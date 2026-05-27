@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-
 type Folder = {
   id: string;
   name: string;
@@ -29,18 +27,14 @@ export function FolderAccordion({
   onToggle: () => void;
   onOpenDocument: (id: string) => void;
 }) {
-  const [localOpen, setLocalOpen] = useState(false);
-  const expanded = open || localOpen;
+  const expanded = open;
 
   return (
     <div className="folder-row">
       <button
         type="button"
         style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-        onClick={() => {
-          setLocalOpen(false);
-          onToggle();
-        }}
+        onClick={onToggle}
       >
         <span>
           {expanded ? '📂' : '📁'} {folder.name} ({folder.documentCount})
