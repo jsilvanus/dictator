@@ -20,7 +20,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       .update(users)
       .set({
         role: body.role,
-        deactivatedAt: body.deactivated ? new Date() : null,
+        ...('deactivated' in body && { deactivatedAt: body.deactivated ? new Date() : null }),
       })
       .where(eq(users.id, id))
       .returning({

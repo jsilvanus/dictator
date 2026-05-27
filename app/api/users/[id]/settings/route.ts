@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { getRequiredSession } from '@/lib/auth/session';
@@ -20,7 +20,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const [updated] = await db
       .update(users)
       .set({ settings: parsed })
-      .where(and(eq(users.id, id)))
+      .where(eq(users.id, id))
       .returning({ settings: users.settings });
 
     return NextResponse.json(updated);
