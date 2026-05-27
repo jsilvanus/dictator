@@ -39,11 +39,7 @@ export function buildInlineContext(snapshot: InlineEditorSnapshot, session: AiSe
   };
 }
 
-export function buildPanelContext(
-  snapshot: InlineEditorSnapshot & { fullText: string },
-  panelHistory: PanelTurn[],
-) {
-  const historySlice = panelHistory.slice(-20);
+export function buildPanelContext(snapshot: InlineEditorSnapshot & { fullText: string }) {
   return {
     title: snapshot.title,
     language: snapshot.language,
@@ -52,6 +48,5 @@ export function buildPanelContext(
     cursorParagraph: snapshot.cursorParagraph,
     precedingParagraphs: snapshot.precedingParagraphs,
     fullDocumentText: snapshot.fullText.slice(0, 16000),
-    conversationHistory: historySlice,
   };
 }

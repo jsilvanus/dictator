@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as ChatRequest;
-    const context = buildPanelContext(body.snapshot, body.history);
+    const context = buildPanelContext(body.snapshot);
 
     const contextMessage = `[Document Context]\n${JSON.stringify({
       title: context.title,
@@ -77,6 +77,7 @@ export async function POST(request: Request) {
       async start(controller) {
         const reader = anthropicBody.getReader();
         const decoder = new TextDecoder();
+        const encoder = new TextEncoder();
         let fullText = '';
 
         try {
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
                 };
                 if (event.type === 'content_block_delta' && event.delta?.text) {
                   fullText += event.delta.text;
-                  controller.enqueue(new TextEncoder().encode(event.delta.text));
+                  controller.enqueue(encoder.encode(event.delta.text));
                 }
               } catch {
                 // skip malformed SSE events
@@ -107,12 +108,11 @@ export async function POST(request: Request) {
             }
           }
 
-          // Persist updated session after streaming completes; strip action envelope from stored content
-          const speech = fullText.replace(/\[ACTION\][\s\S]*?\[\/ACTION\]/, '').trim();
+          const assistantContent = fullText.replace(/\[ACTION\][\s\S]*?\[\/ACTION\]/g, '').trim();
           const updatedTurns: Array<{ role: string; content: string }> = [
-            ...history,
+            ...history.slice(-20),
             { role: 'user', content: message },
-            { role: 'assistant', content: speech },
+            { role: 'assistant', content: assistantContent },
           ];
 
           void db
