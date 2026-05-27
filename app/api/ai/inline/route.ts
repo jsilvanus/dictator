@@ -66,7 +66,12 @@ export async function POST(request: Request) {
     };
 
     const text = raw.content?.find((entry) => entry.type === 'text')?.text ?? '{}';
-    const parsed = JSON.parse(text) as AiResponse;
+    let parsed: AiResponse;
+    try {
+      parsed = JSON.parse(text) as AiResponse;
+    } catch {
+      return NextResponse.json({ error: 'Inline AI returned malformed response' }, { status: 502 });
+    }
 
     return NextResponse.json(parsed);
   } catch (error) {
