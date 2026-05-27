@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
-
 import { useSession } from 'next-auth/react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { fontSizePx } from '@/lib/data/default-settings';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 type ShareEntry = {
   id: string;
@@ -22,16 +22,16 @@ export function ShareModal({
   const [tokenUrl, setTokenUrl] = useState('');
   const [shares, setShares] = useState<ShareEntry[]>([]);
 
-  async function loadShares() {
+  const loadShares = useCallback(async () => {
     const response = await fetch(`/api/documents/${documentId}/share`);
     if (response.ok) {
       setShares((await response.json()) as ShareEntry[]);
     }
-  }
+  }, [documentId]);
 
   useEffect(() => {
     void loadShares();
-  }, [documentId]);
+  }, [loadShares]);
 
   return (
     <div

@@ -2,17 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { authenticateCredentials } from '@/lib/auth/credentials';
 
-vi.mock('@/lib/db', () => ({
-  db: {
-    query: {
-      users: {
-        findFirst: vi.fn(),
-      },
-    },
-  },
-}));
-
-vi.mock('bcrypt', () => ({
+vi.mock('bcryptjs', () => ({
   default: {
     compare: vi.fn(),
   },
@@ -24,39 +14,41 @@ describe('authenticateCredentials', () => {
   });
 
   it('returns session-like user when password is valid', async () => {
-    const { db } = await import('@/lib/db');
-    const bcrypt = (await import('bcrypt')).default;
+    const bcrypt = (await import('bcryptjs')).default;
+    const deps = {
+      findByEmail: vi.fn().mockResolvedValue({
+        id: 'user-1',
+        name: 'Jane',
+        email: 'jane@example.com',
+        role: 'editor',
+        passwordHash: 'hash',
+        deactivatedAt: null,
+      }),
+    };
 
-    vi.mocked(db.query.users.findFirst).mockResolvedValue({
-      id: 'user-1',
-      name: 'Jane',
-      email: 'jane@example.com',
-      role: 'editor',
-      passwordHash: 'hash',
-      deactivatedAt: null,
-    } as never);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
 
-    const result = await authenticateCredentials('jane@example.com', 'secret');
+    const result = await authenticateCredentials('jane@example.com', 'secret', deps);
 
     expect(result).toMatchObject({ id: 'user-1', email: 'jane@example.com' });
   });
 
   it('returns null for wrong password', async () => {
-    const { db } = await import('@/lib/db');
-    const bcrypt = (await import('bcrypt')).default;
+    const bcrypt = (await import('bcryptjs')).default;
+    const deps = {
+      findByEmail: vi.fn().mockResolvedValue({
+        id: 'user-1',
+        name: 'Jane',
+        email: 'jane@example.com',
+        role: 'editor',
+        passwordHash: 'hash',
+        deactivatedAt: null,
+      }),
+    };
 
-    vi.mocked(db.query.users.findFirst).mockResolvedValue({
-      id: 'user-1',
-      name: 'Jane',
-      email: 'jane@example.com',
-      role: 'editor',
-      passwordHash: 'hash',
-      deactivatedAt: null,
-    } as never);
     vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
 
-    const result = await authenticateCredentials('jane@example.com', 'bad');
+    const result = await authenticateCredentials('jane@example.com', 'bad', deps);
 
     expect(result).toBeNull();
   });

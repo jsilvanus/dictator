@@ -31,6 +31,11 @@ type BrowserSpeechRecognition = {
   onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
 };
 
+type SpeechWindow = Window & {
+  SpeechRecognition?: new () => BrowserSpeechRecognition;
+  webkitSpeechRecognition?: new () => BrowserSpeechRecognition;
+};
+
 type SpeechRecognitionEvent = {
   resultIndex: number;
   results: ArrayLike<{
@@ -57,10 +62,7 @@ export function useSpeechRecognition(options: SpeechRecognitionOptions): SpeechR
   useEffect(() => {
     const Constructor =
       typeof window !== 'undefined'
-        ? ((window as Window & { webkitSpeechRecognition?: new () => BrowserSpeechRecognition })
-            .SpeechRecognition ??
-            (window as Window & { webkitSpeechRecognition?: new () => BrowserSpeechRecognition })
-              .webkitSpeechRecognition)
+        ? ((window as SpeechWindow).SpeechRecognition ?? (window as SpeechWindow).webkitSpeechRecognition)
         : undefined;
 
     if (!Constructor) {
@@ -73,7 +75,7 @@ export function useSpeechRecognition(options: SpeechRecognitionOptions): SpeechR
     recognition.interimResults = true;
     recognition.lang = language;
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interim = '';
       let final = '';
 
@@ -97,7 +99,7 @@ export function useSpeechRecognition(options: SpeechRecognitionOptions): SpeechR
       }
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       if (event.error === 'aborted' && listening) {
         recognition.start();
         return;

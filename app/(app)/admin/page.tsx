@@ -1,10 +1,10 @@
+import { asc } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
 import { AppTopbar } from '@/components/shared/AppTopbar';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
-import { asc } from 'drizzle-orm';
 
 export default async function AdminPage() {
   const session = await auth();

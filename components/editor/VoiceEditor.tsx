@@ -3,8 +3,8 @@
 import CharacterCount from '@tiptap/extension-character-count';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
-import StarterKit from '@tiptap/starter-kit';
 import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useSettings } from '@/components/providers/SettingsProvider';

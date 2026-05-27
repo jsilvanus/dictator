@@ -1,13 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-
+import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const params = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +34,7 @@ export default function LoginPage() {
               return;
             }
 
-            router.push(params.get('callbackUrl') ?? '/dashboard');
+            router.push('/dashboard');
             router.refresh();
           }}
           style={{ display: 'grid', gap: 12 }}

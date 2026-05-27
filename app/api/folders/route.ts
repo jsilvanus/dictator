@@ -1,4 +1,4 @@
-import { and, count, eq } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { getRequiredSession } from '@/lib/auth/session';

@@ -2,8 +2,8 @@ import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
-import { AppTopbar } from '@/components/shared/AppTopbar';
 import { SettingsProvider } from '@/components/providers/SettingsProvider';
+import { AppTopbar } from '@/components/shared/AppTopbar';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 

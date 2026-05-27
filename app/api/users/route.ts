@@ -1,10 +1,10 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 
 import { assertAdmin, getRequiredSession } from '@/lib/auth/session';
+import { defaultSettings } from '@/lib/data/default-settings';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
-import { defaultSettings } from '@/lib/data/default-settings';
 
 export async function GET() {
   try {

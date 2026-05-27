@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
@@ -11,9 +11,7 @@ async function seed() {
     throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD are required for db:seed');
   }
 
-  const existing = await db.query.users.findFirst({
-    where: eq(users.email, env.ADMIN_EMAIL),
-  });
+  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, env.ADMIN_EMAIL));
 
   if (existing) {
     console.log('Admin already exists. Skipping.');

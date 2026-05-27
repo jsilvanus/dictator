@@ -1,3 +1,4 @@
+import { and, desc, eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
@@ -5,7 +6,6 @@ import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { AppTopbar } from '@/components/shared/AppTopbar';
 import { db } from '@/lib/db';
 import { documents, folders, shares } from '@/lib/db/schema';
-import { and, desc, eq } from 'drizzle-orm';
 
 export default async function DashboardPage() {
   const session = await auth();
