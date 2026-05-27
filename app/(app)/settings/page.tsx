@@ -6,6 +6,7 @@ import { SettingsProvider } from '@/components/providers/SettingsProvider';
 import { AppTopbar } from '@/components/shared/AppTopbar';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
+import { env } from '@/lib/env';
 
 import { SettingsForm } from './settings-form';
 
@@ -22,7 +23,11 @@ export default async function SettingsPage() {
     <main className="page-shell">
       <AppTopbar title="Settings" />
       <SettingsProvider initial={(user?.settings ?? {}) as Record<string, unknown>}>
-        <SettingsForm userId={session.user.id} />
+        <SettingsForm
+          userId={session.user.id}
+          instanceCommandTriggerDefault={env.COMMAND_TRIGGER_DEFAULT}
+          instanceAiTriggerDefault={env.AI_TRIGGER_DEFAULT}
+        />
       </SettingsProvider>
     </main>
   );

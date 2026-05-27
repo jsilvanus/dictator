@@ -8,6 +8,20 @@
       "when": 1779859997672,
       "tag": "0000_wide_chronomancer",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779862396745,
+      "tag": "0001_lovely_scarlet_spider",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779862487115,
+      "tag": "0002_curious_madame_hydra",
+      "breakpoints": true
     }
   ]
 }

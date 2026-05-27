@@ -87,6 +87,9 @@ export function VoiceDock({
   onSetTitle,
   onOpenHelp,
   onActiveTriggerInfo,
+  aiPanelOpen,
+  onToggleAiPanel,
+  onAiPanelMessage,
 }: {
   editor: Editor | null;
   title: string;
@@ -99,6 +102,9 @@ export function VoiceDock({
   onSetTitle: (title: string) => void;
   onOpenHelp: (category?: HelpCategory) => void;
   onActiveTriggerInfo: (activeTrigger: string, hasOverride: boolean) => void;
+  aiPanelOpen: boolean;
+  onToggleAiPanel: () => void;
+  onAiPanelMessage: (content: string) => void;
 }) {
   const { settings, patchSettings } = useSettings();
   const [status, setStatus] = useState('Idle');
@@ -306,6 +312,13 @@ export function VoiceDock({
 
       for (const segment of segments) {
         if (segment.type === 'text') {
+          // When AI panel is open, route dictation to panel instead of editor
+          if (aiPanelOpen) {
+            onAiPanelMessage(segment.content);
+            handledText = true;
+            continue;
+          }
+
           const lower = segment.content.toLowerCase().trim();
 
           if (lower.includes('new paragraph')) {
@@ -370,7 +383,11 @@ export function VoiceDock({
         }
 
         if (segment.type === 'ai') {
-          void executeAiInline(segment.content);
+          if (aiPanelOpen) {
+            onAiPanelMessage(segment.content);
+          } else {
+            void executeAiInline(segment.content);
+          }
         }
       }
 
@@ -405,12 +422,16 @@ export function VoiceDock({
       return { background: 'var(--purple)', color: 'white', boxShadow: '0 0 0 8px rgb(127 119 221 / 20%)' };
     }
 
+    if (speech.listening && aiPanelOpen) {
+      return { background: 'var(--purple)', color: 'white', boxShadow: '0 0 0 8px rgb(127 119 221 / 15%)' };
+    }
+
     if (speech.listening) {
       return { background: 'var(--teal)', color: 'white', boxShadow: '0 0 0 8px rgb(13 148 136 / 15%)' };
     }
 
     return {};
-  }, [aiThinking, runningCommand, speech.listening, speech.paused]);
+  }, [aiPanelOpen, aiThinking, runningCommand, speech.listening, speech.paused]);
 
   const handleMicClick = () => {
     if (settings.holdToTalk) {
@@ -451,7 +472,17 @@ export function VoiceDock({
         >
           🎙️ Mic
         </button>
-        <button type="button" style={{ background: 'var(--purple)', color: 'white' }}>
+        <button
+          type="button"
+          style={{
+            background: aiPanelOpen ? 'var(--purple)' : undefined,
+            color: aiPanelOpen ? 'white' : undefined,
+            outline: aiPanelOpen ? '2px solid var(--purple)' : undefined,
+          }}
+          onClick={onToggleAiPanel}
+          aria-label="Toggle AI panel"
+          aria-pressed={aiPanelOpen}
+        >
           ✨ AI
         </button>
         <TriggerChip

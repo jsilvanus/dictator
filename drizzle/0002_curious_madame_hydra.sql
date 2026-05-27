@@ -1,0 +1,1 @@
+ALTER TABLE "ai_sessions" ADD CONSTRAINT "ai_sessions_doc_user_mode" UNIQUE("document_id","user_id","mode");
