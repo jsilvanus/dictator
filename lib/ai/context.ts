@@ -10,6 +10,11 @@ export type InlineEditorSnapshot = {
   precedingParagraphs: string[];
 };
 
+export type PanelTurn = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
 export function buildInlineContext(snapshot: InlineEditorSnapshot, session: AiSession) {
   const acceptedTurns = session.turns
     .filter((turn) => turn.acceptedAt !== null && turn.discardedAt === null)
@@ -31,5 +36,22 @@ export function buildInlineContext(snapshot: InlineEditorSnapshot, session: AiSe
     precedingParagraphs: snapshot.precedingParagraphs,
     text: snapshot.text,
     lastAcceptedTurns: acceptedTurns,
+  };
+}
+
+export function buildPanelContext(
+  snapshot: InlineEditorSnapshot & { fullText: string },
+  panelHistory: PanelTurn[],
+) {
+  const historySlice = panelHistory.slice(-20);
+  return {
+    title: snapshot.title,
+    language: snapshot.language,
+    wordCount: snapshot.wordCount,
+    selection: snapshot.selection,
+    cursorParagraph: snapshot.cursorParagraph,
+    precedingParagraphs: snapshot.precedingParagraphs,
+    fullDocumentText: snapshot.fullText.slice(0, 16000),
+    conversationHistory: historySlice,
   };
 }

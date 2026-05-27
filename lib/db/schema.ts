@@ -6,11 +6,13 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role', ['admin', 'editor']);
 export const sharePermissionEnum = pgEnum('share_permission', ['read', 'edit']);
+export const aiSessionModeEnum = pgEnum('ai_session_mode', ['inline', 'panel']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -68,6 +70,24 @@ export const shares = pgTable('shares', {
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const aiSessions = pgTable(
+  'ai_sessions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    mode: aiSessionModeEnum('mode').notNull(),
+    turns: jsonb('turns').$type<Array<{ role: string; content: string }>>().notNull().default([]),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique('ai_sessions_doc_user_mode').on(t.documentId, t.userId, t.mode)],
+);
 
 export const usersRelations = relations(users, ({ many }) => ({
   documents: many(documents),

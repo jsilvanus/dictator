@@ -5,11 +5,7 @@ import { type AiResponse,buildInlineSystemPrompt } from '@/lib/ai/prompts';
 import type { AiSession } from '@/lib/ai/session';
 import { getRequiredSession } from '@/lib/auth/session';
 import { env } from '@/lib/env';
-
-const REQUEST_LIMIT = 60;
-const WINDOW_MS = 60 * 60 * 1000;
-
-const rateLimit = new Map<string, { count: number; resetAt: number }>();
+import { aiRateLimiter } from '@/lib/rate-limiter';
 
 type InlineRequest = {
   prompt: string;
@@ -17,32 +13,10 @@ type InlineRequest = {
   session: AiSession;
 };
 
-function applyRateLimit(userId: string) {
-  const now = Date.now();
-  const current = rateLimit.get(userId);
-
-  if (!current || now >= current.resetAt) {
-    rateLimit.set(userId, { count: 1, resetAt: now + WINDOW_MS });
-    return { allowed: true, retryAfter: 0 };
-  }
-
-  if (current.count >= REQUEST_LIMIT) {
-    return {
-      allowed: false,
-      retryAfter: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
-    };
-  }
-
-  current.count += 1;
-  rateLimit.set(userId, current);
-
-  return { allowed: true, retryAfter: 0 };
-}
-
 export async function POST(request: Request) {
   try {
     const session = await getRequiredSession();
-    const limiter = applyRateLimit(session.userId);
+    const limiter = aiRateLimiter.check(session.userId);
 
     if (!limiter.allowed) {
       return NextResponse.json(

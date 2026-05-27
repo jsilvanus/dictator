@@ -8,6 +8,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { type AiResponse } from '@/lib/ai/prompts';
 import { type AiSession,markAccepted, markDiscarded, recordTurn } from '@/lib/ai/session';
+import { genId, speakText } from '@/lib/utils/tts-id';
 import { executeCommand, parseTriggers } from '@/lib/voice/commands';
 import { helpCategories, type HelpCategory } from '@/lib/voice/help';
 import { normalizeSpokenPunctuation } from '@/lib/voice/punctuation';
@@ -29,30 +30,6 @@ type PendingAiChange =
       beforeTitle: string;
       afterTitle: string;
     };
-
-function uuid() {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function speak(text: string, voiceName: string) {
-  if (typeof window === 'undefined' || !window.speechSynthesis || !text.trim()) {
-    return;
-  }
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  if (voiceName) {
-    const voice = window.speechSynthesis.getVoices().find((entry) => entry.name === voiceName);
-    if (voice) {
-      utterance.voice = voice;
-    }
-  }
-
-  window.speechSynthesis.speak(utterance);
-}
 
 function getSelectionText(editor: Editor) {
   const { from, to } = editor.state.selection;
@@ -87,6 +64,9 @@ export function VoiceDock({
   onSetTitle,
   onOpenHelp,
   onActiveTriggerInfo,
+  aiPanelOpen,
+  onToggleAiPanel,
+  onAiPanelMessage,
 }: {
   editor: Editor | null;
   title: string;
@@ -99,6 +79,9 @@ export function VoiceDock({
   onSetTitle: (title: string) => void;
   onOpenHelp: (category?: HelpCategory) => void;
   onActiveTriggerInfo: (activeTrigger: string, hasOverride: boolean) => void;
+  aiPanelOpen: boolean;
+  onToggleAiPanel: () => void;
+  onAiPanelMessage: (content: string) => void;
 }) {
   const { settings, patchSettings } = useSettings();
   const [status, setStatus] = useState('Idle');
@@ -189,7 +172,7 @@ export function VoiceDock({
       }
 
       const parsed = (await response.json()) as AiResponse;
-      const turnId = uuid();
+      const turnId = genId();
       const action = parsed.action;
 
       if (action.type === 'insert_at_cursor') {
@@ -262,7 +245,7 @@ export function VoiceDock({
       }
 
       if (action.type === 'speak') {
-        speak(action.speech, settings.ttsVoice);
+        speakText(action.speech, settings.ttsVoice);
         recordTurn(inlineAiSession, {
           id: turnId,
           request: content,
@@ -273,7 +256,7 @@ export function VoiceDock({
       }
 
       if (parsed.speech && settings.ttsEnabled) {
-        speak(parsed.speech, settings.ttsVoice);
+        speakText(parsed.speech, settings.ttsVoice);
       }
 
       setStatus(parsed.explanation);
@@ -306,6 +289,13 @@ export function VoiceDock({
 
       for (const segment of segments) {
         if (segment.type === 'text') {
+          // When AI panel is open, route dictation to panel instead of editor
+          if (aiPanelOpen) {
+            onAiPanelMessage(segment.content);
+            handledText = true;
+            continue;
+          }
+
           const lower = segment.content.toLowerCase().trim();
 
           if (lower.includes('new paragraph')) {
@@ -343,7 +333,7 @@ export function VoiceDock({
             onOpenHelp: (category) => {
               if (!category) {
                 if (settings.ttsEnabled) {
-                  speak(`Help categories: ${helpCategories.join(', ')}`, settings.ttsVoice);
+                  speakText(`Help categories: ${helpCategories.join(', ')}`, settings.ttsVoice);
                 }
                 onOpenHelp();
                 return;
@@ -354,7 +344,7 @@ export function VoiceDock({
             onTemporaryTriggerChange: setTemporaryTrigger,
             onSpeak: (spoken) => {
               if (settings.ttsEnabled) {
-                speak(spoken, settings.ttsVoice);
+                speakText(spoken, settings.ttsVoice);
               }
             },
             clearDocumentConfirmUntil,
@@ -370,7 +360,11 @@ export function VoiceDock({
         }
 
         if (segment.type === 'ai') {
-          void executeAiInline(segment.content);
+          if (aiPanelOpen) {
+            onAiPanelMessage(segment.content);
+          } else {
+            void executeAiInline(segment.content);
+          }
         }
       }
 
@@ -405,12 +399,16 @@ export function VoiceDock({
       return { background: 'var(--purple)', color: 'white', boxShadow: '0 0 0 8px rgb(127 119 221 / 20%)' };
     }
 
+    if (speech.listening && aiPanelOpen) {
+      return { background: 'var(--purple)', color: 'white', boxShadow: '0 0 0 8px rgb(127 119 221 / 15%)' };
+    }
+
     if (speech.listening) {
       return { background: 'var(--teal)', color: 'white', boxShadow: '0 0 0 8px rgb(13 148 136 / 15%)' };
     }
 
     return {};
-  }, [aiThinking, runningCommand, speech.listening, speech.paused]);
+  }, [aiPanelOpen, aiThinking, runningCommand, speech.listening, speech.paused]);
 
   const handleMicClick = () => {
     if (settings.holdToTalk) {
@@ -451,7 +449,17 @@ export function VoiceDock({
         >
           🎙️ Mic
         </button>
-        <button type="button" style={{ background: 'var(--purple)', color: 'white' }}>
+        <button
+          type="button"
+          style={{
+            background: aiPanelOpen ? 'var(--purple)' : undefined,
+            color: aiPanelOpen ? 'white' : undefined,
+            outline: aiPanelOpen ? '2px solid var(--purple)' : undefined,
+          }}
+          onClick={onToggleAiPanel}
+          aria-label="Toggle AI panel"
+          aria-pressed={aiPanelOpen}
+        >
           ✨ AI
         </button>
         <TriggerChip

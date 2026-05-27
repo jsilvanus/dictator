@@ -11,6 +11,10 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       COMMAND_TRIGGER_DEFAULT: ${COMMAND_TRIGGER_DEFAULT:-Computer}
       AI_TRIGGER_DEFAULT: ${AI_TRIGGER_DEFAULT:-Assistant}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
     depends_on:
       db:
         condition: service_healthy

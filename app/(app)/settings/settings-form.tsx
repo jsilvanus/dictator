@@ -1,17 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { defaultSettings } from '@/lib/data/default-settings';
 
-export function SettingsForm({ userId }: { userId: string }) {
+export function SettingsForm({
+  userId,
+  instanceCommandTriggerDefault,
+  instanceAiTriggerDefault,
+}: {
+  userId: string;
+  instanceCommandTriggerDefault: string;
+  instanceAiTriggerDefault: string;
+}) {
   const { settings, patchSettings } = useSettings();
   const [status, setStatus] = useState('');
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  // Read session override from sessionStorage
+  const sessionOverride = typeof window !== 'undefined' ? sessionStorage.getItem('temporary-command-trigger') : null;
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      setAvailableVoices(voices);
+    };
+
+    loadVoices();
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+  }, []);
+
+  const filteredVoices = availableVoices.filter((v) => v.lang.startsWith(settings.language.slice(0, 2)));
 
   return (
     <div className="panel" style={{ display: 'grid', gap: 10 }}>
       <h1>Preferences</h1>
+
       <label>
         Language
         <select value={settings.language} onChange={(event) => patchSettings({ language: event.target.value })}>
@@ -20,6 +47,7 @@ export function SettingsForm({ userId }: { userId: string }) {
           <option value="sv-SE">sv-SE</option>
         </select>
       </label>
+
       <label>
         Hold to talk
         <input
@@ -28,38 +56,60 @@ export function SettingsForm({ userId }: { userId: string }) {
           onChange={(event) => patchSettings({ holdToTalk: event.target.checked })}
         />
       </label>
+
       <label>
         View font size
         <select
           value={settings.viewFontSize}
           onChange={(event) => patchSettings({ viewFontSize: event.target.value as 'S' | 'M' | 'L' | 'XL' | 'XXL' })}
         >
-          <option value="S">S</option>
-          <option value="M">M</option>
-          <option value="L">L</option>
-          <option value="XL">XL</option>
-          <option value="XXL">XXL</option>
+          <option value="S">S — 14 px</option>
+          <option value="M">M — 16 px</option>
+          <option value="L">L — 20 px</option>
+          <option value="XL">XL — 24 px</option>
+          <option value="XXL">XXL — 28 px</option>
         </select>
       </label>
+
       <label>
         Command trigger
         <input
           value={settings.commandTrigger}
-          placeholder={defaultSettings.commandTrigger}
+          placeholder={instanceCommandTriggerDefault}
           onChange={(event) => patchSettings({ commandTrigger: event.target.value })}
         />
       </label>
+
       <label>
         AI trigger
         <input
           value={settings.aiTrigger}
-          placeholder={defaultSettings.aiTrigger}
+          placeholder={instanceAiTriggerDefault}
           onChange={(event) => patchSettings({ aiTrigger: event.target.value })}
         />
       </label>
-      <p style={{ margin: 0, color: 'var(--muted)' }}>
-        Session override: voice command “change trigger to [word]” only applies to the current tab session.
+
+      <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--muted)' }}>
+        Instance defaults: command trigger &ldquo;{instanceCommandTriggerDefault}&rdquo;, AI trigger &ldquo;
+        {instanceAiTriggerDefault}&rdquo;. Leave fields empty to use instance defaults.
       </p>
+
+      {sessionOverride ? (
+        <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--amber, #f59e0b)' }}>
+          Session override active: command trigger is &ldquo;{sessionOverride}&rdquo;.{' '}
+          <button
+            type="button"
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+            onClick={() => {
+              sessionStorage.removeItem('temporary-command-trigger');
+              window.location.reload();
+            }}
+          >
+            Clear override
+          </button>
+        </p>
+      ) : null}
+
       <label>
         TTS enabled
         <input
@@ -68,10 +118,27 @@ export function SettingsForm({ userId }: { userId: string }) {
           onChange={(event) => patchSettings({ ttsEnabled: event.target.checked })}
         />
       </label>
+
       <label>
         TTS voice
-        <input value={settings.ttsVoice} onChange={(event) => patchSettings({ ttsVoice: event.target.value })} />
+        {filteredVoices.length > 0 ? (
+          <select value={settings.ttsVoice} onChange={(event) => patchSettings({ ttsVoice: event.target.value })}>
+            <option value="">— system default —</option>
+            {filteredVoices.map((v) => (
+              <option key={v.name} value={v.name}>
+                {v.name} ({v.lang})
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            value={settings.ttsVoice}
+            placeholder="Voice name (loading…)"
+            onChange={(event) => patchSettings({ ttsVoice: event.target.value })}
+          />
+        )}
       </label>
+
       <button
         type="button"
         onClick={async () => {
@@ -86,6 +153,7 @@ export function SettingsForm({ userId }: { userId: string }) {
       >
         Save settings
       </button>
+
       {status ? <p>{status}</p> : null}
     </div>
   );

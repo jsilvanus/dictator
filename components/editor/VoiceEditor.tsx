@@ -14,6 +14,7 @@ import { fontSizePx } from '@/lib/data/default-settings';
 import { type HelpCategory } from '@/lib/voice/help';
 
 import { AiHighlight } from './AiHighlight';
+import { AiPanel } from './AiPanel';
 import { FontSizeControls } from './FontSizeControls';
 import { HelpOverlay } from './HelpOverlay';
 import { Toolbar } from './Toolbar';
@@ -38,6 +39,8 @@ export function VoiceEditor({
   const [helpCategory, setHelpCategory] = useState<HelpCategory | null>(null);
   const [activeCommandTrigger, setActiveCommandTrigger] = useState(settings.commandTrigger);
   const [hasTriggerOverride, setHasTriggerOverride] = useState(false);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [voiceToPanel, setVoiceToPanel] = useState<string | null>(null);
   const inlineAiSessionRef = useRef<AiSession>({ turns: [], currentDocVersion: 0 });
 
   const editor = useEditor({
@@ -48,6 +51,17 @@ export function VoiceEditor({
       setStatus('Unsaved');
     },
   });
+
+  // Listen for set-title events dispatched by AiPanel
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const nextTitle = (e as CustomEvent<string>).detail;
+      setTitle(nextTitle);
+      setStatus('Unsaved');
+    };
+    document.addEventListener('vd:set-title', handler);
+    return () => document.removeEventListener('vd:set-title', handler);
+  }, []);
 
   const saveNow = useCallback(async () => {
     if (!editor) {
@@ -172,6 +186,21 @@ export function VoiceEditor({
           setActiveCommandTrigger(trigger);
           setHasTriggerOverride(hasOverride);
         }}
+        aiPanelOpen={aiPanelOpen}
+        onToggleAiPanel={() => setAiPanelOpen((prev) => !prev)}
+        onAiPanelMessage={(content) => setVoiceToPanel((prev) => (prev ? `${prev} ${content}` : content))}
+      />
+      <AiPanel
+        open={aiPanelOpen}
+        editor={editor}
+        documentId={documentId}
+        title={title}
+        ttsEnabled={settings.ttsEnabled}
+        ttsVoice={settings.ttsVoice}
+        language={settings.language}
+        voiceMessage={voiceToPanel}
+        onVoiceMessageHandled={() => setVoiceToPanel(null)}
+        onClose={() => setAiPanelOpen(false)}
       />
       <HelpOverlay
         open={helpOpen}
