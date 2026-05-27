@@ -116,3 +116,18 @@ select {
 .toolbar button {
   min-height: 36px;
 }
+
+.trigger-chip-override {
+  background: #ffedd5;
+  color: var(--amber);
+}
+
+.command-detected-badge {
+  background: #ffedd5;
+  color: var(--amber);
+}
+
+.ai-highlighted-range {
+  border-left: 3px solid var(--purple);
+  background: rgb(127 119 221 / 12%);
+}
