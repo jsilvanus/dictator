@@ -8,6 +8,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { type AiResponse } from '@/lib/ai/prompts';
 import { type AiSession,markAccepted, markDiscarded, recordTurn } from '@/lib/ai/session';
+import { genId, speakText } from '@/lib/utils/tts-id';
 import { executeCommand, parseTriggers } from '@/lib/voice/commands';
 import { helpCategories, type HelpCategory } from '@/lib/voice/help';
 import { normalizeSpokenPunctuation } from '@/lib/voice/punctuation';
@@ -29,30 +30,6 @@ type PendingAiChange =
       beforeTitle: string;
       afterTitle: string;
     };
-
-function uuid() {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function speak(text: string, voiceName: string) {
-  if (typeof window === 'undefined' || !window.speechSynthesis || !text.trim()) {
-    return;
-  }
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  if (voiceName) {
-    const voice = window.speechSynthesis.getVoices().find((entry) => entry.name === voiceName);
-    if (voice) {
-      utterance.voice = voice;
-    }
-  }
-
-  window.speechSynthesis.speak(utterance);
-}
 
 function getSelectionText(editor: Editor) {
   const { from, to } = editor.state.selection;
@@ -195,7 +172,7 @@ export function VoiceDock({
       }
 
       const parsed = (await response.json()) as AiResponse;
-      const turnId = uuid();
+      const turnId = genId();
       const action = parsed.action;
 
       if (action.type === 'insert_at_cursor') {
@@ -268,7 +245,7 @@ export function VoiceDock({
       }
 
       if (action.type === 'speak') {
-        speak(action.speech, settings.ttsVoice);
+        speakText(action.speech, settings.ttsVoice);
         recordTurn(inlineAiSession, {
           id: turnId,
           request: content,
@@ -279,7 +256,7 @@ export function VoiceDock({
       }
 
       if (parsed.speech && settings.ttsEnabled) {
-        speak(parsed.speech, settings.ttsVoice);
+        speakText(parsed.speech, settings.ttsVoice);
       }
 
       setStatus(parsed.explanation);
@@ -356,7 +333,7 @@ export function VoiceDock({
             onOpenHelp: (category) => {
               if (!category) {
                 if (settings.ttsEnabled) {
-                  speak(`Help categories: ${helpCategories.join(', ')}`, settings.ttsVoice);
+                  speakText(`Help categories: ${helpCategories.join(', ')}`, settings.ttsVoice);
                 }
                 onOpenHelp();
                 return;
@@ -367,7 +344,7 @@ export function VoiceDock({
             onTemporaryTriggerChange: setTemporaryTrigger,
             onSpeak: (spoken) => {
               if (settings.ttsEnabled) {
-                speak(spoken, settings.ttsVoice);
+                speakText(spoken, settings.ttsVoice);
               }
             },
             clearDocumentConfirmUntil,

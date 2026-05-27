@@ -107,8 +107,7 @@ export async function POST(request: Request) {
             }
           }
 
-          // Persist updated session after streaming completes
-          const actionMatch = fullText.match(/\[ACTION\]([\s\S]*?)\[\/ACTION\]/);
+          // Persist updated session after streaming completes; strip action envelope from stored content
           const speech = fullText.replace(/\[ACTION\][\s\S]*?\[\/ACTION\]/, '').trim();
           const updatedTurns: Array<{ role: string; content: string }> = [
             ...history,
@@ -134,8 +133,6 @@ export async function POST(request: Request) {
             .catch(() => {
               // persistence failure is non-fatal
             });
-
-          void actionMatch; // suppress unused variable warning
         } finally {
           reader.releaseLock();
           controller.close();

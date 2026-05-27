@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { AiChatAction } from '@/lib/ai/chat-prompts';
 import type { PanelTurn } from '@/lib/ai/context';
+import { genId, speakText } from '@/lib/utils/tts-id';
 
 type PanelMessage = {
   id: string;
@@ -12,13 +13,6 @@ type PanelMessage = {
   content: string;
   streaming?: boolean;
 };
-
-function genId() {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
 
 function parseAction(text: string): { speech: string; action: AiChatAction } {
   const match = text.match(/\[ACTION\]([\s\S]*?)\[\/ACTION\]/);
@@ -33,16 +27,6 @@ function parseAction(text: string): { speech: string; action: AiChatAction } {
   }
 
   return { speech: speech || text, action: { type: 'none' } };
-}
-
-function speakText(text: string, voiceName: string) {
-  if (typeof window === 'undefined' || !window.speechSynthesis || !text.trim()) return;
-  const utterance = new SpeechSynthesisUtterance(text);
-  if (voiceName) {
-    const voice = window.speechSynthesis.getVoices().find((v) => v.name === voiceName);
-    if (voice) utterance.voice = voice;
-  }
-  window.speechSynthesis.speak(utterance);
 }
 
 export function AiPanel({
@@ -95,14 +79,14 @@ export function AiPanel({
       });
   }, [documentId]);
 
-  // Handle voice-routed messages
+  // Handle voice-routed messages — only when not already streaming so we don't drop them
   useEffect(() => {
-    if (voiceMessage && open) {
+    if (voiceMessage && open && !isStreaming) {
       void sendMessage(voiceMessage);
       onVoiceMessageHandled();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [voiceMessage, open]);
+  }, [voiceMessage, open, isStreaming]);
 
   const conversationHistory: PanelTurn[] = messages
     .filter((m) => !m.streaming)
@@ -145,12 +129,15 @@ export function AiPanel({
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
 
     try {
+      const docText = editor
+        ? editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', '\n')
+        : '';
       const snapshot = {
         title,
         language,
         wordCount: editor?.storage.characterCount?.words() ?? 0,
-        text: editor ? editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', '\n') : '',
-        fullText: editor ? editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', '\n') : '',
+        text: docText,
+        fullText: docText,
         selection: editor
           ? (() => {
               const { from, to } = editor.state.selection;
@@ -191,8 +178,10 @@ export function AiPanel({
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, content: fullText } : m)),
         );
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
+
+      // Single scroll after streaming completes
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
       const { speech, action } = parseAction(fullText);
 

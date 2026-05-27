@@ -188,7 +188,7 @@ export function VoiceEditor({
         }}
         aiPanelOpen={aiPanelOpen}
         onToggleAiPanel={() => setAiPanelOpen((prev) => !prev)}
-        onAiPanelMessage={(content) => setVoiceToPanel(content)}
+        onAiPanelMessage={(content) => setVoiceToPanel((prev) => (prev ? `${prev} ${content}` : content))}
       />
       <AiPanel
         open={aiPanelOpen}
