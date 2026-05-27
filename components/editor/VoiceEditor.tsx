@@ -52,17 +52,6 @@ export function VoiceEditor({
     },
   });
 
-  // Listen for set-title events dispatched by AiPanel
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const nextTitle = (e as CustomEvent<string>).detail;
-      setTitle(nextTitle);
-      setStatus('Unsaved');
-    };
-    document.addEventListener('vd:set-title', handler);
-    return () => document.removeEventListener('vd:set-title', handler);
-  }, []);
-
   const saveNow = useCallback(async () => {
     if (!editor) {
       return;
@@ -200,6 +189,10 @@ export function VoiceEditor({
         language={settings.language}
         voiceMessage={voiceToPanel}
         onVoiceMessageHandled={() => setVoiceToPanel(null)}
+        onSetTitle={(nextTitle) => {
+          setTitle(nextTitle);
+          setStatus('Unsaved');
+        }}
         onClose={() => setAiPanelOpen(false)}
       />
       <HelpOverlay

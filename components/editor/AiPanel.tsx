@@ -39,6 +39,7 @@ export function AiPanel({
   language,
   voiceMessage,
   onVoiceMessageHandled,
+  onSetTitle,
   onClose,
 }: {
   open: boolean;
@@ -50,6 +51,7 @@ export function AiPanel({
   language: string;
   voiceMessage: string | null;
   onVoiceMessageHandled: () => void;
+  onSetTitle: (title: string) => void;
   onClose: () => void;
 }) {
   const [messages, setMessages] = useState<PanelMessage[]>([]);
@@ -93,15 +95,19 @@ export function AiPanel({
     .map((m) => ({ role: m.role, content: m.content }));
 
   function executeAction(action: AiChatAction) {
+    if (action.type === 'set_title') {
+      onSetTitle(action.title);
+      return;
+    }
+
     if (!editor) return;
 
     if (action.type === 'insert_at_cursor') {
       editor.chain().focus().insertContent(action.content).run();
     } else if (action.type === 'replace_selection') {
       editor.chain().focus().insertContent(action.content).run();
-    } else if (action.type === 'set_title') {
-      document.dispatchEvent(new CustomEvent('vd:set-title', { detail: action.title }));
     } else if (action.type === 'read_back') {
+      if (!ttsEnabled) return;
       let text = '';
       if (action.target === 'selection') {
         const { from, to } = editor.state.selection;
@@ -111,7 +117,7 @@ export function AiPanel({
       }
       if (text) speakText(text, ttsVoice);
     } else if (action.type === 'speak') {
-      speakText(action.speech, ttsVoice);
+      if (ttsEnabled) speakText(action.speech, ttsVoice);
     }
   }
 
@@ -132,11 +138,15 @@ export function AiPanel({
       const docText = editor
         ? editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', '\n')
         : '';
+      const cursorParagraph = editor ? editor.state.selection.$from.parent.textContent : '';
+      const paragraphs = docText.split('\n').filter((p) => p.trim().length > 0);
+      const cursorIdx = paragraphs.findIndex((p) => p === cursorParagraph);
+      const precedingParagraphs =
+        cursorIdx <= 0 ? paragraphs.slice(0, 2) : paragraphs.slice(Math.max(0, cursorIdx - 2), cursorIdx);
       const snapshot = {
         title,
         language,
         wordCount: editor?.storage.characterCount?.words() ?? 0,
-        text: docText,
         fullText: docText,
         selection: editor
           ? (() => {
@@ -144,8 +154,8 @@ export function AiPanel({
               return from === to ? '' : editor.state.doc.textBetween(from, to, '\n', '\n');
             })()
           : '',
-        cursorParagraph: editor ? editor.state.selection.$from.parent.textContent : '',
-        precedingParagraphs: [],
+        cursorParagraph,
+        precedingParagraphs,
       };
 
       const response = await fetch('/api/ai/chat', {
