@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 
-import { getRequiredSession } from '@/lib/auth/session';
 import { buildInlineContext, type InlineEditorSnapshot } from '@/lib/ai/context';
-import { buildInlineSystemPrompt, type AiResponse } from '@/lib/ai/prompts';
+import { type AiResponse,buildInlineSystemPrompt } from '@/lib/ai/prompts';
 import type { AiSession } from '@/lib/ai/session';
+import { getRequiredSession } from '@/lib/auth/session';
 import { env } from '@/lib/env';
 
 const REQUEST_LIMIT = 60;

@@ -9,8 +9,8 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { fontSizePx } from '@/lib/data/default-settings';
 import { type AiSession } from '@/lib/ai/session';
+import { fontSizePx } from '@/lib/data/default-settings';
 import { type HelpCategory } from '@/lib/voice/help';
 
 import { AiHighlight } from './AiHighlight';

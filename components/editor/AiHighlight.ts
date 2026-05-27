@@ -1,7 +1,7 @@
-import type { Editor } from '@tiptap/react';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import type { Editor } from '@tiptap/react';
 
 const aiHighlightKey = new PluginKey<DecorationSet>('ai-highlight');
 

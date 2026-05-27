@@ -1,12 +1,12 @@
 import type { Editor } from '@tiptap/react';
 
 import {
-  markDiscarded,
-  resolveAiTurnByPosition,
-  resolveAiTurnRange,
   type AiSession,
   type AiTurn,
   type AiTurnPosition,
+  markDiscarded,
+  resolveAiTurnByPosition,
+  resolveAiTurnRange,
   textOffsetToRange,
 } from '@/lib/ai/session';
 
@@ -536,7 +536,8 @@ export function executeCommand(command: string, editor: Editor, session: AiSessi
 
   const helpCategoryMatch = normalized.match(/^help\s+(navigation|editing|formatting|document|ai|triggers)$/);
   if (helpCategoryMatch) {
-    options.onOpenHelp?.(helpCategoryMatch[1]);
+    const category = helpCategoryMatch[1] === 'ai' ? 'AI' : helpCategoryMatch[1];
+    options.onOpenHelp?.(category);
     return true;
   }
 

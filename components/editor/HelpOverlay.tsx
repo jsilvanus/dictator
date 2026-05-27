@@ -1,6 +1,6 @@
 'use client';
 
-import { helpCategories, helpEntries, type HelpCategory } from '@/lib/voice/help';
+import { helpCategories, type HelpCategory,helpEntries } from '@/lib/voice/help';
 
 export function HelpOverlay({
   open,

@@ -5,12 +5,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { clearAiHighlight, setAiHighlight } from '@/components/editor/AiHighlight';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { type AiResponse } from '@/lib/ai/prompts';
-import { markAccepted, markDiscarded, recordTurn, type AiSession } from '@/lib/ai/session';
+import { type AiSession,markAccepted, markDiscarded, recordTurn } from '@/lib/ai/session';
 import { executeCommand, parseTriggers } from '@/lib/voice/commands';
 import { helpCategories, type HelpCategory } from '@/lib/voice/help';
 import { normalizeSpokenPunctuation } from '@/lib/voice/punctuation';
-import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 
 import { TriggerChip } from './TriggerChip';
 
@@ -109,6 +109,7 @@ export function VoiceDock({
   const [runningCommand, setRunningCommand] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
   const clearHighlightTimeoutRef = useRef<number | null>(null);
+  const pendingAiChangeRef = useRef<PendingAiChange | null>(null);
 
   const activeCommandTrigger = temporaryTrigger ?? settings.commandTrigger;
 
@@ -132,6 +133,10 @@ export function VoiceDock({
     sessionStorage.removeItem('temporary-command-trigger');
   }, [temporaryTrigger]);
 
+  useEffect(() => {
+    pendingAiChangeRef.current = pendingAiChange;
+  }, [pendingAiChange]);
+
   const stageHighlight = (from: number, to: number) => {
     if (!editor) {
       return;
@@ -144,7 +149,7 @@ export function VoiceDock({
     }
 
     clearHighlightTimeoutRef.current = window.setTimeout(() => {
-      if (!pendingAiChange) {
+      if (!pendingAiChangeRef.current) {
         clearAiHighlight(editor);
       }
     }, 4000);
