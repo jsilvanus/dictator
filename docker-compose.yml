@@ -3,7 +3,7 @@ services:
     build: .
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://voicedoc:${DB_PASSWORD}@db:5432/voicedoc
+      DATABASE_URL: postgres://dictator:${DB_PASSWORD}@db:5432/dictator
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
@@ -29,13 +29,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: voicedoc
-      POSTGRES_USER: voicedoc
+      POSTGRES_DB: dictator
+      POSTGRES_USER: dictator
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U voicedoc']
+      test: ['CMD-SHELL', 'pg_isready -U dictator']
       interval: 10s
       retries: 5
 
