@@ -5,9 +5,18 @@ type Entry = { count: number; resetAt: number };
 
 export class RateLimiter {
   private readonly map = new Map<string, Entry>();
+  private nextCleanup = Date.now() + WINDOW_MS;
 
   check(userId: string): { allowed: boolean; retryAfter: number } {
     const now = Date.now();
+
+    if (now >= this.nextCleanup) {
+      for (const [key, entry] of this.map) {
+        if (now >= entry.resetAt) this.map.delete(key);
+      }
+      this.nextCleanup = now + WINDOW_MS;
+    }
+
     const current = this.map.get(userId);
 
     if (!current || now >= current.resetAt) {

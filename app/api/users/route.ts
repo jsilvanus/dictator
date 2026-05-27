@@ -43,6 +43,10 @@ export async function POST(request: Request) {
       role: 'admin' | 'editor';
     };
 
+    if (!body.name?.trim() || !body.email?.trim() || !body.password || !['admin', 'editor'].includes(body.role)) {
+      return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
+    }
+
     const passwordHash = await bcrypt.hash(body.password, 12);
 
     const [created] = await db
