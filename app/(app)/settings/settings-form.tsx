@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { defaultSettings } from '@/lib/data/default-settings';
 
 export function SettingsForm({ userId }: { userId: string }) {
   const { settings, patchSettings } = useSettings();
@@ -42,12 +43,23 @@ export function SettingsForm({ userId }: { userId: string }) {
       </label>
       <label>
         Command trigger
-        <input value={settings.commandTrigger} onChange={(event) => patchSettings({ commandTrigger: event.target.value })} />
+        <input
+          value={settings.commandTrigger}
+          placeholder={defaultSettings.commandTrigger}
+          onChange={(event) => patchSettings({ commandTrigger: event.target.value })}
+        />
       </label>
       <label>
         AI trigger
-        <input value={settings.aiTrigger} onChange={(event) => patchSettings({ aiTrigger: event.target.value })} />
+        <input
+          value={settings.aiTrigger}
+          placeholder={defaultSettings.aiTrigger}
+          onChange={(event) => patchSettings({ aiTrigger: event.target.value })}
+        />
       </label>
+      <p style={{ margin: 0, color: 'var(--muted)' }}>
+        Session override: voice command “change trigger to [word]” only applies to the current tab session.
+      </p>
       <label>
         TTS enabled
         <input

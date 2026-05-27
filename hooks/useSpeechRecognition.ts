@@ -15,6 +15,8 @@ type SpeechRecognitionHandle = {
 
 type SpeechRecognitionOptions = {
   language: string;
+  commandTrigger: string;
+  aiTrigger: string;
   onInterim?: (text: string) => void;
   onFinal?: (text: string) => void;
   onError?: (error: string) => void;
@@ -52,12 +54,22 @@ type SpeechRecognitionErrorEvent = {
 
 export function useSpeechRecognition(options: SpeechRecognitionOptions): SpeechRecognitionHandle {
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const callbacksRef = useRef({
+    onInterim: options.onInterim,
+    onFinal: options.onFinal,
+    onError: options.onError,
+  });
+
+  callbacksRef.current = {
+    onInterim: options.onInterim,
+    onFinal: options.onFinal,
+    onError: options.onError,
+  };
+
   const [listening, setListening] = useState(false);
   const [paused, setPaused] = useState(false);
   const [interimText, setInterimText] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  const language = options.language;
 
   useEffect(() => {
     const Constructor =
@@ -73,7 +85,7 @@ export function useSpeechRecognition(options: SpeechRecognitionOptions): SpeechR
     const recognition = new Constructor();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = language;
+    recognition.lang = options.language;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interim = '';
@@ -90,12 +102,12 @@ export function useSpeechRecognition(options: SpeechRecognitionOptions): SpeechR
 
       if (interim) {
         setInterimText(interim);
-        options.onInterim?.(interim);
+        callbacksRef.current.onInterim?.(interim);
       }
 
       if (final) {
         setInterimText('');
-        options.onFinal?.(final);
+        callbacksRef.current.onFinal?.(final);
       }
     };
 
@@ -117,7 +129,7 @@ export function useSpeechRecognition(options: SpeechRecognitionOptions): SpeechR
             : `Speech error: ${event.error}`;
 
       setError(message);
-      options.onError?.(message);
+      callbacksRef.current.onError?.(message);
     };
 
     recognitionRef.current = recognition;
@@ -126,7 +138,7 @@ export function useSpeechRecognition(options: SpeechRecognitionOptions): SpeechR
       recognition.stop();
       recognitionRef.current = null;
     };
-  }, [language, listening, options]);
+  }, [listening, options.aiTrigger, options.commandTrigger, options.language]);
 
   const start = useCallback(() => {
     setError(null);
