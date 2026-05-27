@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
-import { shares } from '@/lib/db/schema';
+import { documents, shares } from '@/lib/db/schema';
 
 function randomToken() {
   return crypto.randomUUID().replaceAll('-', '');
@@ -13,6 +13,15 @@ export async function POST(request: Request) {
   try {
     const session = await getRequiredSession();
     const body = (await request.json()) as { documentId: string; permission: 'read' | 'edit' };
+
+    const [doc] = await db
+      .select({ ownerId: documents.ownerId })
+      .from(documents)
+      .where(eq(documents.id, body.documentId));
+
+    if (!doc || doc.ownerId !== session.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const [existing] = await db
       .select({ token: shares.token })
@@ -38,20 +47,29 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const token = new URL(request.url).searchParams.get('token');
+  try {
+    await getRequiredSession();
 
-  if (!token) {
-    return NextResponse.json({ error: 'Token required' }, { status: 400 });
+    const token = new URL(request.url).searchParams.get('token');
+
+    if (!token) {
+      return NextResponse.json({ error: 'Token required' }, { status: 400 });
+    }
+
+    const [share] = await db
+      .select({ documentId: shares.documentId, permission: shares.permission })
+      .from(shares)
+      .where(eq(shares.token, token));
+
+    if (!share) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(share);
+  } catch (error) {
+    if (error instanceof Response) {
+      return NextResponse.json({ error: await error.text() }, { status: error.status });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  const [share] = await db
-    .select({ documentId: shares.documentId, permission: shares.permission })
-    .from(shares)
-    .where(eq(shares.token, token));
-
-  if (!share) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  }
-
-  return NextResponse.json(share);
 }
