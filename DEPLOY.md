@@ -1,4 +1,4 @@
-# VoiceDoc — Deployment Guide
+# Dictator — Deployment Guide
 
 ## Requirements
 
@@ -10,8 +10,8 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/voicedoc.git
-cd voicedoc
+git clone https://github.com/your-org/dictator.git
+cd dictator
 
 # 2. Copy the example env file and fill in your values
 cp .env.example .env
@@ -35,7 +35,7 @@ Log in with the `ADMIN_EMAIL` / `ADMIN_PASSWORD` you set in `.env`.
 |---|---|---|
 | `DATABASE_URL` | yes | PostgreSQL connection string |
 | `NEXTAUTH_SECRET` | yes | JWT signing secret (`openssl rand -base64 32`) |
-| `NEXTAUTH_URL` | yes | Public URL of the app (e.g. `https://voicedoc.example.com`) |
+| `NEXTAUTH_URL` | yes | Public URL of the app (e.g. `https://dictator.example.com`) |
 | `ANTHROPIC_API_KEY` | yes | Anthropic API key |
 | `DB_PASSWORD` | yes (compose) | PostgreSQL password used in the compose stack |
 | `ADMIN_EMAIL` | seed only | First admin user email |

@@ -16,9 +16,11 @@ export function SettingsForm({
   const { settings, patchSettings } = useSettings();
   const [status, setStatus] = useState('');
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [sessionOverride, setSessionOverride] = useState<string | null>(null);
 
-  // Read session override from sessionStorage
-  const sessionOverride = typeof window !== 'undefined' ? sessionStorage.getItem('temporary-command-trigger') : null;
+  useEffect(() => {
+    setSessionOverride(sessionStorage.getItem('temporary-command-trigger'));
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
@@ -91,7 +93,7 @@ export function SettingsForm({
 
       <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--muted)' }}>
         Instance defaults: command trigger &ldquo;{instanceCommandTriggerDefault}&rdquo;, AI trigger &ldquo;
-        {instanceAiTriggerDefault}&rdquo;. Leave fields empty to use instance defaults.
+        {instanceAiTriggerDefault}&rdquo;.
       </p>
 
       {sessionOverride ? (
@@ -102,7 +104,7 @@ export function SettingsForm({
             style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
             onClick={() => {
               sessionStorage.removeItem('temporary-command-trigger');
-              window.location.reload();
+              setSessionOverride(null);
             }}
           >
             Clear override

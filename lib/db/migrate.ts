@@ -4,19 +4,19 @@ import postgres from 'postgres';
 
 import { env } from '@/lib/env';
 
-let hasRun = false;
+let migrationPromise: Promise<void> | null = null;
 
-export async function runMigrations() {
-  if (hasRun) {
-    return;
-  }
+export function runMigrations(): Promise<void> {
+  migrationPromise ??= doMigrate();
+  return migrationPromise;
+}
 
+async function doMigrate(): Promise<void> {
   const migrationClient = postgres(env.DATABASE_URL, { max: 1 });
   const migrationDb = drizzle(migrationClient);
 
   try {
     await migrate(migrationDb, { migrationsFolder: 'drizzle' });
-    hasRun = true;
   } finally {
     await migrationClient.end({ timeout: 5 });
   }

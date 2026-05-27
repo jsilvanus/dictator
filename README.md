@@ -1,6 +1,6 @@
-# VoiceDoc — product spec & phased TODO
+# Dictator — product spec & phased TODO
 
-Working title: **VoiceDoc**
+Working title: **Dictator**
 Organisation: Evangelical Lutheran Church of Finland (initial deployment)
 Stack: Next.js 15 App Router · ESM · Tiptap · Auth.js · PostgreSQL · Drizzle ORM · Anthropic API · Docker
 
@@ -8,7 +8,7 @@ Stack: Next.js 15 App Router · ESM · Tiptap · Auth.js · PostgreSQL · Drizzl
 
 ## 1. Product overview
 
-VoiceDoc is a self-hosted, voice-first document editor for institutional deployment. A user presses a
+Dictator is a self-hosted, voice-first document editor for institutional deployment. A user presses a
 single button and speaks; text flows to the cursor. Voice commands (prefixed with a configurable
 trigger phrase) control the editor without touching the keyboard. A second trigger phrase routes the
 same speech stream to an embedded AI that can read, react to, and write into the document inline —
@@ -27,7 +27,7 @@ infrastructure.
 ## 2. Architecture
 
 ```
-voicedoc/
+dictator/
   app/
     (auth)/
       login/page.tsx
@@ -598,7 +598,7 @@ services:
     build: .
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://voicedoc:${DB_PASSWORD}@db:5432/voicedoc
+      DATABASE_URL: postgres://dictator:${DB_PASSWORD}@db:5432/dictator
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
@@ -614,12 +614,12 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: voicedoc
-      POSTGRES_USER: voicedoc
+      POSTGRES_DB: dictator
+      POSTGRES_USER: dictator
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U voicedoc"]
+      test: ["CMD-SHELL", "pg_isready -U dictator"]
       interval: 10s
       retries: 5
 

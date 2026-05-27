@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { ZodError } from 'zod';
 
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
@@ -27,6 +28,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   } catch (error) {
     if (error instanceof Response) {
       return NextResponse.json({ error: await error.text() }, { status: error.status });
+    }
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: error.errors[0]?.message ?? 'Invalid settings' }, { status: 400 });
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

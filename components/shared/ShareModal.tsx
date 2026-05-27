@@ -21,6 +21,7 @@ export function ShareModal({
   const [email, setEmail] = useState('');
   const [tokenUrl, setTokenUrl] = useState('');
   const [shares, setShares] = useState<ShareEntry[]>([]);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   const loadShares = useCallback(async () => {
     const response = await fetch(`/api/documents/${documentId}/share`);
@@ -68,11 +69,17 @@ export function ShareModal({
             style={{ display: 'grid', gap: 8 }}
             onSubmit={async (event) => {
               event.preventDefault();
-              await fetch(`/api/documents/${documentId}/share`, {
+              setInviteError(null);
+              const response = await fetch(`/api/documents/${documentId}/share`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, permission }),
               });
+              if (!response.ok) {
+                const data = (await response.json().catch(() => ({}))) as { error?: string };
+                setInviteError(data.error ?? 'Failed to send invite');
+                return;
+              }
               setEmail('');
               await loadShares();
             }}
@@ -89,6 +96,7 @@ export function ShareModal({
               <option value="read">Can view</option>
             </select>
             <button type="submit">Send invite</button>
+            {inviteError ? <p style={{ margin: 0, color: 'var(--error, #dc2626)' }}>{inviteError}</p> : null}
           </form>
         ) : null}
 
