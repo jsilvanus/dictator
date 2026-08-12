@@ -46,12 +46,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       content: Record<string, unknown>;
       wordCount: number;
       saveCount?: number;
+      deviceId?: string;
+      deviceVersion?: number;
     };
 
     const [doc] = await db
       .select({
         id: documents.id,
         ownerId: documents.ownerId,
+        deviceVersion: documents.deviceVersion,
         canEdit: shares.permission,
       })
       .from(documents)
@@ -62,12 +65,18 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Determine device source
+    const deviceIdPrefix = body.deviceId?.startsWith('android-') ? 'android' : 'web';
+    const newDeviceVersion = body.deviceVersion || (doc.deviceVersion || 0) + 1;
+
     const [updated] = await db
       .update(documents)
       .set({
         title: body.title,
         content: body.content,
         wordCount: body.wordCount,
+        lastModifiedDevice: deviceIdPrefix,
+        deviceVersion: newDeviceVersion,
         updatedAt: new Date(),
       })
       .where(eq(documents.id, id))
@@ -78,6 +87,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         await tx.insert(documentVersions).values({
           documentId: id,
           content: body.content,
+          deviceSource: deviceIdPrefix,
+          deviceVersion: newDeviceVersion,
         });
 
         const staleRows = await tx
