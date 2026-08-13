@@ -6,6 +6,22 @@ Stack: Next.js 15 App Router · ESM · Tiptap · Auth.js · PostgreSQL · Drizzl
 
 ---
 
+## 🔐 Privacy-First by Design
+
+Dictator is built with **privacy-by-design** principles:
+
+- **Local-first processing**: Documents and voice stay on-device by default
+- **Transparent AI policies**: Provider data handling clearly documented (see [PRIVACY_ARCHITECTURE.md](./PRIVACY_ARCHITECTURE.md))
+- **Minimal data transmission**: User controls exactly what gets sent to cloud AI (selected text vs full document)
+- **Privacy-safe telemetry**: HMAC-based pseudonymous user IDs, no document/prompt logging
+- **Sensitive data detection**: Built-in scanner warns before sending credit cards, API keys, SSN, etc.
+- **Provenance tracking**: AI-modified content is tracked and auditable
+- **Full user control**: Export all data, delete everything, review access logs
+
+For complete privacy documentation, see **[PRIVACY_ARCHITECTURE.md](./PRIVACY_ARCHITECTURE.md)**.
+
+---
+
 ## 1. Product overview
 
 Dictator is a self-hosted, voice-first document editor for institutional deployment. A user presses a
