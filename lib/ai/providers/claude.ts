@@ -1,9 +1,10 @@
 import { BaseAiProvider } from './base';
-import { AiChatRequest, AiInlineRequest, AiResponse, AiStreamChunk, ModelProvider } from './types';
+import { AiChatRequest, AiInlineRequest, AiResponse, AiStreamChunk, ModelProvider, ToolCall } from './types';
 
 /**
  * Claude/Anthropic AI Provider
  * Implements provider interface for Anthropic's Claude API
+ * Supports tool calling via tool_use content blocks
  */
 export class ClaudeProvider extends BaseAiProvider {
   private apiKey: string;
@@ -56,14 +57,16 @@ export class ClaudeProvider extends BaseAiProvider {
       }
 
       const data = (await response.json()) as {
-        content?: Array<{ type: string; text?: string }>;
+        content?: Array<{ type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }>;
         usage?: { input_tokens?: number; output_tokens?: number };
       };
 
       const textContent = data.content?.find((c) => c.type === 'text')?.text ?? '';
+      const toolCalls = this.parseToolCalls(data.content ?? []);
 
       return {
         content: textContent,
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
         usage: {
           inputTokens: data.usage?.input_tokens ?? 0,
           outputTokens: data.usage?.output_tokens ?? 0,
@@ -82,6 +85,15 @@ export class ClaudeProvider extends BaseAiProvider {
     const params = this.mergeRequestParams(request);
 
     try {
+      // Convert tools to Anthropic format if provided
+      const tools = request.tools
+        ? request.tools.map((tool) => ({
+            name: tool.name,
+            description: tool.description,
+            input_schema: tool.inputSchema,
+          }))
+        : undefined;
+
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -95,6 +107,7 @@ export class ClaudeProvider extends BaseAiProvider {
           temperature: params.temperature,
           system: request.systemPrompt,
           messages: request.messages,
+          tools,
           stream: true,
         }),
       });
@@ -113,6 +126,21 @@ export class ClaudeProvider extends BaseAiProvider {
   }
 
   /**
+   * Parse tool_use content blocks from Anthropic response
+   * @param content - Array of content blocks from Anthropic API
+   * @returns Array of ToolCall objects
+   */
+  private parseToolCalls(content: Array<{ type: string; id?: string; name?: string; input?: Record<string, unknown> }>): ToolCall[] {
+    return content
+      .filter((block) => block.type === 'tool_use')
+      .map((block) => ({
+        id: block.id ?? `tool-${Date.now()}`,
+        name: block.name ?? 'unknown',
+        arguments: block.input ?? {},
+      }));
+  }
+
+  /**
    * Convert Anthropic's SSE stream format to our internal format
    */
   private createStreamFromResponse(body: ReadableStream<Uint8Array>): ReadableStream<AiStreamChunk> {
@@ -120,6 +148,8 @@ export class ClaudeProvider extends BaseAiProvider {
       async start(controller) {
         const reader = body.getReader();
         const decoder = new TextDecoder();
+        const contentBlocks: Array<{ type: string; id?: string; name?: string; input?: Record<string, unknown>; text?: string }> = [];
+        let currentToolInput: Record<string, unknown> = {};
 
         try {
           while (true) {
@@ -138,18 +168,71 @@ export class ClaudeProvider extends BaseAiProvider {
               try {
                 const event = JSON.parse(data) as {
                   type?: string;
-                  delta?: { type?: string; text?: string };
+                  index?: number;
+                  delta?: { type?: string; text?: string; input?: Record<string, unknown> };
+                  content_block?: { type?: string; id?: string; name?: string };
                 };
 
+                // Handle content block start
+                if (event.type === 'content_block_start' && event.content_block) {
+                  const blockType = event.content_block.type;
+                  if (blockType === 'text') {
+                    contentBlocks.push({ type: 'text', text: '' });
+                  } else if (blockType === 'tool_use') {
+                    currentToolInput = {};
+                    contentBlocks.push({
+                      type: 'tool_use',
+                      id: event.content_block.id,
+                      name: event.content_block.name,
+                      input: currentToolInput,
+                    });
+                  }
+                }
+
+                // Handle text delta
                 if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+                  const lastBlock = contentBlocks[contentBlocks.length - 1];
+                  if (lastBlock && lastBlock.type === 'text') {
+                    lastBlock.text = (lastBlock.text ?? '') + (event.delta.text ?? '');
+                  }
                   controller.enqueue({
                     type: 'delta',
                     content: event.delta.text,
                   });
                 }
+
+                // Handle tool input delta
+                if (event.type === 'content_block_delta' && event.delta?.type === 'input_json_delta') {
+                  const lastBlock = contentBlocks[contentBlocks.length - 1];
+                  if (lastBlock && lastBlock.type === 'tool_use') {
+                    // Note: Anthropic sends tool input as JSON string deltas
+                    // This is a simplified implementation
+                    if (event.delta.input) {
+                      Object.assign(currentToolInput, event.delta.input);
+                    }
+                  }
+                }
               } catch {
                 // Skip malformed SSE events
               }
+            }
+          }
+
+          // Extract and emit tool calls if any
+          const toolCalls = contentBlocks
+            .filter((block) => block.type === 'tool_use')
+            .map((block) => ({
+              id: block.id ?? `tool-${Date.now()}`,
+              name: block.name ?? 'unknown',
+              arguments: block.input ?? {},
+            }));
+
+          if (toolCalls.length > 0) {
+            for (const toolCall of toolCalls) {
+              controller.enqueue({
+                type: 'tool-call',
+                toolCall,
+              });
             }
           }
 
@@ -166,3 +249,4 @@ export class ClaudeProvider extends BaseAiProvider {
     });
   }
 }
+

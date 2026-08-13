@@ -1,5 +1,5 @@
 import { BaseAiProvider } from './base';
-import { AiChatRequest, AiInlineRequest, AiResponse, AiStreamChunk, ModelProvider } from './types';
+import { AiChatRequest, AiInlineRequest, AiResponse, AiStreamChunk, ModelProvider, ToolCall } from './types';
 
 /**
  * Generic OpenAI-Compatible Provider
@@ -36,7 +36,7 @@ export class GenericOpenAiProvider extends BaseAiProvider {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `******
+          Authorization: 'Bearer ' + this.apiKey,
         },
         body: JSON.stringify({
           model: this.model,
@@ -104,7 +104,7 @@ export class GenericOpenAiProvider extends BaseAiProvider {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `******
+          Authorization: 'Bearer ' + this.apiKey,
         },
         body: JSON.stringify({
           model: this.model,
@@ -191,4 +191,31 @@ export class GenericOpenAiProvider extends BaseAiProvider {
       },
     });
   }
+
+  /**
+   * Parse tool calls from OpenAI-compatible function_calls format
+   */
+  private parseToolCalls(toolCalls?: Array<{ id: string; function?: { name: string; arguments: string } }>): ToolCall[] {
+    if (!toolCalls || toolCalls.length === 0) return [];
+    
+    return toolCalls
+      .filter((call) => call.id && call.function?.name)
+      .map((call) => ({
+        id: call.id,
+        name: call.function!.name,
+        arguments: this.parseJsonArguments(call.function!.arguments),
+      }));
+  }
+
+  /**
+   * Safely parse JSON string arguments
+   */
+  private parseJsonArguments(jsonString: string): Record<string, unknown> {
+    try {
+      return JSON.parse(jsonString);
+    } catch {
+      return {};
+    }
+  }
 }
+

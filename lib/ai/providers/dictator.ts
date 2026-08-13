@@ -1,8 +1,9 @@
-import { AiProvider, AiResponse, AiStreamChunk, AiChatRequest, AiInlineRequest } from './types';
+import { AiProvider, AiResponse, AiStreamChunk, AiChatRequest, AiInlineRequest, ToolCall } from './types';
 
 /**
  * Dictator Service AI Provider
  * Connects to the Dictator-hosted AI service backend
+ * Supports tool calling via the Dictator API
  */
 export class DictatorProvider implements AiProvider {
   private baseUrl: string;
@@ -37,12 +38,14 @@ export class DictatorProvider implements AiProvider {
       const data = (await response.json()) as {
         content?: string;
         stopReason?: string;
+        toolCalls?: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
         usage?: { inputTokens: number; outputTokens: number };
       };
 
       return {
         content: data.content || '',
         stopReason: data.stopReason,
+        toolCalls: data.toolCalls,
         usage: data.usage,
       };
     } catch (error) {
@@ -64,6 +67,7 @@ export class DictatorProvider implements AiProvider {
             temperature: request.temperature ?? 0.7,
             maxTokens: request.maxTokens ?? 2048,
             model: this.model,
+            tools: request.tools,
             stream: true,
           }),
         });
@@ -108,11 +112,22 @@ export class DictatorProvider implements AiProvider {
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               try {
-                const data = JSON.parse(line.slice(6)) as { content?: string };
+                const data = JSON.parse(line.slice(6)) as {
+                  content?: string;
+                  toolCall?: { id: string; name: string; arguments: Record<string, unknown> };
+                };
+
                 if (data.content) {
                   controller.enqueue({
                     type: 'delta',
                     content: data.content,
+                  });
+                }
+
+                if (data.toolCall) {
+                  controller.enqueue({
+                    type: 'tool-call',
+                    toolCall: data.toolCall,
                   });
                 }
               } catch {
@@ -144,3 +159,4 @@ export class DictatorProvider implements AiProvider {
     return 'dictator' as const;
   }
 }
+

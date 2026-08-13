@@ -1,9 +1,10 @@
 import { BaseAiProvider } from './base';
-import { AiChatRequest, AiInlineRequest, AiResponse, AiStreamChunk, ModelProvider } from './types';
+import { AiChatRequest, AiInlineRequest, AiResponse, AiStreamChunk, ModelProvider, ToolCall } from './types';
 
 /**
  * Ollama Provider
  * Implements provider interface for Ollama (self-hosted, OpenAI-compatible)
+ * Tool support is limited and depends on model capabilities
  */
 export class OllamaProvider extends BaseAiProvider {
   private baseUrl: string;
@@ -72,18 +73,31 @@ export class OllamaProvider extends BaseAiProvider {
     const params = this.mergeRequestParams(request);
 
     try {
+      // Note: Ollama's tool support is limited and experimental
+      // Only include tools if the request provides them
+      const body: Record<string, unknown> = {
+        model: this.model,
+        messages: request.messages,
+        temperature: params.temperature,
+        num_predict: params.maxTokens,
+        stream: true,
+      };
+
+      // Add tools if provided (experimental)
+      if (request.tools && request.tools.length > 0) {
+        body.tools = request.tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.inputSchema,
+        }));
+      }
+
       const response = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: this.model,
-          messages: request.messages,
-          temperature: params.temperature,
-          num_predict: params.maxTokens,
-          stream: true,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -96,6 +110,34 @@ export class OllamaProvider extends BaseAiProvider {
       return this.createErrorStream(
         `Ollama chat request failed: ${error instanceof Error ? error.message : String(error)}`
       );
+    }
+  }
+
+  /**
+   * Parse tool calls from Ollama response (experimental)
+   * @param toolCalls - Array of tool call objects
+   * @returns Array of ToolCall objects
+   */
+  private parseToolCalls(toolCalls: Array<{ id?: string; name?: string; arguments?: Record<string, unknown> | string }>): ToolCall[] {
+    return toolCalls
+      .filter((call) => call.name)
+      .map((call) => ({
+        id: call.id ?? `tool-${Date.now()}`,
+        name: call.name ?? 'unknown',
+        arguments: typeof call.arguments === 'string' ? this.parseJsonArguments(call.arguments) : call.arguments ?? {},
+      }));
+  }
+
+  /**
+   * Safely parse JSON arguments
+   * @param jsonStr - JSON string to parse
+   * @returns Parsed object or empty object on error
+   */
+  private parseJsonArguments(jsonStr: string): Record<string, unknown> {
+    try {
+      return JSON.parse(jsonStr);
+    } catch {
+      return {};
     }
   }
 
@@ -125,7 +167,7 @@ export class OllamaProvider extends BaseAiProvider {
 
               try {
                 const event = JSON.parse(line) as {
-                  message?: { content?: string };
+                  message?: { content?: string; tool_calls?: Array<{ id?: string; name?: string; arguments?: Record<string, unknown> | string }> };
                   done?: boolean;
                 };
 
@@ -134,6 +176,17 @@ export class OllamaProvider extends BaseAiProvider {
                     type: 'delta',
                     content: event.message.content,
                   });
+                }
+
+                // Handle tool calls if present
+                if (event.message?.tool_calls) {
+                  const toolCalls = (this as any).parseToolCalls(event.message.tool_calls);
+                  for (const toolCall of toolCalls) {
+                    controller.enqueue({
+                      type: 'tool-call',
+                      toolCall,
+                    });
+                  }
                 }
 
                 if (event.done) {
@@ -151,7 +204,7 @@ export class OllamaProvider extends BaseAiProvider {
           if (buffer.trim()) {
             try {
               const event = JSON.parse(buffer) as {
-                message?: { content?: string };
+                message?: { content?: string; tool_calls?: Array<{ id?: string; name?: string; arguments?: Record<string, unknown> | string }> };
                 done?: boolean;
               };
 
@@ -160,6 +213,17 @@ export class OllamaProvider extends BaseAiProvider {
                   type: 'delta',
                   content: event.message.content,
                 });
+              }
+
+              // Handle tool calls if present
+              if (event.message?.tool_calls) {
+                const toolCalls = (this as any).parseToolCalls(event.message.tool_calls);
+                for (const toolCall of toolCalls) {
+                  controller.enqueue({
+                    type: 'tool-call',
+                    toolCall,
+                  });
+                }
               }
 
               if (event.done) {
@@ -185,3 +249,4 @@ export class OllamaProvider extends BaseAiProvider {
     });
   }
 }
+
