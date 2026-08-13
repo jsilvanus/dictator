@@ -37,6 +37,8 @@ kotlin {
 
                 // Ktor Client (multiplatform)
                 implementation("io.ktor:ktor-client-core:2.3.4")
+                implementation("io.ktor:ktor-client-serialization:2.3.4")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.4")
 
                 // Koin DI
                 implementation("io.insert-koin:koin-core:3.4.0")
