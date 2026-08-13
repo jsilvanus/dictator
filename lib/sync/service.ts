@@ -6,7 +6,7 @@
 import { and, eq, lte } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { documents, documentVersions, pendingSyncQueue, syncMetadata } from '@/lib/db/schema';
+import { documents, documentVersions, pendingSyncQueue } from '@/lib/db/schema';
 
 export interface SyncQueueItem {
   id: string;
@@ -100,6 +100,8 @@ export class SyncService {
         // Update queue item status
         await db.update(pendingSyncQueue).set({ status: 'synced', updatedAt: new Date() }).where(eq(pendingSyncQueue.id, item.id));
       } catch (error) {
+        // Log error but continue processing other items
+        void error;
         failed.push(item.id);
 
         // Update retry count and status

@@ -4,13 +4,14 @@
  * PUT: Update device preferences
  */
 
+/* eslint-disable simple-import-sort/imports */
 import { NextResponse } from 'next/server';
 
+import { conflictResolutionService, type DevicePreferences } from '@/lib/sync';
 import { getRequiredSession } from '@/lib/auth/session';
-import { conflictResolutionService } from '@/lib/sync';
-import type { DevicePreferences } from '@/lib/sync';
+/* eslint-enable simple-import-sort/imports */
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await getRequiredSession();
 
@@ -27,10 +28,10 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(_request: Request) {
   try {
     const session = await getRequiredSession();
-    const updates = (await request.json()) as Partial<DevicePreferences>;
+    const updates = (await _request.json()) as Partial<DevicePreferences>;
 
     await conflictResolutionService.updateDevicePreferences(session.userId, updates);
 

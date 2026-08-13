@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
 import { getRequiredSession } from '@/lib/auth/session';
 import { syncService } from '@/lib/sync';
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const session = await getRequiredSession();
 
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await getRequiredSession();
 

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { getRequiredSession } from '@/lib/auth/session';
@@ -17,7 +17,7 @@ interface SyncStatusResponse {
   totalPending: number;
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await getRequiredSession();
 

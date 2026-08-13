@@ -16,9 +16,9 @@ interface ResolveConflictRequest {
   webPriority?: number;
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getRequiredSession();
+    await getRequiredSession();
     const { id } = await params;
 
     const history = await conflictResolutionService.getConflictHistory(id, 1);
@@ -38,11 +38,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getRequiredSession();
+    await getRequiredSession();
     const { id } = await params;
-    const body = (await request.json()) as ResolveConflictRequest;
+    const body = (await _request.json()) as ResolveConflictRequest;
 
     let resolved;
 

@@ -127,7 +127,7 @@ export function ConflictResolutionUI({ onConflictResolved }: ConflictResolutionU
 
       {selectedConflict && (
         <div className="space-y-3 rounded bg-gray-50 p-3">
-          <div className="text-sm font-medium">Resolve "{selectedConflict.title}"</div>
+          <div className="text-sm font-medium">Resolve &quot;{selectedConflict.title}&quot;</div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Resolution Strategy</label>

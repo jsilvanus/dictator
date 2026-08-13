@@ -15,11 +15,11 @@ interface DetectConflictRequest {
   webVersion: Record<string, unknown>;
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const session = await getRequiredSession();
+    const { userId } = await getRequiredSession();
 
-    const conflicts = await conflictResolutionService.getUnresolvedConflicts(session.userId);
+    const conflicts = await conflictResolutionService.getUnresolvedConflicts(userId);
 
     return NextResponse.json({
       conflicts,
@@ -33,10 +33,10 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
   try {
-    const session = await getRequiredSession();
-    const body = (await request.json()) as DetectConflictRequest;
+    await getRequiredSession();
+    const body = (await _request.json()) as DetectConflictRequest;
 
     const conflict = await conflictResolutionService.detectConflict(body.documentId, body.androidVersion, body.webVersion);
 
