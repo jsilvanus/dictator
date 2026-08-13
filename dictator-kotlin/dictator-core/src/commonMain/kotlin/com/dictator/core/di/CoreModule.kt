@@ -75,6 +75,62 @@ val coreModule = module {
     singleOf(::com.dictator.core.util.voice.PunctuationNormalizer)
     singleOf(::com.dictator.core.util.validation.Validators)
     
-    // Services will be implemented in Phase B/C
-    // For now, interfaces are bound to repositories for basic operations
+    // Services (singletons)
+    single<AuthService> {
+        com.dictator.core.service.AuthServiceImpl(
+            remoteApiService = get(),
+            userRepository = get(),
+            sharedPreferences = get()
+        )
+    }
+    
+    single<DocumentService> {
+        com.dictator.core.service.DocumentServiceImpl(
+            documentRepository = get(),
+            remoteApiService = get(),
+            syncService = get()
+        )
+    }
+    
+    single<VoiceService> {
+        com.dictator.core.service.VoiceServiceImpl(
+            voiceCommandParser = get(),
+            punctuationNormalizer = get(),
+            documentRepository = get()
+        )
+    }
+    
+    single<AiService> {
+        com.dictator.core.service.AiServiceImpl(
+            remoteApiService = get(),
+            aiSessionRepository = get()
+        )
+    }
+    
+    single<SyncService> {
+        com.dictator.core.service.SyncServiceImpl(
+            documentRepository = get(),
+            documentVersionRepository = get(),
+            syncMetadataRepository = get(),
+            pendingSyncRepository = get(),
+            conflictRepository = get(),
+            remoteApiService = get()
+        )
+    }
+    
+    single<FolderService> {
+        com.dictator.core.service.FolderServiceImpl(
+            folderRepository = get(),
+            documentRepository = get(),
+            remoteApiService = get()
+        )
+    }
+    
+    single<ShareService> {
+        com.dictator.core.service.ShareServiceImpl(
+            shareRepository = get(),
+            documentRepository = get(),
+            remoteApiService = get()
+        )
+    }
 }

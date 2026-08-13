@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Dictator</string>
+    
+    <!-- Common UI strings -->
+    <string name="loading">Loading...</string>
+    <string name="error">Error</string>
+    <string name="try_again">Try Again</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="create">Create</string>
+    <string name="logout">Logout</string>
+    <string name="settings">Settings</string>
+    
+    <!-- Authentication -->
+    <string name="login">Login</string>
+    <string name="signup">Sign Up</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="name">Name</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="dont_have_account">Don\'t have an account?</string>
+    <string name="already_have_account">Already have an account?</string>
+    
+    <!-- Documents -->
+    <string name="documents">Documents</string>
+    <string name="new_document">New Document</string>
+    <string name="document_title">Document Title</string>
+    <string name="delete_document">Delete Document</string>
+    <string name="edit_document">Edit Document</string>
+    <string name="no_documents">No documents yet</string>
+    
+    <!-- Folders -->
+    <string name="folders">Folders</string>
+    <string name="new_folder">New Folder</string>
+    <string name="folder_name">Folder Name</string>
+    <string name="delete_folder">Delete Folder</string>
+    
+    <!-- Voice -->
+    <string name="voice_input">Voice Input</string>
+    <string name="start_listening">Start Listening</string>
+    <string name="stop_listening">Stop Listening</string>
+    <string name="recording">Recording...</string>
+    
+    <!-- AI -->
+    <string name="ai_assistant">AI Assistant</string>
+    <string name="ask_ai">Ask AI</string>
+    <string name="ai_response">AI Response</string>
+    
+    <!-- Sync -->
+    <string name="sync">Sync</string>
+    <string name="syncing">Syncing...</string>
+    <string name="sync_complete">Sync Complete</string>
+    <string name="sync_error">Sync Error</string>
+    
+    <!-- Sharing -->
+    <string name="share">Share</string>
+    <string name="share_document">Share Document</string>
+    <string name="share_with">Share with</string>
+    <string name="permission">Permission</string>
+    <string name="view_only">View Only</string>
+    <string name="can_edit">Can Edit</string>
+    <string name="can_comment">Can Comment</string>
+</resources>
