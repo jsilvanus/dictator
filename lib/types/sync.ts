@@ -107,3 +107,113 @@ export interface SyncStatusResponse {
   }>;
   totalPending: number;
 }
+
+// Phase 4: Comprehensive Versioning Types
+export interface VersionSnapshot {
+  id: string;
+  documentId: string;
+  versionNumber: number;
+  snapshotData: Record<string, unknown>;
+  createdAt: Date;
+  createdByDevice: DeviceSource;
+  tag?: string;
+  isCheckpoint: boolean;
+}
+
+export interface VersionMetadata {
+  id: string;
+  documentId: string;
+  versionNumber: number;
+  parentVersion?: number;
+  changeSummary?: string;
+  wordCountChange?: number;
+  sizeBytes?: number;
+  isMajorVersion: boolean;
+  createdAt: Date;
+}
+
+export interface DeviceVersionRecord {
+  id: string;
+  documentId: string;
+  deviceId: string;
+  deviceVersion: number;
+  syncedAt: Date;
+  status: 'synced' | 'pending' | 'conflict';
+}
+
+export interface VersionDiff {
+  from: number;
+  to: number;
+  additions: string[];
+  deletions: string[];
+  modifications: Array<{ line: number; from: string; to: string }>;
+  unifiedDiff: string;
+}
+
+export interface VersionTimeline {
+  documentId: string;
+  versionNumber: number;
+  timestamp: Date;
+  createdByDevice: DeviceSource;
+  changeSummary?: string;
+  tags: string[];
+}
+
+// Phase 5: Real-time Collaboration & Sync Optimization Types
+export interface SyncActivityLogEntry {
+  id: string;
+  userId: string;
+  documentId: string;
+  deviceId: string;
+  action: 'sync_started' | 'sync_completed' | 'conflict_detected' | 'conflict_resolved';
+  details: Record<string, unknown>;
+  timestamp: Date;
+}
+
+export interface SyncNotification {
+  id: string;
+  userId: string;
+  documentId: string;
+  type: 'sync_complete' | 'conflict' | 'version_available';
+  read: boolean;
+  createdAt: Date;
+}
+
+export interface SyncScheduleConfig {
+  documentId: string;
+  intervalMinutes?: number;
+  onFileChange?: boolean;
+  batteryAware?: boolean;
+  bandwidthLimit?: number;
+}
+
+// Phase 6: Advanced Versioning & Sync Orchestration Types
+export interface VersionBranch {
+  id: string;
+  documentId: string;
+  branchName: string;
+  baseVersion: number;
+  createdAt: Date;
+  isMain: boolean;
+}
+
+export interface SyncPerformanceMetric {
+  id: string;
+  documentId: string;
+  syncTimeMs: number;
+  dataSizeBytes: number;
+  compressionRatio?: number;
+  success: boolean;
+  timestamp: Date;
+}
+
+export interface SyncAnalytics {
+  documentId: string;
+  totalSyncs: number;
+  successfulSyncs: number;
+  failedSyncs: number;
+  averageSyncTimeMs: number;
+  averageDataSizeBytes: number;
+  compressionRatio: number;
+  period: 'hour' | 'day' | 'week' | 'month';
+}

@@ -1,8 +1,10 @@
 import { relations, sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -138,6 +140,97 @@ export const documentConflicts = pgTable('document_conflicts', {
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
 });
 
+// Phase 4: Comprehensive Versioning
+export const documentVersionSnapshots = pgTable('document_version_snapshots', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  documentId: uuid('document_id')
+    .notNull()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+  versionNumber: bigint('version_number', { mode: 'number' }).notNull(),
+  snapshotData: jsonb('snapshot_data').$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  createdByDevice: text('created_by_device').notNull().default('web'),
+  tag: text('tag'),
+  isCheckpoint: boolean('is_checkpoint').notNull().default(false),
+}, (t) => [unique('document_version_snapshots_unique').on(t.documentId, t.versionNumber)]);
+
+export const documentVersionMetadata = pgTable('document_version_metadata', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  documentId: uuid('document_id')
+    .notNull()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+  versionNumber: bigint('version_number', { mode: 'number' }).notNull(),
+  parentVersion: bigint('parent_version', { mode: 'number' }),
+  changeSummary: text('change_summary'),
+  wordCountChange: integer('word_count_change'),
+  sizeBytes: integer('size_bytes'),
+  isMajorVersion: boolean('is_major_version').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [unique('document_version_metadata_unique').on(t.documentId, t.versionNumber)]);
+
+export const deviceVersionHistory = pgTable('device_version_history', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  documentId: uuid('document_id')
+    .notNull()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+  deviceId: text('device_id').notNull(),
+  deviceVersion: bigint('device_version', { mode: 'number' }).notNull(),
+  syncedAt: timestamp('synced_at', { withTimezone: true }).defaultNow().notNull(),
+  status: text('status').notNull().default('synced'),
+}, (t) => [unique('device_version_history_unique').on(t.documentId, t.deviceId, t.deviceVersion)]);
+
+// Phase 5: Real-time Collaboration & Sync Optimization
+export const syncActivityLog = pgTable('sync_activity_log', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id),
+  documentId: uuid('document_id')
+    .notNull()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+  deviceId: text('device_id').notNull(),
+  action: text('action').notNull(),
+  details: jsonb('details').$type<Record<string, unknown>>().notNull().default({}),
+  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const syncNotifications = pgTable('sync_notifications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  documentId: uuid('document_id')
+    .notNull()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  read: boolean('read').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Phase 6: Advanced Versioning & Sync Orchestration
+export const versionBranches = pgTable('version_branches', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  documentId: uuid('document_id')
+    .notNull()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+  branchName: text('branch_name').notNull(),
+  baseVersion: bigint('base_version', { mode: 'number' }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  isMain: boolean('is_main').notNull().default(false),
+}, (t) => [unique('version_branches_unique').on(t.documentId, t.branchName)]);
+
+export const syncPerformanceMetrics = pgTable('sync_performance_metrics', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  documentId: uuid('document_id')
+    .notNull()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+  syncTimeMs: integer('sync_time_ms').notNull(),
+  dataSizeBytes: integer('data_size_bytes').notNull(),
+  compressionRatio: numeric('compression_ratio', { precision: 5, scale: 2 }),
+  success: boolean('success').notNull(),
+  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   documents: many(documents),
 }));
@@ -158,6 +251,13 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   }),
   pendingSyncs: many(pendingSyncQueue),
   conflicts: many(documentConflicts),
+  versionSnapshots: many(documentVersionSnapshots),
+  versionMetadata: many(documentVersionMetadata),
+  deviceVersionHistory: many(deviceVersionHistory),
+  syncActivityLogs: many(syncActivityLog),
+  syncNotifications: many(syncNotifications),
+  versionBranches: many(versionBranches),
+  performanceMetrics: many(syncPerformanceMetrics),
 }));
 
 export const syncMetadataRelations = relations(syncMetadata, ({ one }) => ({
@@ -177,6 +277,66 @@ export const pendingSyncQueueRelations = relations(pendingSyncQueue, ({ one }) =
 export const documentConflictsRelations = relations(documentConflicts, ({ one }) => ({
   document: one(documents, {
     fields: [documentConflicts.documentId],
+    references: [documents.id],
+  }),
+}));
+
+// Phase 4 relations
+export const documentVersionSnapshotsRelations = relations(documentVersionSnapshots, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentVersionSnapshots.documentId],
+    references: [documents.id],
+  }),
+}));
+
+export const documentVersionMetadataRelations = relations(documentVersionMetadata, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentVersionMetadata.documentId],
+    references: [documents.id],
+  }),
+}));
+
+export const deviceVersionHistoryRelations = relations(deviceVersionHistory, ({ one }) => ({
+  document: one(documents, {
+    fields: [deviceVersionHistory.documentId],
+    references: [documents.id],
+  }),
+}));
+
+// Phase 5 relations
+export const syncActivityLogRelations = relations(syncActivityLog, ({ one }) => ({
+  user: one(users, {
+    fields: [syncActivityLog.userId],
+    references: [users.id],
+  }),
+  document: one(documents, {
+    fields: [syncActivityLog.documentId],
+    references: [documents.id],
+  }),
+}));
+
+export const syncNotificationsRelations = relations(syncNotifications, ({ one }) => ({
+  user: one(users, {
+    fields: [syncNotifications.userId],
+    references: [users.id],
+  }),
+  document: one(documents, {
+    fields: [syncNotifications.documentId],
+    references: [documents.id],
+  }),
+}));
+
+// Phase 6 relations
+export const versionBranchesRelations = relations(versionBranches, ({ one }) => ({
+  document: one(documents, {
+    fields: [versionBranches.documentId],
+    references: [documents.id],
+  }),
+}));
+
+export const syncPerformanceMetricsRelations = relations(syncPerformanceMetrics, ({ one }) => ({
+  document: one(documents, {
+    fields: [syncPerformanceMetrics.documentId],
     references: [documents.id],
   }),
 }));
