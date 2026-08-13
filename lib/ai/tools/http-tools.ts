@@ -163,6 +163,7 @@ export const httpGetTool: RegisteredTool = {
       };
     }
   },
+  requiresPermission: true,
 };
 
 /**
@@ -280,6 +281,7 @@ export const httpPostTool: RegisteredTool = {
       };
     }
   },
+  requiresPermission: true,
 };
 
 /**

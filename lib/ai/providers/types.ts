@@ -42,6 +42,8 @@ export type ToolResult = {
   name: string;
   result: unknown;
   error?: string;
+  errorCode?: 'permission_denied' | 'rate_limited' | 'validation_failed' | 'execution_error';
+  target?: string; // Target URL or MCP name for permission errors
 };
 
 export type AiChatRequest = {

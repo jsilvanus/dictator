@@ -15,6 +15,7 @@ export {
   getAllTools,
   hasTool,
   hasToolPermission,
+  getToolsRequiringPermission,
 } from './registry';
 
 // Re-export executor functions and class
@@ -23,6 +24,15 @@ export {
   executeTool,
   ToolExecutor,
 } from './executor';
+
+// Re-export permissions functions and class
+export {
+  getPermissionManager,
+  createPermissionManager,
+} from './permissions';
+
+// Re-export permissions store types and implementations
+export * from './permissions-store';
 
 // Re-export tool definitions
 export {

@@ -80,6 +80,20 @@ class ToolRegistry {
   }
 
   /**
+   * Get all tools that require permission
+   * @returns Array of tool names requiring permission
+   */
+  getToolsRequiringPermission(): string[] {
+    const requiring: string[] = [];
+    for (const tool of this.tools.values()) {
+      if (tool.requiresPermission) {
+        requiring.push(tool.name);
+      }
+    }
+    return requiring;
+  }
+
+  /**
    * Clear all tools (mainly for testing)
    */
   clear(): void {
@@ -145,6 +159,14 @@ export function hasTool(name: string): boolean {
  */
 export async function hasToolPermission(userId: string, toolName: string): Promise<boolean> {
   return getGlobalRegistry().hasToolPermission(userId, toolName);
+}
+
+/**
+ * Get all tools that require permission
+ * @returns Array of tool names that require permission
+ */
+export function getToolsRequiringPermission(): string[] {
+  return getGlobalRegistry().getToolsRequiringPermission();
 }
 
 export default getGlobalRegistry;

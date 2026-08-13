@@ -1,11 +1,12 @@
 /**
  * Generic tool executor for executing registered tools
- * Handles execution, error handling, rate limiting, and audit logging
+ * Handles execution, error handling, rate limiting, audit logging, and permission checks
  */
 
 import { ToolCall, ToolResult } from '../providers/types';
 import { ToolExecutionContext } from './types';
-import { getTool, hasToolPermission } from './registry';
+import { getTool } from './registry';
+import { getPermissionManager } from './permissions';
 
 /**
  * Rate limit tracking for individual tools
@@ -71,26 +72,50 @@ export class ToolExecutor {
       };
     }
 
-    // Check permissions
-    const hasPermission = await hasToolPermission(context.userId, toolCall.name);
-    if (!hasPermission) {
-      const error = `User ${context.userId} does not have permission to execute tool '${toolCall.name}'`;
-      this.logAudit({
-        timestamp: new Date(),
-        userId: context.userId,
-        toolName: toolCall.name,
-        arguments: toolCall.arguments,
-        success: false,
-        error,
-        executionTime: Date.now() - startTime,
-      });
+    // Check permissions for tools that require them
+    if (tool.requiresPermission) {
+      // Extract target from arguments based on tool name
+      let target: string | undefined;
+      let toolType: 'http' | 'mcp' = 'http';
 
-      return {
-        toolCallId: toolCall.id,
-        name: toolCall.name,
-        result: null,
-        error,
-      };
+      if (toolCall.name.startsWith('http_')) {
+        target = toolCall.arguments.url as string;
+        toolType = 'http';
+      } else if (toolCall.name.startsWith('mcp_')) {
+        target = toolCall.name; // MCP tools use their name as target
+        toolType = 'mcp';
+      }
+
+      if (target) {
+        const permissionManager = getPermissionManager();
+        const hasPermission = permissionManager.checkPermission(
+          context.userId,
+          target,
+          context.documentId
+        );
+
+        if (!hasPermission) {
+          const error = `Permission denied: User ${context.userId} is not approved to access '${target}'`;
+          this.logAudit({
+            timestamp: new Date(),
+            userId: context.userId,
+            toolName: toolCall.name,
+            arguments: toolCall.arguments,
+            success: false,
+            error,
+            executionTime: Date.now() - startTime,
+          });
+
+          return {
+            toolCallId: toolCall.id,
+            name: toolCall.name,
+            result: null,
+            error,
+            errorCode: 'permission_denied',
+            target, // Include target so UI can prompt for approval
+          };
+        }
+      }
     }
 
     // Check rate limits
