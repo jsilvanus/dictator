@@ -58,7 +58,7 @@ class DictatorProvider(
         }
     }
 
-    override suspend fun chat(request: AiChatRequest): Flow<AiStreamChunk> = flow {
+    override fun chat(request: AiChatRequest): Flow<AiStreamChunk> = flow {
         try {
             val messagesArray = buildJsonArray {
                 request.messages.forEach { msg ->
