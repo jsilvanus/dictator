@@ -12,17 +12,51 @@ export type AiInlineRequest = {
   maxTokens?: number;
 };
 
+/**
+ * Tool definition for function calling
+ */
+export type AiTool = {
+  name: string;
+  description: string;
+  inputSchema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+};
+
+/**
+ * Tool call invocation from AI
+ */
+export type ToolCall = {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+};
+
+/**
+ * Result of tool execution
+ */
+export type ToolResult = {
+  toolCallId: string;
+  name: string;
+  result: unknown;
+  error?: string;
+};
+
 export type AiChatRequest = {
-  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  messages: Array<{ role: 'user' | 'assistant'; content: string; toolResults?: ToolResult[] }>;
   systemPrompt?: string;
   temperature?: number;
   maxTokens?: number;
   stream?: boolean;
+  tools?: AiTool[];
 };
 
 export type AiResponse = {
   content: string;
   stopReason?: string;
+  toolCalls?: ToolCall[];
   usage?: {
     inputTokens: number;
     outputTokens: number;
@@ -30,9 +64,10 @@ export type AiResponse = {
 };
 
 export type AiStreamChunk = {
-  type: 'delta' | 'complete' | 'error';
+  type: 'delta' | 'complete' | 'error' | 'tool-call';
   content?: string;
   error?: string;
+  toolCall?: ToolCall;
 };
 
 export interface AiProvider {

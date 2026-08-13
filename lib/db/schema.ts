@@ -18,6 +18,8 @@ export const sharePermissionEnum = pgEnum('share_permission', ['read', 'edit']);
 export const aiSessionModeEnum = pgEnum('ai_session_mode', ['inline', 'panel']);
 export const syncConflictStatusEnum = pgEnum('sync_conflict_status', ['none', 'resolved', 'unresolved']);
 export const aiProviderEnum = pgEnum('ai_provider', ['claude', 'openai', 'ollama', 'openai-compatible', 'dictator']);
+export const toolPermissionModeEnum = pgEnum('tool_permission_mode', ['once', 'per-document', 'always']);
+export const toolTypeEnum = pgEnum('tool_type', ['http', 'mcp']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -248,12 +250,31 @@ export const userAiPreferences = pgTable('user_ai_preferences', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Tool Permissions
+export const toolPermissions = pgTable(
+  'tool_permissions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    target: text('target').notNull(), // URL for HTTP, MCP name for MCP
+    toolType: toolTypeEnum('tool_type').notNull(),
+    mode: toolPermissionModeEnum('mode').notNull(),
+    documentId: uuid('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+  },
+  (t) => [unique('tool_permissions_unique').on(t.userId, t.target, t.toolType, t.documentId)],
+);
+
 export const usersRelations = relations(users, ({ many, one }) => ({
   documents: many(documents),
   aiPreferences: one(userAiPreferences, {
     fields: [users.id],
     references: [userAiPreferences.userId],
   }),
+  toolPermissions: many(toolPermissions),
 }));
 
 export const documentsRelations = relations(documents, ({ one, many }) => ({
@@ -366,6 +387,17 @@ export const userAiPreferencesRelations = relations(userAiPreferences, ({ one })
   user: one(users, {
     fields: [userAiPreferences.userId],
     references: [users.id],
+  }),
+}));
+
+export const toolPermissionsRelations = relations(toolPermissions, ({ one }) => ({
+  user: one(users, {
+    fields: [toolPermissions.userId],
+    references: [users.id],
+  }),
+  document: one(documents, {
+    fields: [toolPermissions.documentId],
+    references: [documents.id],
   }),
 }));
 
