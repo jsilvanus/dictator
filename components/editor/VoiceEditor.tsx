@@ -17,6 +17,7 @@ import { AiHighlight } from './AiHighlight';
 import { AiPanel } from './AiPanel';
 import { FontSizeControls } from './FontSizeControls';
 import { HelpOverlay } from './HelpOverlay';
+import { LanguageIndicator } from './LanguageIndicator';
 import { Toolbar } from './Toolbar';
 import { VoiceDock } from './VoiceDock';
 
@@ -135,6 +136,7 @@ export function VoiceEditor({
         >
           ?
         </button>
+        <LanguageIndicator />
         <FontSizeControls />
         <span className="badge">{status}</span>
       </div>
