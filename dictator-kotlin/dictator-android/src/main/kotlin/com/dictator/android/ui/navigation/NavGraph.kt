@@ -8,6 +8,7 @@ import androidx.navigation.compose.rememberNavController
 import com.dictator.android.ui.auth.AuthScreen
 import com.dictator.android.ui.document.DocumentListScreen
 import com.dictator.android.ui.editor.EditorScreen
+import com.dictator.android.ui.settings.SettingsScreen
 
 sealed class Screen(val route: String) {
     data object Auth : Screen("auth")
@@ -15,6 +16,7 @@ sealed class Screen(val route: String) {
     data object Editor : Screen("editor/{documentId}") {
         fun createRoute(documentId: String) = "editor/$documentId"
     }
+    data object Settings : Screen("settings")
 }
 
 @Composable
@@ -39,6 +41,9 @@ fun DictatorNavHost(
                 onDocumentSelect = { documentId ->
                     navController.navigate(Screen.Editor.createRoute(documentId))
                 },
+                onSettingsClick = {
+                    navController.navigate(Screen.Settings.route)
+                },
                 onLogout = {
                     navController.navigate(Screen.Auth.route) {
                         popUpTo(Screen.DocumentList.route) { inclusive = true }
@@ -51,6 +56,12 @@ fun DictatorNavHost(
             val documentId = backStackEntry.arguments?.getString("documentId") ?: ""
             EditorScreen(
                 documentId = documentId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(
                 onBack = { navController.popBackStack() }
             )
         }

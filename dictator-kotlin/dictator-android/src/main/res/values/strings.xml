@@ -143,4 +143,46 @@
     <string name="make_private">Make private</string>
     <string name="public_link">Public link</string>
     <string name="link_copied">Link copied to clipboard</string>
+    
+    <!-- Settings -->
+    <string name="settings_ai_provider">AI Provider Mode</string>
+    <string name="settings_dictator_service">Dictator Service</string>
+    <string name="settings_dictator_service_desc">Use the remote Dictator web service</string>
+    <string name="settings_direct_provider">Direct Provider</string>
+    <string name="settings_direct_provider_desc">Configure AI provider directly on device</string>
+    <string name="settings_dictator_service_config">Dictator Service Configuration</string>
+    <string name="settings_service_url">Service URL</string>
+    <string name="settings_service_url_hint">https://example.com</string>
+    <string name="settings_service_url_example">Example: http://localhost:3000 or https://dictator.example.com</string>
+    <string name="settings_direct_provider_config">Direct Provider Configuration</string>
+    <string name="settings_provider_label">AI Provider</string>
+    <string name="settings_api_key">API Key</string>
+    <string name="settings_api_key_claude_hint">sk-ant-...</string>
+    <string name="settings_api_key_openai_hint">sk-proj-...</string>
+    <string name="settings_api_key_generic_hint">sk-...</string>
+    <string name="settings_base_url">Base URL</string>
+    <string name="settings_base_url_ollama_hint">http://localhost:11434</string>
+    <string name="settings_base_url_generic_hint">https://api.example.com/v1</string>
+    <string name="settings_model">Model</string>
+    <string name="settings_model_claude_hint">claude-sonnet-4-6</string>
+    <string name="settings_model_openai_hint">gpt-4o</string>
+    <string name="settings_model_ollama_hint">mistral</string>
+    <string name="settings_model_generic_hint">gpt-3.5-turbo</string>
+    <string name="settings_temperature">Temperature</string>
+    <string name="settings_temperature_desc">Lower = more deterministic, Higher = more creative</string>
+    <string name="settings_max_tokens">Max Tokens</string>
+    <string name="settings_max_tokens_hint">2048</string>
+    <string name="settings_test_connection">Test Connection</string>
+    <string name="settings_save">Save Settings</string>
+    <string name="settings_saved">Settings saved successfully</string>
+    <string name="settings_error_required">required</string>
+    <string name="settings_error_url_invalid">Invalid URL format</string>
+    <string name="settings_error_temperature_range">Temperature must be between 0.0 and 2.0</string>
+    <string name="settings_error_max_tokens">Max tokens must be at least 1</string>
+    <string name="settings_test_connection_success">✓ Connection successful!</string>
+    <string name="settings_test_connection_failed">✗ Connection failed</string>
+    <string name="settings_test_config_valid">✓ Configuration valid!</string>
+    <string name="settings_test_config_invalid">✗ Missing required fields</string>
+    <string name="settings_show_key">Show</string>
+    <string name="settings_hide_key">Hide</string>
 </resources>

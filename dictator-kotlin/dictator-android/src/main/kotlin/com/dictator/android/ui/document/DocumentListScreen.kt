@@ -48,6 +48,7 @@ import com.dictator.android.R
 fun DocumentListScreen(
     viewModel: DocumentViewModel = viewModel(),
     onDocumentSelect: (String) -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
@@ -68,7 +69,7 @@ fun DocumentListScreen(
                     IconButton(onClick = onLogout) {
                         Icon(Icons.Filled.Logout, contentDescription = stringResource(R.string.logout))
                     }
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
                     }
                 }

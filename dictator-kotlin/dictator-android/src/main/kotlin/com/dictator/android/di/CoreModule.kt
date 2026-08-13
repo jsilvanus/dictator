@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.dictator.android.data.AndroidSharedPreferences
 import com.dictator.core.data.local.*
 import com.dictator.core.data.remote.HttpClientFactory
 import com.dictator.core.data.remote.RemoteApiService
@@ -30,6 +31,11 @@ object CoreModule {
     @Provides
     @Singleton
     fun provideContext(@ApplicationContext context: Context): Context = context
+
+    @Provides
+    @Singleton
+    fun provideSharedPreferences(@ApplicationContext context: Context): SharedPreferences =
+        AndroidSharedPreferences(context)
 
     @Provides
     @Singleton
