@@ -118,6 +118,11 @@ export class ToolExecutor {
       }
     }
 
+    // Handle MCP tool calls specially
+    if (toolCall.name.startsWith('mcp_')) {
+      return this.executeMcpTool(toolCall, context, startTime);
+    }
+
     // Check rate limits
     const rateLimitKey = `${context.userId}:${toolCall.name}`;
     const isRateLimited = this.checkRateLimit(rateLimitKey, context.userId);
@@ -266,16 +271,96 @@ export class ToolExecutor {
   }
 
   /**
+   * Execute an MCP tool call
+   * @param toolCall - The MCP tool call
+   * @param context - Execution context
+   * @param startTime - Start time for timing
+   * @returns Promise resolving to ToolResult
+   */
+  private async executeMcpTool(
+   toolCall: ToolCall,
+   context: ToolExecutionContext,
+   startTime: number
+  ): Promise<ToolResult> {
+   try {
+     // Parse MCP tool name: mcp_<serverId>_<toolName>
+     const parts = toolCall.name.substring(4).split('_'); // Remove "mcp_" prefix
+     if (parts.length < 2) {
+       const error = `Invalid MCP tool name: ${toolCall.name}`;
+       this.logAudit({
+         timestamp: new Date(),
+         userId: context.userId,
+         toolName: toolCall.name,
+         arguments: toolCall.arguments,
+         success: false,
+         error,
+         executionTime: Date.now() - startTime,
+       });
+
+       return {
+         toolCallId: toolCall.id,
+         name: toolCall.name,
+         result: null,
+         error,
+       };
+     }
+
+     const serverId = parts[0];
+     const toolName = parts.slice(1).join('_');
+
+     // Dynamically import MCP functions to avoid circular dependency
+     const { callMcpTool } = await import('../mcp/registry');
+     const result = await callMcpTool(serverId, toolName, toolCall.arguments);
+
+     this.logAudit({
+       timestamp: new Date(),
+       userId: context.userId,
+       toolName: toolCall.name,
+       arguments: toolCall.arguments,
+       success: result.success,
+       error: result.error,
+       executionTime: Date.now() - startTime,
+     });
+
+     return {
+       toolCallId: toolCall.id,
+       name: toolCall.name,
+       result: result.success ? result.result : null,
+       error: result.error,
+     };
+   } catch (error) {
+     const errorMsg = error instanceof Error ? error.message : String(error);
+
+     this.logAudit({
+       timestamp: new Date(),
+       userId: context.userId,
+       toolName: toolCall.name,
+       arguments: toolCall.arguments,
+       success: false,
+       error: errorMsg,
+       executionTime: Date.now() - startTime,
+     });
+
+     return {
+       toolCallId: toolCall.id,
+       name: toolCall.name,
+       result: null,
+       error: errorMsg,
+     };
+   }
+  }
+
+  /**
    * Log tool execution to audit trail
    * @param log - The audit log entry
    */
   private logAudit(log: ToolAuditLog): void {
-    this.auditLogs.push(log);
+   this.auditLogs.push(log);
 
-    // Keep audit logs bounded
-    if (this.auditLogs.length > this.maxAuditLogs) {
-      this.auditLogs.shift();
-    }
+   // Keep audit logs bounded
+   if (this.auditLogs.length > this.maxAuditLogs) {
+     this.auditLogs.shift();
+   }
   }
 
   /**

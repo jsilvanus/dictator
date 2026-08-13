@@ -13,6 +13,7 @@
     "db:seed": "tsx scripts/db-seed.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@tiptap/extension-character-count": "^2.26.1",
     "@tiptap/extension-placeholder": "^2.26.1",
     "@tiptap/extension-underline": "^2.26.1",

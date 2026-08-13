@@ -276,6 +276,28 @@ export const toolPermissions = pgTable(
   (t) => [unique('tool_permissions_unique').on(t.userId, t.target, t.toolType, t.documentId)],
 );
 
+// MCP Servers
+export const mcpServers = pgTable(
+  'mcp_servers',
+  {
+    id: text('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    enabled: boolean('enabled').notNull().default(true),
+    transportType: text('transport_type').notNull().default('stdio'), // 'stdio', 'sse', 'http'
+    serverCommand: text('server_command'), // For stdio transport
+    serverArgs: text('server_args'), // JSON array, for stdio transport
+    serverUrl: text('server_url'), // For HTTP/SSE transport
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique('mcp_servers_unique').on(t.userId, t.name),
+  ],
+);
+
 // ============================================================================
 // Privacy & Data Protection Tables
 // ============================================================================
