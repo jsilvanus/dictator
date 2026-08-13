@@ -1,4 +1,5 @@
 import type { Editor } from '@tiptap/react';
+import type { AiTurnProvenance, AiContentSource, AiRequestScope } from '@/lib/privacy/types';
 
 export type AiTurn = {
   id: string;
@@ -9,6 +10,42 @@ export type AiTurn = {
   createdAt: number;
   acceptedAt: number | null;
   discardedAt: number | null;
+  
+  // Privacy & Provenance Tracking
+  /**
+   * Source of this content (human vs AI generated/modified)
+   * Helps with disclosure and audit trails
+   */
+  source?: AiContentSource;
+  
+  /**
+   * Confidence level for AI-generated content (0-1)
+   * Used for quality assessment and disclosure requirements
+   */
+  confidence?: number;
+  
+  /**
+   * Scope of content that was sent to AI
+   * Tracks whether full document or just selection was used
+   */
+  contentScope?: AiRequestScope;
+  
+  /**
+   * Whether this turn has been explicitly reviewed by user
+   * Different from 'acceptedAt' - explicit review for editorial responsibility
+   */
+  reviewedAt?: number | null;
+  
+  /**
+   * Full provenance metadata (for export/audit)
+   */
+  provenance?: AiTurnProvenance;
+  
+  /**
+   * Which AI request policy was active for this turn
+   * Tracks data handling and retention policy used
+   */
+  policyId?: string;
 };
 
 export type AiSession = {

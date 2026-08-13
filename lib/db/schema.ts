@@ -21,6 +21,14 @@ export const aiProviderEnum = pgEnum('ai_provider', ['claude', 'openai', 'ollama
 export const toolPermissionModeEnum = pgEnum('tool_permission_mode', ['once', 'per-document', 'always']);
 export const toolTypeEnum = pgEnum('tool_type', ['http', 'mcp']);
 
+// Privacy & Provenance Enums
+export const aiContentSourceEnum = pgEnum('ai_content_source', ['human-dictated', 'human-written', 'ai-generated', 'ai-modified']);
+export const aiRequestScopeEnum = pgEnum('ai_request_scope', ['full-document', 'selected-text', 'context-snippet']);
+export const deletionStatusEnum = pgEnum('deletion_status', ['pending', 'processing', 'completed', 'failed']);
+export const deletionMethodEnum = pgEnum('deletion_method', ['soft-delete', 'hard-delete', 'anonymize']);
+export const dataProcessingPurposeEnum = pgEnum('data_processing_purpose', ['model-training', 'service-improvement', 'user-support', 'compliance', 'security']);
+export const backupInclusionPolicyEnum = pgEnum('backup_inclusion_policy', ['never', 'local-only', 'encrypted-cloud', 'unencrypted-cloud']);
+
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
   email: text('email').notNull().unique(),
@@ -268,6 +276,127 @@ export const toolPermissions = pgTable(
   (t) => [unique('tool_permissions_unique').on(t.userId, t.target, t.toolType, t.documentId)],
 );
 
+// ============================================================================
+// Privacy & Data Protection Tables
+// ============================================================================
+
+/**
+ * AI Provider Policies - Documents privacy policies for each AI provider
+ * Tracks data handling, retention, training usage, and GDPR compliance
+ */
+export const aiProviderPolicies = pgTable(
+  'ai_provider_policies',
+  {
+    id: text('id').primaryKey(),
+    provider: text('provider').notNull(),
+    displayName: text('display_name').notNull(),
+    dataRetentionDays: integer('data_retention_days'), // null = indefinite
+    processingPurposes: jsonb('processing_purposes').$type<string[]>().notNull().default([]),
+    processingLocations: jsonb('processing_locations').$type<string[]>().notNull().default([]),
+    usesDataForTraining: boolean('uses_data_for_training').notNull().default(false),
+    trainingOptOutAvailable: boolean('training_opt_out_available').notNull().default(false),
+    privacyPolicyUrl: text('privacy_policy_url').default(''),
+    gdprCompliant: boolean('gdpr_compliant').notNull().default(false),
+    notes: text('notes').default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique('ai_provider_policies_provider_date').on(t.provider, t.updatedAt)],
+);
+
+/**
+ * AI Turn Provenance - Tracks source and metadata for each AI-assisted edit
+ * Links to AI sessions to provide audit trail and disclosure information
+ */
+export const aiTurnProvenance = pgTable(
+  'ai_turn_provenance',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    aiSessionId: uuid('ai_session_id')
+      .notNull()
+      .references(() => aiSessions.id, { onDelete: 'cascade' }),
+    turnId: text('turn_id').notNull(),
+    source: aiContentSourceEnum('source').notNull(),
+    confidence: numeric('confidence', { precision: 3, scale: 2 }), // 0-1 for AI content
+    contentScope: aiRequestScopeEnum('content_scope'),
+    policyId: text('policy_id').references(() => aiProviderPolicies.id),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    device: text('device').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique('ai_turn_provenance_unique').on(t.aiSessionId, t.turnId)],
+);
+
+/**
+ * User Privacy Settings - Track user's privacy preferences
+ * Controls backup policies, telemetry, encryption preferences, etc.
+ */
+export const userPrivacySettings = pgTable(
+  'user_privacy_settings',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .unique()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    backupInclusionPolicy: backupInclusionPolicyEnum('backup_inclusion_policy').notNull().default('local-only'),
+    includeEncryptionKeysInBackup: boolean('include_encryption_keys_in_backup').notNull().default(false),
+    encryptBackups: boolean('encrypt_backups').notNull().default(true),
+    backupRetentionDays: integer('backup_retention_days'), // null = indefinite
+    allowTelemetry: boolean('allow_telemetry').notNull().default(true),
+    allowCrashReporting: boolean('allow_crash_reporting').notNull().default(true),
+    enableSensitiveDataDetection: boolean('enable_sensitive_data_detection').notNull().default(true),
+    requireExplicitAiApproval: boolean('require_explicit_ai_approval').notNull().default(false),
+    defaultAiRequestScope: aiRequestScopeEnum('default_ai_request_scope').notNull().default('selected-text'),
+    allowModelTraining: boolean('allow_model_training').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+);
+
+/**
+ * Data Deletion Records - Audit trail for all data deletions
+ * Tracks what was deleted, when, by whom, and status
+ */
+export const deletionRecords = pgTable(
+  'deletion_records',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    resourceType: text('resource_type').notNull(), // 'document', 'account', 'session', 'ai-history'
+    resourceId: text('resource_id').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).defaultNow().notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    status: deletionStatusEnum('status').notNull().default('pending'),
+    method: deletionMethodEnum('method').notNull(),
+    providerDeletions: jsonb('provider_deletions').$type<Array<{ provider: string; deletedAt?: number; status: string }>>().default([]),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique('deletion_records_resource').on(t.resourceType, t.resourceId, t.requestedAt)],
+);
+
+/**
+ * Privacy Audit Log - Records all privacy-related events
+ * Access to sensitive data, exports, policy changes, etc.
+ */
+export const privacyAuditLog = pgTable('privacy_audit_log', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  eventType: text('event_type').notNull(), // 'data-export', 'privacy-policy-change', 'access-sensitive', etc.
+  documentId: uuid('document_id').references(() => documents.id, { onDelete: 'set null' }),
+  details: jsonb('details').$type<Record<string, unknown>>().notNull().default({}),
+  ipAddress: text('ip_address'), // For security tracking
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many, one }) => ({
   documents: many(documents),
   aiPreferences: one(userAiPreferences, {
@@ -275,6 +404,12 @@ export const usersRelations = relations(users, ({ many, one }) => ({
     references: [userAiPreferences.userId],
   }),
   toolPermissions: many(toolPermissions),
+  privacySettings: one(userPrivacySettings, {
+    fields: [users.id],
+    references: [userPrivacySettings.userId],
+  }),
+  deletionRecords: many(deletionRecords),
+  privacyAuditLog: many(privacyAuditLog),
 }));
 
 export const documentsRelations = relations(documents, ({ one, many }) => ({
@@ -397,6 +532,47 @@ export const toolPermissionsRelations = relations(toolPermissions, ({ one }) => 
   }),
   document: one(documents, {
     fields: [toolPermissions.documentId],
+    references: [documents.id],
+  }),
+}));
+
+// Privacy Relations
+export const aiTurnProvenanceRelations = relations(aiTurnProvenance, ({ one }) => ({
+  aiSession: one(aiSessions, {
+    fields: [aiTurnProvenance.aiSessionId],
+    references: [aiSessions.id],
+  }),
+  policy: one(aiProviderPolicies, {
+    fields: [aiTurnProvenance.policyId],
+    references: [aiProviderPolicies.id],
+  }),
+  user: one(users, {
+    fields: [aiTurnProvenance.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userPrivacySettingsRelations = relations(userPrivacySettings, ({ one }) => ({
+  user: one(users, {
+    fields: [userPrivacySettings.userId],
+    references: [users.id],
+  }),
+}));
+
+export const deletionRecordsRelations = relations(deletionRecords, ({ one }) => ({
+  user: one(users, {
+    fields: [deletionRecords.userId],
+    references: [users.id],
+  }),
+}));
+
+export const privacyAuditLogRelations = relations(privacyAuditLog, ({ one }) => ({
+  user: one(users, {
+    fields: [privacyAuditLog.userId],
+    references: [users.id],
+  }),
+  document: one(documents, {
+    fields: [privacyAuditLog.documentId],
     references: [documents.id],
   }),
 }));

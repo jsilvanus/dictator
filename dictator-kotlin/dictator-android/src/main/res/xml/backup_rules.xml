@@ -1,10 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 
+  Dictator Android Backup Rules
+  
+  Privacy-First Backup Policy:
+  - Documents and user data are backed up by default (encrypted)
+  - Encryption keys are NEVER backed up to cloud storage
+  - Sensitive credentials and auth tokens are excluded
+  - Cache and temporary files are excluded
+  - Users can configure backup preferences in Settings
+  
+  User Control:
+  - Settings app allows users to enable/disable Android backup
+  - Users can choose to backup documents only or exclude documents
+  - Master encryption keys require explicit user consent to backup
+-->
 <full-backup-content>
-    <!-- Backup all app data by default -->
+    <!-- Backup documents and preferences (encrypted) -->
     <include domain="database" path="." />
     <include domain="sharedpref" path="." />
-    <include domain="file" path="." />
+    <include domain="file" path="documents" />
     
-    <!-- Exclude cache files -->
+    <!-- Exclude cache and temporary files -->
     <exclude domain="cache" path="." />
+    <exclude domain="file" path="temp" />
+    <exclude domain="file" path="tmp" />
+    
+    <!-- Exclude encryption keys and credentials -->
+    <!-- These MUST be protected with Android Keystore -->
+    <exclude domain="file" path="encryption_keys" />
+    <exclude domain="file" path="master_keys" />
+    <exclude domain="sharedpref" path="encryption_keys.xml" />
+    <exclude domain="sharedpref" path="auth_tokens.xml" />
+    <exclude domain="sharedpref" path="credentials.xml" />
+    
+    <!-- Exclude files that should never be backed up -->
+    <exclude domain="file" path="sensitive_data" />
+    <exclude domain="file" path="api_keys" />
+    <exclude domain="file" path="private_keys" />
 </full-backup-content>

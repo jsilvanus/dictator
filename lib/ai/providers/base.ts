@@ -1,8 +1,11 @@
 import { AiChatRequest, AiInlineRequest, AiProvider, AiResponse, AiStreamChunk, ModelProvider } from './types';
+import { getPolicyManager } from '@/lib/privacy/ProviderPolicyManager';
+import type { AiProviderPolicy } from '@/lib/privacy/types';
 
 /**
  * Base abstract class for AI providers
  * Provides common functionality and defines required methods
+ * Includes privacy policy metadata and data handling
  */
 export abstract class BaseAiProvider implements AiProvider {
   protected model: string;
@@ -45,6 +48,72 @@ export abstract class BaseAiProvider implements AiProvider {
    * Subclasses must implement provider type
    */
   abstract getProviderType(): ModelProvider;
+
+  /**
+   * Get privacy policy for this provider
+   * Subclasses can override to provide custom policies
+   */
+  getPrivacyPolicy(): AiProviderPolicy | null {
+    const policyManager = getPolicyManager();
+    return policyManager.getLatestPolicyForProvider(this.getProviderType());
+  }
+
+  /**
+   * Get privacy rating for this provider (0-100)
+   * Higher = more privacy-friendly
+   */
+  getPrivacyRating(): number {
+    const policyManager = getPolicyManager();
+    return policyManager.getPrivacyRating(this.getProviderType());
+  }
+
+  /**
+   * Get human-readable privacy summary for this provider
+   */
+  getPrivacySummary(): string {
+    const policyManager = getPolicyManager();
+    return policyManager.getPrivacySummary(this.getProviderType());
+  }
+
+  /**
+   * Check if this provider uses data for model training
+   */
+  usesDataForTraining(): boolean {
+    const policy = this.getPrivacyPolicy();
+    return policy?.usesDataForTraining ?? false;
+  }
+
+  /**
+   * Check if user can opt out of model training for this provider
+   */
+  supportsTrainingOptOut(): boolean {
+    const policy = this.getPrivacyPolicy();
+    return policy?.trainingOptOutAvailable ?? false;
+  }
+
+  /**
+   * Check if this provider processes data on-device only
+   */
+  isLocalProcessing(): boolean {
+    const policy = this.getPrivacyPolicy();
+    return policy?.processingLocations.includes('on-device') ?? false;
+  }
+
+  /**
+   * Get data retention period in days (null = indefinite)
+   */
+  getDataRetentionDays(): number | null {
+    const policy = this.getPrivacyPolicy();
+    return policy?.dataRetentionDays ?? null;
+  }
+
+  /**
+   * Check if GDPR compliant
+   */
+  isGdprCompliant(): boolean {
+    const policy = this.getPrivacyPolicy();
+    return policy?.gdprCompliant ?? false;
+  }
 
   /**
    * Helper to set configuration parameters
