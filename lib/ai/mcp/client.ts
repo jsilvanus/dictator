@@ -4,7 +4,7 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { ListToolsResult, Tool } from '@modelcontextprotocol/sdk/types.js';
+import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { McpServerConfig, McpServerState, McpToolDefinition, McpToolResult } from './types';
 
 /**
@@ -38,9 +38,7 @@ export class McpClient {
             version: '1.0.0',
           },
           {
-            capabilities: {
-              tools: {},
-            },
+            capabilities: {},
           }
         );
 
@@ -92,10 +90,10 @@ export class McpClient {
     try {
       const result = (await this.client.request(
         { method: 'tools/list' } as any,
-        ListToolsResult
-      )) as ListToolsResult;
+        {} as any
+      )) as { tools?: Array<{ name: string; description?: string; inputSchema?: any }> };
 
-      return result.tools.map((tool: Tool) => ({
+      return (result.tools || []).map((tool) => ({
         name: tool.name,
         description: tool.description || '',
         inputSchema: tool.inputSchema || {
