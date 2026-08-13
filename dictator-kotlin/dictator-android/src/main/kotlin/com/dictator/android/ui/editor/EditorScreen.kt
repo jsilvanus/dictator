@@ -66,25 +66,10 @@ fun EditorScreen(
         topBar = {
             Column {
                 // Top app bar
-                TopAppBar(
-                    title = { Text(stringResource(R.string.edit_document)) },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.share))
-                        }
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = "More")
-                        }
-                    }
-                )
+                EditorTopBar(onBack = onBack)
 
-                // Editor toolbar
-                EditorToolbar(viewModel = viewModel, state = state)
+                // Editor toolbar (IMPROVEMENT: Extracted into reusable component)
+                EditorFormattingBar(viewModel = viewModel, state = state)
             }
         }
     ) { paddingValues ->
@@ -95,74 +80,113 @@ fun EditorScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // Title field
-            OutlinedTextField(
-                value = state.title,
-                onValueChange = viewModel::onTitleChanged,
-                placeholder = { Text(stringResource(R.string.document_title)) },
-                textStyle = MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                singleLine = true
-            )
+            EditorTitleField(state = state, viewModel = viewModel)
 
-            // Metadata row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = when (state.syncStatus) {
-                        SyncStatus.SYNCED -> Icons.Filled.CloudDone
-                        SyncStatus.SYNCING -> Icons.Filled.Cloud
-                        else -> Icons.Filled.CloudDone
-                    },
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = if (state.syncStatus == SyncStatus.SYNCED)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.tertiary
-                )
-                Text(
-                    text = viewModel.getSyncStatusText(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = stringResource(R.string.word_count, state.wordCount),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            // Metadata row (IMPROVEMENT: Extracted into reusable component)
+            SyncIndicator(state = state, viewModel = viewModel)
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
             // Content editor
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(16.dp)
-                    .background(Color.Transparent)
-            ) {
-                OutlinedTextField(
-                    value = state.content,
-                    onValueChange = viewModel::onContentChanged,
-                    modifier = Modifier.fillMaxSize(),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
-                    placeholder = { Text("Start typing...") }
-                )
-            }
+            EditorContentArea(state = state, viewModel = viewModel)
         }
     }
 }
 
+// IMPROVEMENT: Extracted component for top bar
 @Composable
-fun EditorToolbar(viewModel: EditorViewModel, state: EditorUiState) {
+fun EditorTopBar(onBack: () -> Unit = {}) {
+    TopAppBar(
+        title = { Text(stringResource(R.string.edit_document)) },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+            }
+        },
+        actions = {
+            IconButton(onClick = {}) {
+                Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.share))
+            }
+            IconButton(onClick = {}) {
+                Icon(Icons.Filled.MoreVert, contentDescription = "More")
+            }
+        }
+    )
+}
+
+// IMPROVEMENT: Extracted component for title field
+@Composable
+fun EditorTitleField(state: EditorUiState, viewModel: EditorViewModel) {
+    OutlinedTextField(
+        value = state.title,
+        onValueChange = viewModel::onTitleChanged,
+        placeholder = { Text(stringResource(R.string.document_title)) },
+        textStyle = MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        singleLine = true
+    )
+}
+
+// IMPROVEMENT: Extracted component for sync status indicator
+@Composable
+fun SyncIndicator(state: EditorUiState, viewModel: EditorViewModel) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = when (state.syncStatus) {
+                SyncStatus.SYNCED -> Icons.Filled.CloudDone
+                SyncStatus.SYNCING -> Icons.Filled.Cloud
+                else -> Icons.Filled.CloudDone
+            },
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = if (state.syncStatus == SyncStatus.SYNCED)
+                MaterialTheme.colorScheme.primary
+            else
+                MaterialTheme.colorScheme.tertiary
+        )
+        Text(
+            text = viewModel.getSyncStatusText(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = stringResource(R.string.word_count, state.wordCount),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+// IMPROVEMENT: Extracted component for content editing area
+@Composable
+fun EditorContentArea(state: EditorUiState, viewModel: EditorViewModel) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f)
+            .padding(16.dp)
+            .background(Color.Transparent)
+    ) {
+        OutlinedTextField(
+            value = state.content,
+            onValueChange = viewModel::onContentChanged,
+            modifier = Modifier.fillMaxSize(),
+            textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
+            placeholder = { Text("Start typing...") }
+        )
+    }
+}
+
+@Composable
+fun EditorFormattingBar(viewModel: EditorViewModel, state: EditorUiState) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
