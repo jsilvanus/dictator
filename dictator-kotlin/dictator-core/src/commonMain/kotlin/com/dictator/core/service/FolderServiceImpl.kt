@@ -226,6 +226,90 @@ class FolderServiceImpl(
         }
     }
     
+    /**
+     * Detects circular references in folder hierarchy.
+     * Returns true if moving folderToMove under targetParentId would create a cycle.
+     * 
+     * SECURITY: Prevents infinite loops in folder tree.
+     */
+    private suspend fun wouldCreateCycle(folderToMoveId: String, targetParentId: String?): Boolean {
+        if (targetParentId == null) {
+            return false  // Moving to root cannot create cycle
+        }
+        
+        if (folderToMoveId == targetParentId) {
+            return true  // Cannot move folder to itself
+        }
+        
+        // Check if target is a descendant of folder being moved
+        var currentId: String? = targetParentId
+        val visited = mutableSetOf<String>()
+        
+        while (currentId != null) {
+            if (visited.contains(currentId)) {
+                Napier.w("Cycle detected: $currentId already visited")
+                return true
+            }
+            
+            if (currentId == folderToMoveId) {
+                Napier.w("Circular reference detected: target is descendant of folder being moved")
+                return true
+            }
+            
+            visited.add(currentId)
+            
+            // Get parent of current folder
+            val folder = folderRepository.getFolderById(currentId)
+            currentId = folder?.parentId
+        }
+        
+        return false
+    }
+    
+    /**
+     * Moves a folder to a new parent folder.
+     * Validates that the move does not create circular references.
+     */
+    suspend fun moveFolder(folderId: String, targetParentId: String?): Folder {
+        return try {
+            Napier.d("Moving folder: $folderId to parent: $targetParentId")
+            
+            val folder = folderRepository.getFolderById(folderId)
+                ?: throw DataException.NotFound("Folder not found: $folderId")
+            
+            // Check for circular references (CRITICAL SECURITY CHECK)
+            if (wouldCreateCycle(folderId, targetParentId)) {
+                throw DataException.ValidationError(
+                    "Cannot move folder: would create circular reference"
+                )
+            }
+            
+            // Validate target parent exists and belongs to same user
+            if (targetParentId != null) {
+                val targetParent = folderRepository.getFolderById(targetParentId)
+                    ?: throw DataException.NotFound("Target parent folder not found: $targetParentId")
+                
+                if (targetParent.userId != folder.userId) {
+                    throw DataException.AuthorizationError(
+                        "Target parent does not belong to same user"
+                    )
+                }
+            }
+            
+            val updatedFolder = folder.copy(parentId = targetParentId)
+            folderRepository.updateFolder(updatedFolder)
+            
+            Napier.i("Folder moved successfully: $folderId")
+            updatedFolder
+        } catch (e: DataException) {
+            Napier.e("Failed to move folder: ${e.message}", e)
+            throw e
+        } catch (e: Exception) {
+            Napier.e("Unexpected error moving folder", e)
+            throw DataException.DatabaseError("Failed to move folder: ${e.message}", e)
+        }
+    }
+    
     private fun generateFolderId(): String {
         return "folder_${System.currentTimeMillis()}_${Random.nextInt(10000)}"
     }

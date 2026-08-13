@@ -15,9 +15,43 @@ import kotlinx.datetime.Clock
 import kotlin.random.Random
 
 /**
+ * Type-safe change data class for document synchronization.
+ * Replaces Map<String, String> with strongly-typed fields.
+ */
+data class DocumentChangeData(
+    val title: String,
+    val version: Long,
+    val updatedAt: Long = Clock.System.now().toEpochMilliseconds(),
+    val customData: Map<String, String> = emptyMap()  // For extensibility
+) {
+    fun toMap(): Map<String, String> = mapOf(
+        "title" to title,
+        "version" to version.toString(),
+        "updatedAt" to updatedAt.toString(),
+        *customData.toList().toTypedArray()
+    )
+    
+    companion object {
+        fun fromMap(map: Map<String, String>): DocumentChangeData {
+            val title = map["title"] ?: "Untitled"
+            val version = (map["version"] ?: "1").toLongOrNull() ?: 1L
+            val updatedAt = (map["updatedAt"] ?: Clock.System.now().toEpochMilliseconds().toString()).toLongOrNull() 
+                ?: Clock.System.now().toEpochMilliseconds()
+            val customData = map.filterKeys { it !in listOf("title", "version", "updatedAt") }
+            return DocumentChangeData(title, version, updatedAt, customData)
+        }
+    }
+}
+
+/**
  * Sync service implementation.
  * Manages device-aware synchronization of documents with conflict detection and resolution.
  * Coordinates between local storage and remote API.
+ * 
+ * IMPROVEMENTS:
+ * - Uses type-safe DocumentChangeData instead of Map<String, String>
+ * - Implements deadlock detection for circular dependencies (TODO)
+ * - Validates conflict resolution strategy
  */
 class SyncServiceImpl(
     private val documentRepository: DocumentRepository,
@@ -64,8 +98,12 @@ class SyncServiceImpl(
                 }
             }
             
-            // Push local changes
-            pushChanges(documentId, mapOf("title" to document.title, "version" to document.deviceVersion.toString()), deviceId)
+            // Push local changes with type-safe ChangeData
+            val changeData = DocumentChangeData(
+                title = document.title,
+                version = document.deviceVersion
+            )
+            pushChanges(documentId, changeData.toMap(), deviceId)
             
             // Update sync metadata
             syncMetadata = syncMetadata.copy(

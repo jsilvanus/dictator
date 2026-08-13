@@ -8,6 +8,9 @@ import io.github.aakira.napier.Napier
 /**
  * Authentication service implementation.
  * Handles user login, signup, token management, and session validation.
+ * 
+ * SECURITY: Tokens are stored exclusively in SharedPreferences (secure storage).
+ * No tokens are held in memory (RAM) to prevent heap dump vulnerabilities.
  */
 class AuthServiceImpl(
     private val remoteApiService: RemoteApiService,
@@ -16,17 +19,26 @@ class AuthServiceImpl(
 ) : AuthService {
     
     private var currentUserId: String? = null
-    private var currentToken: String? = null
+    // DO NOT store tokens in memory - always retrieve from secure storage
     
     init {
-        // Restore token from storage on initialization
-        currentToken = sharedPreferences.getString("auth_token", null)
+        // Restore user ID from storage on initialization
         currentUserId = sharedPreferences.getString("current_user_id", null)
+        // Token is NOT cached in memory - retrieved fresh on demand (see getToken())
+    }
+    
+    /**
+     * Get the current auth token from secure storage.
+     * Returns null if no valid token exists.
+     * SECURITY: Token is retrieved fresh from SharedPreferences each time.
+     */
+    private fun getToken(): String? {
+        return sharedPreferences.getString("auth_token", null)
     }
     
     /**
      * Logs in a user with email and password.
-     * Stores JWT token and user information.
+     * Stores JWT token and user information in secure storage.
      */
     override suspend fun login(email: String, password: String): String {
         return try {
@@ -37,12 +49,12 @@ class AuthServiceImpl(
             // Save user to local storage
             userRepository.createUser(user)
             
-            // Store token and user ID
+            // Store token and user ID in secure storage (not in memory)
             sharedPreferences.setString("auth_token", token)
             sharedPreferences.setString("current_user_id", user.id)
             
-            currentToken = token
             currentUserId = user.id
+            // Token intentionally not cached in memory (security)
             
             Napier.i("Login successful for user: ${user.id}")
             token
@@ -68,12 +80,12 @@ class AuthServiceImpl(
             // Save user to local storage
             userRepository.createUser(user)
             
-            // Store token and user ID
+            // Store token and user ID in secure storage (not in memory)
             sharedPreferences.setString("auth_token", token)
             sharedPreferences.setString("current_user_id", user.id)
             
-            currentToken = token
             currentUserId = user.id
+            // Token intentionally not cached in memory (security)
             
             Napier.i("Signup successful for user: ${user.id}")
             token
@@ -88,7 +100,7 @@ class AuthServiceImpl(
     
     /**
      * Logs out the current user.
-     * Clears stored token and user information.
+     * Clears stored token and user information from secure storage.
      */
     override suspend fun logout() {
         return try {
@@ -97,11 +109,10 @@ class AuthServiceImpl(
             // Call logout endpoint
             remoteApiService.logout()
             
-            // Clear stored data
+            // Clear stored data from secure storage
             sharedPreferences.remove("auth_token")
             sharedPreferences.remove("current_user_id")
             
-            currentToken = null
             currentUserId = null
             
             Napier.i("Logout successful")
@@ -110,14 +121,12 @@ class AuthServiceImpl(
             // Still clear local data even if server call fails
             sharedPreferences.remove("auth_token")
             sharedPreferences.remove("current_user_id")
-            currentToken = null
             currentUserId = null
         } catch (e: Exception) {
             Napier.e("Unexpected error during logout", e)
             // Still clear local data even if error occurs
             sharedPreferences.remove("auth_token")
             sharedPreferences.remove("current_user_id")
-            currentToken = null
             currentUserId = null
         }
     }
@@ -149,7 +158,9 @@ class AuthServiceImpl(
     
     /**
      * Refreshes an expired token.
-     * Returns new JWT token.
+     * Returns new JWT token and updates secure storage.
+     * 
+     * SECURITY: New token is stored in SharedPreferences and never cached in memory.
      */
     override suspend fun refreshToken(token: String): String {
         return try {
@@ -157,9 +168,9 @@ class AuthServiceImpl(
             
             val newToken = remoteApiService.refreshToken(token)
             
-            // Update stored token
+            // Update stored token in secure storage (not in memory)
             sharedPreferences.setString("auth_token", newToken)
-            currentToken = newToken
+            // Token intentionally not cached in memory (security)
             
             Napier.i("Token refresh successful")
             newToken

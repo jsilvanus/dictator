@@ -10,6 +10,20 @@ import io.ktor.http.*
 
 /**
  * Remote data source implementations using Ktor HTTP client.
+ * 
+ * REFACTORING NOTE: This service is currently monolithic (588 LOC) and should be split
+ * into domain-specific sub-services for better maintainability:
+ * 
+ * - AuthApiService (implemented) - login, signup, token management
+ * - DocumentApiService - document CRUD, versions
+ * - FolderApiService - folder management  
+ * - ShareApiService - document sharing
+ * - AiApiService - AI sessions and chat
+ * 
+ * This facade will delegate to these services in a future refactoring.
+ * For now, all endpoints are implemented here with clear section markers.
+ * 
+ * TODO: Extract into separate services (Phase 6)
  */
 
 class RemoteApiService(

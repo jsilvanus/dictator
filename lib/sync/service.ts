@@ -29,12 +29,78 @@ export interface SyncBatch {
 /**
  * Phase 1: Sync Service - Queue Management
  * Manages pending sync items with retry logic and batch processing
+ * 
+ * IMPROVEMENTS:
+ * - Added deadlock detection for circular dependencies
+ * - Validates sync queue for dependency cycles
+ * - Implements safe batch processing with cycle detection
  */
 export class SyncService {
   private readonly MAX_RETRIES = 5;
   private readonly RETRY_DELAY_MS = 5000; // 5 seconds base delay
   private readonly BATCH_SIZE = 10;
   private readonly MAX_BATCH_SIZE_BYTES = 1024 * 1024; // 1MB max batch
+  
+  /**
+   * Detects circular dependencies in sync queue.
+   * Returns true if a deadlock cycle is detected, false otherwise.
+   * 
+   * SECURITY: Prevents infinite loops in sync processing.
+   */
+  private detectDeadlock(items: SyncQueueItem[]): boolean {
+    // Build dependency graph from changeData
+    const dependencies: Map<string, Set<string>> = new Map();
+    
+    for (const item of items) {
+      const deps = new Set<string>();
+      
+      // Check if changeData contains references to other documents
+      const changeStr = JSON.stringify(item.changeData);
+      for (const otherItem of items) {
+        if (item.documentId !== otherItem.documentId) {
+          // Check if this item depends on another
+          if (changeStr.includes(otherItem.documentId)) {
+            deps.add(otherItem.documentId);
+          }
+        }
+      }
+      
+      dependencies.set(item.documentId, deps);
+    }
+    
+    // DFS cycle detection
+    const visited = new Set<string>();
+    const recursionStack = new Set<string>();
+    
+    const hasCycle = (docId: string): boolean => {
+      visited.add(docId);
+      recursionStack.add(docId);
+      
+      const deps = dependencies.get(docId) || new Set();
+      for (const dep of deps) {
+        if (!visited.has(dep)) {
+          if (hasCycle(dep)) return true;
+        } else if (recursionStack.has(dep)) {
+          return true;  // Cycle detected
+        }
+      }
+      
+      recursionStack.delete(docId);
+      return false;
+    };
+    
+    // Check all documents for cycles
+    for (const docId of dependencies.keys()) {
+      if (!visited.has(docId)) {
+        if (hasCycle(docId)) {
+          console.warn(`Deadlock detected in sync queue for document: ${docId}`);
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
 
   /**
    * Add an item to the pending sync queue
@@ -64,10 +130,23 @@ export class SyncService {
   /**
    * Create a sync batch optimized for battery consumption (battery-aware batching)
    * Groups items by document and prioritizes by update frequency
+   * 
+   * SECURITY: Detects and prevents deadlock cycles
    */
   async createBatch(userId: string, maxItems: number = this.BATCH_SIZE): Promise<SyncBatch> {
     const rawItems = await this.getPendingItems(userId, maxItems);
     const items = rawItems as SyncQueueItem[];
+
+    // Check for deadlock/circular dependencies
+    if (this.detectDeadlock(items)) {
+      console.error(`Deadlock detected in sync batch for user: ${userId}`);
+      // Return empty batch if deadlock is detected
+      return {
+        items: [],
+        totalSize: 0,
+        estimatedEnergy: 0,
+      };
+    }
 
     // Calculate total size and energy estimate
     let totalSize = 0;
