@@ -1,7 +1,7 @@
 plugins {
-    kotlin("multiplatform") version "1.9.23"
-    kotlin("plugin.serialization") version "1.9.23"
-    id("com.squareup.sqldelight") version "2.0.1"
+    id("org.jetbrains.kotlin.multiplatform") version "1.9.25"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.25"
+    id("app.cash.sqldelight") version "2.0.1"
 }
 
 kotlin {
