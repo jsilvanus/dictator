@@ -67,13 +67,15 @@ AI: Anthropic Claude Sonnet 4.6 via REST API
 
 ## 2. Feature Mapping: 11 Development Phases
 
-### Phase 1: Basic Authentication & User Management
+### Phase 1: Basic Authentication & User Management (Optional)
 **Web Components:** Auth flow, User model, JWT session handling  
 **Android Implementation:**
-- OAuth 2.0 flow using Chrome Custom Tabs
-- JWT storage in Android Keystore
+- **Optional Login:** User can use app in offline mode without authentication
+- OAuth 2.0 flow using Chrome Custom Tabs (for authenticated sync)
+- JWT storage in Android Keystore (only when logged in)
 - ViewModel-based auth state (LoginViewModel, SignupViewModel)
-- Retrofit interceptor for JWT auto-attachment to requests
+- Retrofit interceptor for JWT auto-attachment to requests (only when authenticated)
+- Local-only mode: Full document functionality without backend connection
 
 ### Phase 2: Document & Folder Creation
 **Web Components:** Document CRUD, Folder hierarchy, file browser UI  
@@ -155,6 +157,30 @@ AI: Anthropic Claude Sonnet 4.6 via REST API
 
 ---
 
+## 3. Authentication & Sync Strategy
+
+### Optional Authentication Model
+The Android port implements a **progressive authentication** model:
+- **Offline Mode (No Auth):** Users can create, edit, and delete documents locally without logging in. All features work: voice input, AI (with API key), rich text editing.
+- **Sync Mode (Auth Required):** Users can optionally log in to enable cloud sync, share documents with others, and keep multiple devices in sync.
+- **Hybrid Model:** Users start offline, can add authentication at any time to enable sync without losing local data.
+
+### Sync API Integration (Phase 0)
+The sync strategy implements device-aware synchronization from SYNC_API_PHASE0.md:
+- **Device Tracking:** Each document tracks `lastModifiedDevice` ('web' or 'android') and `deviceVersion` for conflict detection
+- **Incremental Sync:** `/api/documents/:id/sync?since=timestamp` only downloads changes since last sync
+- **Pending Queue:** Changes are queued locally in `pending_sync_queue` table until both authenticated and online
+- **Conflict Resolution:** Last-write-wins with device awareness; conflicts stored in `document_conflicts` table for manual resolution
+- **Version Metadata:** `SyncMetadata` table tracks local/remote versions and sync status per document
+
+### API Endpoints for Sync
+- **GET `/api/documents/:id/sync`**: Fetch document with incremental changes since timestamp
+- **PUT `/api/documents/:id/sync`**: Push local changes with device metadata
+- **POST `/api/documents/:id/versions`**: Fetch version history for a document
+- **GET `/api/sync/status`**: Check sync status for all documents
+
+---
+
 ## 3. Data Model Mapping
 
 ### Current Web Schema (PostgreSQL via Drizzle)
@@ -195,9 +221,11 @@ data class Document(
     @PrimaryKey val id: String,
     val title: String,
     val folderId: String,
-    val userId: String,
+    val userId: String?,  // Nullable for offline-first mode
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val lastModifiedDevice: String = "android",  // 'web' or 'android'
+    val deviceVersion: Long = 1  // Sync tracking
 )
 
 @Entity(tableName = "document_versions")
@@ -207,7 +235,9 @@ data class DocumentVersion(
     val content: String,
     val version: Int,
     val createdBy: String,
-    val createdAt: Long
+    val createdAt: Long,
+    val deviceSource: String = "android",  // 'web' or 'android'
+    val deviceVersion: Long = 1  // Device version at time of save
 )
 
 @Entity(tableName = "shares")
@@ -222,29 +252,72 @@ data class Share(
 @Entity(tableName = "ai_sessions")
 data class AiSession(
     @PrimaryKey val id: String,
-    val userId: String,
+    val userId: String?,  // Nullable for offline-first mode
     val mode: String, // "inline" or "panel"
     val turnsJson: String, // JSON array serialization
     val metadata: String?, // JSON object
     val createdAt: Long
 )
+
+// Sync Phase 0 Tables (Device-aware sync)
+@Entity(tableName = "sync_metadata")
+data class SyncMetadata(
+    @PrimaryKey val documentId: String,
+    val lastSyncedAt: Long?,
+    val localVersion: Long,
+    val remoteVersion: Long,
+    val pendingChanges: Int = 0,
+    val conflictStatus: String = "none", // 'none', 'resolved', 'unresolved'
+    val updatedAt: Long
+)
+
+@Entity(tableName = "pending_sync_queue")
+data class PendingSyncItem(
+    @PrimaryKey val id: String,
+    val documentId: String,
+    val userId: String?,  // Nullable for local changes
+    val deviceId: String = "android",
+    val changeDataJson: String,  // JSON payload
+    val status: String = "pending",  // 'pending', 'failed', 'synced'
+    val retryCount: Int = 0,
+    val createdAt: Long,
+    val updatedAt: Long
+)
+
+@Entity(tableName = "document_conflicts")
+data class DocumentConflict(
+    @PrimaryKey val id: String,
+    val documentId: String,
+    val baseVersionJson: String,  // Common ancestor
+    val androidVersionJson: String,  // Local version
+    val webVersionJson: String,  // Remote version
+    val resolvedVersionJson: String?,  // Resolution result
+    val status: String = "unresolved",  // 'unresolved', 'resolved'
+    val createdAt: Long,
+    val resolvedAt: Long?
+)
 ```
 
 ### Sync Strategy
-- **Online-first:** Primary source of truth is backend server
-- **Offline-first capability:** Room provides local cache, synced on reconnect
-- **Conflict resolution:** Last-write-wins for simplicity; server state takes precedence
+- **Offline-first with optional sync:** Full app functionality without authentication; users can work completely offline
+- **Device-aware sync (Phase 0):** When logged in, syncs changes to web via `/api/documents/:id/sync` with device metadata
+- **Online-first for shared docs:** When authenticated and online, pulls latest changes from server and other devices
+- **Offline-first capability:** Room provides local cache, fully functional even without network or authentication
+- **Conflict resolution:** Last-write-wins with device awareness; server `lastModifiedDevice` tracks source
+- **Version tracking:** Monotonically increasing `deviceVersion` per device for conflict detection
+- **Pending sync queue:** Changes queued locally when offline or unauthenticated, synced when both conditions met
+- **Incremental sync:** Uses `since` parameter for bandwidth-efficient incremental pulls
 
 ---
 
 ## 4. API Layer Mapping
 
-### Web Endpoints (18 REST routes)
+### Web Endpoints (18 REST routes + Sync API)
 
 The Android app will consume existing Next.js API routes:
 
 ```
-Auth:
+Auth (Optional):
   POST   /api/auth/register          → RetrofitAuthService.register()
   POST   /api/auth/login             → RetrofitAuthService.login()
   POST   /api/auth/logout            → RetrofitAuthService.logout()
@@ -256,6 +329,12 @@ Documents:
   POST   /api/documents              → DocumentRepository.createDocument()
   PUT    /api/documents/:id          → DocumentRepository.updateDocument()
   DELETE /api/documents/:id          → DocumentRepository.deleteDocument()
+
+Sync API (Device-aware sync):
+  GET    /api/documents/:id/sync     → SyncService.getSyncedDocument(since?: timestamp)
+  PUT    /api/documents/:id/sync     → SyncService.pushChanges(content, deviceId, deviceVersion)
+  POST   /api/documents/:id/versions → SyncService.getVersionHistory(since, limit)
+  GET    /api/sync/status            → SyncService.getSyncStatus()
 
 Folders:
   GET    /api/folders                → FolderRepository.getAllFolders()
@@ -287,6 +366,29 @@ interface DocumentService {
     @GET("documents")
     suspend fun getAllDocuments(): List<DocumentDto>
     // ... others
+}
+
+interface SyncService {
+    @GET("documents/{id}/sync")
+    suspend fun getSyncedDocument(
+        @Path("id") documentId: String,
+        @Query("since") since: String?
+    ): SyncResponse
+    
+    @PUT("documents/{id}/sync")
+    suspend fun pushChanges(
+        @Path("id") documentId: String,
+        @Body req: SyncRequest
+    ): SyncResponse
+    
+    @POST("documents/{id}/versions")
+    suspend fun getVersionHistory(
+        @Path("id") documentId: String,
+        @Body req: VersionHistoryRequest
+    ): VersionHistoryResponse
+    
+    @GET("sync/status")
+    suspend fun getSyncStatus(): SyncStatusResponse
 }
 
 interface AIService {
@@ -439,12 +541,17 @@ LaunchedEffect(Unit) {
 }
 ```
 
-### 7.3 Offline Functionality
+### 7.3 Offline Functionality (Optional Sync with New Sync API)
 
-- **Local-first approach:** Room DB provides complete document cache
-- **Sync manager:** Background WorkManager job syncs when network available
-- **Conflict resolution:** Detect stale documents, merge or show conflict UI
-- **Voice input:** Fully functional offline; queued for sync when online
+- **Local-first approach:** Room DB provides complete document cache, fully functional offline
+- **Optional sync:** Sync only requires login; app works without authentication for local documents
+- **Device-aware sync:** Tracks which device (web vs Android) last modified documents
+- **Sync manager:** Background WorkManager job syncs when network and auth available
+- **Pending queue:** Changes queued locally when offline, automatically synced when online
+- **Conflict resolution:** Last-write-wins strategy with device awareness; conflicts stored in `document_conflicts` table
+- **Version tracking:** Monotonically increasing `deviceVersion` per device for merge tracking
+- **Incremental sync:** `/api/documents/:id/sync?since=timestamp` for bandwidth efficiency
+- **Voice input:** Fully functional offline; queued for sync when online and authenticated
 
 ### 7.4 Security Best Practices
 
@@ -530,22 +637,26 @@ class EditorScreenTest {
 
 | Week(s) | Milestones | Tasks |
 |---------|-----------|-------|
-| 1-2 | Project Setup | Set up Kotlin project, Compose scaffold, Hilt DI, Room DB |
-| 3 | Auth MVP | Login/signup screens, JWT token handling, session persistence |
-| 4 | Documents & Folders | Room schema, repository layer, list/create/delete functionality |
+| 1-2 | Project Setup | Set up Kotlin project, Compose scaffold, Hilt DI, Room DB with sync tables |
+| 3 | Auth MVP (Optional) | Login/signup screens, JWT token handling, session persistence; app usable without auth |
+| 4 | Documents & Folders | Room schema, repository layer, list/create/delete functionality (local and synced) |
 | 5 | Rich Text Editor | Implement editor component (Compose or WebView hybrid) |
-| 6 | Voice Input Phase 1 | SpeechRecognizer integration, basic command parsing |
-| 7 | Voice Input Phase 2 | Punctuation normalization, continuous listening |
-| 8 | AI Integration MVP | Claude API integration, inline AI execution, streaming |
-| 9 | AI Panel Mode | Session persistence, conversation history UI |
-| 10 | Sharing & Collab | Share links, permission model, QR code display |
-| 11 | Testing & Polish | Full test suite, UI polish, performance optimization |
-| 12 | Deployment | Play Store submission, release APK signing, documentation |
+| 6 | Sync API MVP | Integrate `/api/documents/:id/sync` endpoint, pending queue, version tracking |
+| 7 | Voice Input Phase 1 | SpeechRecognizer integration, basic command parsing |
+| 8 | Voice Input Phase 2 | Punctuation normalization, continuous listening |
+| 9 | AI Integration MVP | Claude API integration (requires auth), inline AI execution, streaming |
+| 10 | AI Panel Mode | Session persistence, conversation history UI |
+| 11 | Sharing & Collab | Share links, permission model, QR code display |
+| 12 | Conflict Resolution | Handle sync conflicts, pending queue retry logic, conflict UI |
+| 13 | Testing & Polish | Full test suite, UI polish, performance optimization |
+| 14 | Deployment | Play Store submission, release APK signing, documentation |
 
 ### Extended Roadmap (Phases 8-11 features)
 
-- Week 12+: Advanced AI features, settings, biometric auth, export/import
-- Post-MVP: Real-time collaboration (Firebase or Socket.IO), offline-first robustness
+- Week 14+: Advanced AI features, settings, biometric auth, export/import
+- Sync Phase 1: Real-time collaboration (Firebase or Socket.IO), 3-way merge conflict resolution
+- Sync Phase 2: Device-specific change tracking, sync history, selective sync per document
+- Post-MVP: Real-time collaboration, offline-first robustness with advanced conflict UI
 
 ---
 
@@ -708,11 +819,13 @@ jobs:
 ### MVP Success Criteria
 - [ ] All 11 phases from web spec ported to Android
 - [ ] 80%+ test coverage
-- [ ] Offline-first capability with sync
+- [ ] Offline-first capability with full local document functionality (login optional)
+- [ ] Device-aware sync with pending queue and conflict tracking (when authenticated)
 - [ ] Voice input with punctuation normalization
-- [ ] Claude AI integration working
+- [ ] Claude AI integration working (requires authentication)
 - [ ] Play Store alpha release
 - [ ] Performance: Load documents <2s, voice recognition <1s latency
+- [ ] Optional authentication: App fully usable without login for local documents
 
 ### Post-MVP (Phase 2)
 - [ ] Real-time collaborative editing
@@ -727,10 +840,12 @@ jobs:
 
 1. **Rich Text Editor:** WebView bridge (fast) vs. Compose custom (performant)?
 2. **Real-time Collaboration:** Firebase Realtime DB, Socket.IO, or simple polling?
-3. **Offline Conflict Resolution:** Last-write-wins, merge strategy, or UI prompt?
+3. **Offline Conflict Resolution:** Current last-write-wins is simple; manual merge UI needed for power users?
 4. **Voice Recognition:** Android SpeechRecognizer (free) or Google Cloud Speech (better accuracy)?
 5. **API Rate Limiting:** In-memory (single instance) or Redis (distributed)?
 6. **Target Device Types:** Phones only, tablets, foldables?
+7. **Optional Auth Scope:** Should offline documents be synced when user logs in, or kept separate?
+8. **Device Identification:** Generate device ID on first run vs. use Android device ID? Privacy implications?
 
 ---
 
@@ -763,10 +878,15 @@ jobs:
 
 ## Conclusion
 
-The Android port of Dictator is feasible within 8-12 weeks with a clear tech stack, phased development approach, and offline-first architecture. The modular web backend (18 REST endpoints) provides a stable foundation for the Android client. Voice input and AI features present the highest technical complexity but have clear implementation patterns based on existing web code.
+The Android port of Dictator is feasible within 8-12 weeks with a clear tech stack, phased development approach, and **optional authentication with device-aware sync**. The app provides full offline functionality without requiring login, while offering progressive authentication for cloud sync capabilities.
+
+The modular web backend (18 REST endpoints + Phase 0 Sync API) provides a stable foundation for the Android client. The Sync API Phase 0 introduces device-aware conflict resolution and pending queue management, enabling robust multi-device synchronization.
+
+Voice input and AI features present the highest technical complexity but have clear implementation patterns based on existing web code. The optional authentication model differentiates the Android app from the web version, enabling true offline-first document creation.
 
 **Next Steps:**
-1. Finalize decisions on Rich Text Editor and Real-time Collaboration approaches
-2. Create Android project scaffold with Compose + Room + Hilt setup
-3. Implement Phase 1 (Auth) and Phase 2 (Documents) as MVP foundation
-4. Establish CI/CD pipeline for automated testing and builds
+1. Finalize decisions on optional auth implementation (e.g., document ownership model for offline docs)
+2. Decide on device identification strategy for sync tracking
+3. Create Android project scaffold with Compose + Room + Hilt setup, including sync tables
+4. Implement Phase 1 (Optional Auth) and Phase 2 (Documents) as MVP foundation
+5. Establish CI/CD pipeline for automated testing and builds
