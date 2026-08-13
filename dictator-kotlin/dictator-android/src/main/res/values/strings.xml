@@ -25,6 +25,24 @@
     <string name="dont_have_account">Don\'t have an account?</string>
     <string name="already_have_account">Already have an account?</string>
     
+    <!-- Auth Messages -->
+    <string name="welcome_login">Sign in to continue your writing workflow.</string>
+    <string name="welcome_signup">Create your account to start writing with Dictator.</string>
+    <string name="login_success">Welcome back — your login flow is wired up.</string>
+    <string name="signup_success">Account ready — your sign-up flow is wired up.</string>
+    <string name="error_invalid_email">Please enter a valid email address</string>
+    <string name="error_password_short">Password must be at least 8 characters</string>
+    <string name="error_name_empty">Please enter your name</string>
+    <string name="error_password_mismatch">Passwords do not match</string>
+    <string name="error_generic">An error occurred. Please try again.</string>
+    <string name="terms_agree">I agree to the Terms of Service and Privacy Policy</string>
+    <string name="password_strength_weak">Weak</string>
+    <string name="password_strength_medium">Medium</string>
+    <string name="password_strength_strong">Strong</string>
+    <string name="password_strength_very_strong">Very Strong</string>
+    <string name="show_password">Show password</string>
+    <string name="hide_password">Hide password</string>
+    
     <!-- Documents -->
     <string name="documents">Documents</string>
     <string name="new_document">New Document</string>
@@ -32,29 +50,80 @@
     <string name="delete_document">Delete Document</string>
     <string name="edit_document">Edit Document</string>
     <string name="no_documents">No documents yet</string>
-    
-    <!-- Folders -->
-    <string name="folders">Folders</string>
-    <string name="new_folder">New Folder</string>
-    <string name="folder_name">Folder Name</string>
-    <string name="delete_folder">Delete Folder</string>
+    <string name="last_modified">Last modified</string>
+    <string name="word_count">%1$d words</string>
+    <string name="folder">Folder</string>
+    <string name="synced">Synced</string>
+    <string name="syncing_status">Syncing...</string>
+    <string name="unsaved_changes">Unsaved changes</string>
+    <string name="search_documents">Search documents...</string>
+    <string name="pull_to_refresh">Pull to refresh</string>
+    <string name="editor_title">Title</string>
+    <string name="bold">Bold</string>
+    <string name="italic">Italic</string>
+    <string name="underline">Underline</string>
+    <string name="heading_1">H1</string>
+    <string name="heading_2">H2</string>
+    <string name="heading_3">H3</string>
+    <string name="bullet_list">List</string>
+    <string name="blockquote">Quote</string>
+    <string name="code_block">Code</string>
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
+    <string name="undo_tooltip">Undo (Ctrl+Z)</string>
+    <string name="redo_tooltip">Redo (Ctrl+Y)</string>
+    <string name="saved">Saved</string>
+    <string name="saving">Saving...</string>
+    <string name="document_metadata">Document Info</string>
+    <string name="created_date">Created</string>
+    <string name="modified_date">Modified</string>
+    <string name="archive_document">Archive</string>
+    <string name="unarchive_document">Unarchive</string>
+    <string name="delete_confirm">Are you sure you want to delete this document?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
     
     <!-- Voice -->
     <string name="voice_input">Voice Input</string>
     <string name="start_listening">Start Listening</string>
     <string name="stop_listening">Stop Listening</string>
     <string name="recording">Recording...</string>
+    <string name="voice_confidence">Confidence: %1$d%%</string>
+    <string name="voice_clear">Clear</string>
+    <string name="voice_retry">Retry</string>
+    <string name="voice_error_permission">Microphone permission not granted</string>
+    <string name="voice_error_no_input">No speech detected</string>
+    <string name="voice_error_timeout">Recording timeout</string>
+    <string name="permission_required">Permission Required</string>
+    <string name="microphone_permission_description">This app needs microphone access to use voice input features.</string>
     
     <!-- AI -->
     <string name="ai_assistant">AI Assistant</string>
     <string name="ask_ai">Ask AI</string>
     <string name="ai_response">AI Response</string>
+    <string name="ai_prompt_placeholder">Enter your prompt...</string>
+    <string name="ai_send">Send</string>
+    <string name="ai_copy">Copy</string>
+    <string name="ai_insert">Insert into document</string>
+    <string name="ai_clear">Clear conversation</string>
+    <string name="ai_history">Conversation History</string>
+    <string name="ai_settings">AI Settings</string>
+    <string name="ai_streaming">Generating response...</string>
     
     <!-- Sync -->
     <string name="sync">Sync</string>
     <string name="syncing">Syncing...</string>
     <string name="sync_complete">Sync Complete</string>
     <string name="sync_error">Sync Error</string>
+    <string name="last_sync">Last synced: %1$s</string>
+    <string name="sync_status">Sync Status</string>
+    <string name="pending_changes">Pending Changes</string>
+    <string name="sync_retry">Retry Sync</string>
+    <string name="conflict_resolution">Resolve Conflicts</string>
+    <string name="resolve_conflicts">Resolve Conflicts</string>
+    <string name="keep_local">Keep Local Version</string>
+    <string name="keep_remote">Keep Remote Version</string>
+    <string name="manual_merge">Manual Merge</string>
     
     <!-- Sharing -->
     <string name="share">Share</string>
@@ -64,4 +133,12 @@
     <string name="view_only">View Only</string>
     <string name="can_edit">Can Edit</string>
     <string name="can_comment">Can Comment</string>
+    <string name="add_user">Add user or email</string>
+    <string name="shared_users">Shared with</string>
+    <string name="remove_share">Remove</string>
+    <string name="copy_link">Copy link</string>
+    <string name="make_public">Make public</string>
+    <string name="make_private">Make private</string>
+    <string name="public_link">Public link</string>
+    <string name="link_copied">Link copied to clipboard</string>
 </resources>

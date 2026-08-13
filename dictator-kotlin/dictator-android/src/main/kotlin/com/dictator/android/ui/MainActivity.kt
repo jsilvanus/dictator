@@ -8,7 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.dictator.android.ui.auth.AuthScreen
+import com.dictator.android.ui.navigation.DictatorNavHost
 import com.dictator.android.ui.theme.DictatorTheme
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.aakira.napier.Napier
@@ -42,5 +42,5 @@ class MainActivity : ComponentActivity() {
  */
 @Composable
 fun DictatorApp() {
-    AuthScreen()
+    DictatorNavHost()
 }
