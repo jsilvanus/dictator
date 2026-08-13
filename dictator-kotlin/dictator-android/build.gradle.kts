@@ -98,6 +98,9 @@ dependencies {
     // Speech Recognition
     implementation("androidx.speech:speech-recognition:1.0.0-alpha03")
 
+    // SQLDelight Android driver
+    implementation("app.cash.sqldelight:android-driver:2.0.1")
+    
     // DataStore for preferences
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
