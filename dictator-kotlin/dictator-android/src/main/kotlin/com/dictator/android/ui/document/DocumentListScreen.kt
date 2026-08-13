@@ -97,34 +97,92 @@ fun DocumentListScreen(
                         .padding(12.dp)
                 )
 
-                // Document list
-                val filteredDocs = viewModel.getFilteredDocuments()
-                if (filteredDocs.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            stringResource(R.string.no_documents),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                // Document list states (IMPROVEMENT: Explicit state handling)
+                when {
+                    state.isLoading -> {
+                        // Loading state
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                androidx.compose.material3.CircularProgressIndicator()
+                                Text(
+                                    stringResource(R.string.loading_documents),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(filteredDocs) { doc ->
-                            DocumentCard(
-                                document = doc,
-                                onSelect = { onDocumentSelect(doc.id) },
-                                onLongPress = { viewModel.selectDocument(doc) }
-                            )
+                    state.errorMessage != null -> {
+                        // Error state
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.CloudOff,
+                                    contentDescription = stringResource(R.string.error),
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                                Text(
+                                    state.errorMessage!!,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                    else -> {
+                        // Content state
+                        val filteredDocs = viewModel.getFilteredDocuments()
+                        if (filteredDocs.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    stringResource(R.string.no_documents),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // IMPROVEMENT: Stable keys for performance
+                                items(
+                                    items = filteredDocs,
+                                    key = { doc -> doc.id }
+                                ) { doc ->
+                                    DocumentCard(
+                                        document = doc,
+                                        onSelect = { onDocumentSelect(doc.id) },
+                                        onLongPress = { viewModel.selectDocument(doc) }
+                                    )
+                                }
+                            }
                         }
                     }
                 }

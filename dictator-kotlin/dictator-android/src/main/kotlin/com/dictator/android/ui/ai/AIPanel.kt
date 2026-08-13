@@ -147,17 +147,33 @@ fun AIPanel(
 
             Divider()
 
-            // Error message
+            // Error message with retry button
             state.errorMessage?.let { error ->
-                Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.labelSmall,
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
-                    textAlign = TextAlign.Center
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    // Retry button (IMPROVEMENT: Error recovery)
+                    if (state.canRetry) {
+                        Button(
+                            onClick = { viewModel.retryLastPrompt() },
+                            modifier = Modifier
+                                .align(Alignment.CenterHorizontally)
+                        ) {
+                            Text(stringResource(R.string.ai_retry))
+                        }
+                    }
+                }
             }
 
             // Input field

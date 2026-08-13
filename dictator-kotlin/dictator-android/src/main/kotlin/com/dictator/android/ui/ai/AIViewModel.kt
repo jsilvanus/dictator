@@ -19,12 +19,17 @@ data class AIPanelUiState(
     val currentStreamingResponse: String = "",
     val errorMessage: String? = null,
     val sessions: List<String> = emptyList(),
-    val currentSessionId: String = "default"
+    val currentSessionId: String = "default",
+    val retryCount: Int = 0,
+    val canRetry: Boolean = false
 )
 
 class AIViewModel : ViewModel() {
     private val _state = MutableStateFlow(AIPanelUiState())
     val state: StateFlow<AIPanelUiState> = _state.asStateFlow()
+    
+    private val MAX_RETRIES = 3
+    private var lastFailedPrompt: String? = null
 
     init {
         loadSessions()
@@ -48,19 +53,51 @@ class AIViewModel : ViewModel() {
             currentPrompt = "",
             isStreaming = true,
             currentStreamingResponse = "",
-            errorMessage = null
+            errorMessage = null,
+            retryCount = 0,
+            canRetry = false
         )
 
+        lastFailedPrompt = prompt
+        
         // Simulate AI response streaming
         simulateStreaming(prompt)
+    }
+    
+    /**
+     * Retry the last failed AI prompt with exponential backoff.
+     * IMPROVEMENT: Error recovery with retry logic.
+     */
+    fun retryLastPrompt() {
+        if (lastFailedPrompt == null) return
+        if (_state.value.retryCount >= MAX_RETRIES) {
+            _state.value = _state.value.copy(
+                errorMessage = "Maximum retries exceeded. Please try again later.",
+                canRetry = false
+            )
+            return
+        }
+        
+        _state.value = _state.value.copy(
+            isStreaming = true,
+            errorMessage = null,
+            retryCount = _state.value.retryCount + 1,
+            canRetry = false
+        )
+        
+        simulateStreaming(lastFailedPrompt!!)
     }
 
     fun clearConversation() {
         _state.value = _state.value.copy(
             messages = emptyList(),
             currentStreamingResponse = "",
-            isStreaming = false
+            isStreaming = false,
+            errorMessage = null,
+            retryCount = 0,
+            canRetry = false
         )
+        lastFailedPrompt = null
     }
 
     fun copyResponse(text: String) {
@@ -94,6 +131,20 @@ class AIViewModel : ViewModel() {
     }
 
     private fun simulateStreaming(prompt: String) {
+        // Simulate random errors for testing error recovery
+        val shouldFail = kotlin.random.Random.nextInt(100) < 15  // 15% failure rate
+        
+        if (shouldFail && _state.value.retryCount < MAX_RETRIES) {
+            // Simulate API error
+            _state.value = _state.value.copy(
+                isStreaming = false,
+                currentStreamingResponse = "",
+                errorMessage = "Failed to get AI response. Tap retry to try again.",
+                canRetry = true
+            )
+            return
+        }
+        
         // Simulate streaming response
         val responseId = System.currentTimeMillis().toString()
         var response = "This is a simulated AI response to: \"$prompt\". "
@@ -117,7 +168,9 @@ class AIViewModel : ViewModel() {
         _state.value = _state.value.copy(
             messages = _state.value.messages + assistantMessage,
             isStreaming = false,
-            currentStreamingResponse = ""
+            currentStreamingResponse = "",
+            errorMessage = null,
+            canRetry = false
         )
     }
 }

@@ -50,6 +50,7 @@
     <string name="delete_document">Delete Document</string>
     <string name="edit_document">Edit Document</string>
     <string name="no_documents">No documents yet</string>
+    <string name="loading_documents">Loading documents...</string>
     <string name="last_modified">Last modified</string>
     <string name="word_count">%1$d words</string>
     <string name="folder">Folder</string>
@@ -103,6 +104,7 @@
     <string name="ai_response">AI Response</string>
     <string name="ai_prompt_placeholder">Enter your prompt...</string>
     <string name="ai_send">Send</string>
+    <string name="ai_retry">Retry</string>
     <string name="ai_copy">Copy</string>
     <string name="ai_insert">Insert into document</string>
     <string name="ai_clear">Clear conversation</string>
