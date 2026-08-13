@@ -209,3 +209,9 @@ data class ErrorResponse(
     val code: Int? = null,
     val details: String? = null
 )
+
+@Serializable
+data class RefreshTokenResponse(
+    val token: String
+)
+

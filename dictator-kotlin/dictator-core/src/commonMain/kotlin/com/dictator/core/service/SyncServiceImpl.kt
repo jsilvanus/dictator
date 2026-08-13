@@ -209,7 +209,7 @@ class SyncServiceImpl(
             createdAt = Clock.System.now().toEpochMilliseconds(),
             updatedAt = Clock.System.now().toEpochMilliseconds()
         )
-        pendingSyncRepository.createPendingSync(pendingItem)
+        pendingSyncRepository.createPendingItem(pendingItem)
     }
     
     private fun hasConflict(localVersion: DocumentVersion, remoteVersion: DocumentVersion): Boolean {

@@ -33,6 +33,11 @@ val coreModule = module {
         DatabaseManager.getInstance()
     }
     
+    // Shared Preferences (platform-specific - override in platform modules)
+    single<SharedPreferences> {
+        InMemorySharedPreferences()
+    }
+    
     // Local Repositories
     single<UserRepository> {
         LocalUserRepository(get())
@@ -77,7 +82,7 @@ val coreModule = module {
     
     // Services (singletons)
     single<AuthService> {
-        com.dictator.core.service.AuthServiceImpl(
+        AuthServiceImpl(
             remoteApiService = get(),
             userRepository = get(),
             sharedPreferences = get()
@@ -85,7 +90,7 @@ val coreModule = module {
     }
     
     single<DocumentService> {
-        com.dictator.core.service.DocumentServiceImpl(
+        DocumentServiceImpl(
             documentRepository = get(),
             remoteApiService = get(),
             syncService = get()
@@ -93,7 +98,7 @@ val coreModule = module {
     }
     
     single<VoiceService> {
-        com.dictator.core.service.VoiceServiceImpl(
+        VoiceServiceImpl(
             voiceCommandParser = get(),
             punctuationNormalizer = get(),
             documentRepository = get()
@@ -101,14 +106,14 @@ val coreModule = module {
     }
     
     single<AiService> {
-        com.dictator.core.service.AiServiceImpl(
+        AiServiceImpl(
             remoteApiService = get(),
             aiSessionRepository = get()
         )
     }
     
     single<SyncService> {
-        com.dictator.core.service.SyncServiceImpl(
+        SyncServiceImpl(
             documentRepository = get(),
             documentVersionRepository = get(),
             syncMetadataRepository = get(),
@@ -119,7 +124,7 @@ val coreModule = module {
     }
     
     single<FolderService> {
-        com.dictator.core.service.FolderServiceImpl(
+        FolderServiceImpl(
             folderRepository = get(),
             documentRepository = get(),
             remoteApiService = get()
@@ -127,7 +132,7 @@ val coreModule = module {
     }
     
     single<ShareService> {
-        com.dictator.core.service.ShareServiceImpl(
+        ShareServiceImpl(
             shareRepository = get(),
             documentRepository = get(),
             remoteApiService = get()

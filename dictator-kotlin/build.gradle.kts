@@ -1,11 +1,8 @@
 // Root build.gradle.kts - Shared configuration
 
-plugins {
-    id("com.android.application") version "8.1.4" apply false
-}
-
 subprojects {
     tasks.withType<Test> {
         useJUnitPlatform()
     }
 }
+

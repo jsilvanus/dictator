@@ -18,4 +18,5 @@ dependencyResolutionManagement {
 rootProject.name = "dictator"
 
 include(":dictator-core")
-include(":dictator-android")
+// include(":dictator-android")
+

@@ -181,13 +181,3 @@ class AuthServiceImpl(
     }
 }
 
-/**
- * Abstract interface for platform-specific shared preferences.
- * Implementations provided by platform layers (Android, iOS, etc.).
- */
-interface SharedPreferences {
-    fun getString(key: String, defaultValue: String? = null): String?
-    fun setString(key: String, value: String)
-    fun remove(key: String)
-    fun clear()
-}

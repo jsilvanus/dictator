@@ -111,6 +111,39 @@ class RemoteApiService(
         }
     }
     
+    suspend fun validateToken(token: String): Boolean {
+        return try {
+            val response = httpClient.post("$baseUrl/api/auth/validate") {
+                contentType(ContentType.Application.Json)
+                header("Authorization", "******")
+                setBody(mapOf("token" to token))
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            throw DataException.AuthenticationError("Token validation failed: ${e.message}")
+        }
+    }
+    
+    suspend fun refreshToken(token: String): String {
+        return try {
+            val response = httpClient.post("$baseUrl/api/auth/refresh") {
+                contentType(ContentType.Application.Json)
+                header("Authorization", "******")
+                setBody(mapOf("token" to token))
+            }
+            
+            if (response.status.isSuccess()) {
+                val refreshResp = response.body<RefreshTokenResponse>()
+                authToken = refreshResp.token
+                refreshResp.token
+            } else {
+                throw DataException.ServerError("Token refresh failed", response.status.value)
+            }
+        } catch (e: Exception) {
+            throw DataException.NetworkError("Token refresh error", e)
+        }
+    }
+    
     // ============= Documents =============
     
     suspend fun getDocuments(userId: String): List<Document> {
@@ -365,6 +398,59 @@ class RemoteApiService(
         }
     }
     
+    suspend fun updateShare(shareId: String, permission: String): Share {
+        return try {
+            val response = httpClient.put("$baseUrl/api/shares/$shareId") {
+                contentType(ContentType.Application.Json)
+                authToken?.let { header("Authorization", "******") }
+                setBody(mapOf("permission" to permission))
+            }
+            
+            if (response.status.isSuccess()) {
+                val dto = response.body<ShareResponse>()
+                Share(
+                    id = dto.id,
+                    documentId = dto.documentId,
+                    sharedWithUserId = dto.sharedWithUserId,
+                    permission = dto.permission,
+                    createdAt = dto.createdAt
+                )
+            } else {
+                throw DataException.ServerError("Failed to update share", response.status.value)
+            }
+        } catch (e: Exception) {
+            throw DataException.NetworkError("Share update error", e)
+        }
+    }
+    
+    suspend fun getSharedDocuments(userId: String): List<Document> {
+        return try {
+            val response = httpClient.get("$baseUrl/api/documents/shared") {
+                authToken?.let { header("Authorization", "******") }
+                parameter("userId", userId)
+            }
+            
+            if (response.status.isSuccess()) {
+                response.body<List<DocumentResponse>>().map { dto ->
+                    Document(
+                        id = dto.id,
+                        title = dto.title,
+                        folderId = dto.folderId,
+                        userId = dto.userId,
+                        createdAt = dto.createdAt,
+                        updatedAt = dto.updatedAt,
+                        lastModifiedDevice = dto.lastModifiedDevice,
+                        deviceVersion = dto.deviceVersion
+                    )
+                }
+            } else {
+                throw DataException.ServerError("Failed to fetch shared documents", response.status.value)
+            }
+        } catch (e: Exception) {
+            throw DataException.NetworkError("Shared documents fetch error", e)
+        }
+    }
+    
     // ============= AI =============
     
     suspend fun askInline(prompt: String, context: String?): String {
@@ -383,6 +469,60 @@ class RemoteApiService(
             }
         } catch (e: Exception) {
             throw DataException.NetworkError("AI request error", e)
+        }
+    }
+    
+    suspend fun askAi(prompt: String, context: String): String {
+        return askInline(prompt, context)
+    }
+    
+    suspend fun getDocumentVersions(documentId: String, since: Long = 0): List<DocumentVersion> {
+        return try {
+            val response = httpClient.get("$baseUrl/api/documents/$documentId/versions") {
+                authToken?.let { header("Authorization", "******") }
+                if (since > 0) {
+                    parameter("since", since)
+                }
+            }
+            
+            if (response.status.isSuccess()) {
+                response.body<List<DocumentVersionResponse>>().map { dto ->
+                    DocumentVersion(
+                        id = dto.id,
+                        documentId = dto.documentId,
+                        content = dto.content,
+                        version = dto.version,
+                        createdBy = dto.createdBy,
+                        createdAt = dto.createdAt,
+                        deviceSource = dto.deviceSource,
+                        deviceVersion = dto.deviceVersion
+                    )
+                }
+            } else {
+                throw DataException.ServerError("Failed to fetch document versions", response.status.value)
+            }
+        } catch (e: Exception) {
+            throw DataException.NetworkError("Document versions fetch error", e)
+        }
+    }
+    
+    suspend fun pushDocumentChanges(documentId: String, changes: Map<String, String>, deviceId: String) {
+        return try {
+            val response = httpClient.post("$baseUrl/api/documents/$documentId/sync") {
+                contentType(ContentType.Application.Json)
+                authToken?.let { header("Authorization", "******") }
+                setBody(mapOf(
+                    "changes" to changes,
+                    "deviceId" to deviceId,
+                    "timestamp" to System.currentTimeMillis()
+                ))
+            }
+            
+            if (!response.status.isSuccess()) {
+                throw DataException.ServerError("Failed to push changes", response.status.value)
+            }
+        } catch (e: Exception) {
+            throw DataException.NetworkError("Push changes error", e)
         }
     }
     
