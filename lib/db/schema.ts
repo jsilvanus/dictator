@@ -17,6 +17,7 @@ export const roleEnum = pgEnum('role', ['admin', 'editor']);
 export const sharePermissionEnum = pgEnum('share_permission', ['read', 'edit']);
 export const aiSessionModeEnum = pgEnum('ai_session_mode', ['inline', 'panel']);
 export const syncConflictStatusEnum = pgEnum('sync_conflict_status', ['none', 'resolved', 'unresolved']);
+export const aiProviderEnum = pgEnum('ai_provider', ['claude', 'openai', 'ollama', 'openai-compatible']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -231,8 +232,28 @@ export const syncPerformanceMetrics = pgTable('sync_performance_metrics', {
   timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const usersRelations = relations(users, ({ many }) => ({
+// AI Provider Preferences
+export const userAiPreferences = pgTable('user_ai_preferences', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  preferredProvider: aiProviderEnum('preferred_provider').notNull().default('claude'),
+  preferredModel: text('preferred_model'),
+  customTemperature: numeric('custom_temperature', { precision: 3, scale: 2 }),
+  customMaxTokens: integer('custom_max_tokens'),
+  ollamaUrl: text('ollama_url'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const usersRelations = relations(users, ({ many, one }) => ({
   documents: many(documents),
+  aiPreferences: one(userAiPreferences, {
+    fields: [users.id],
+    references: [userAiPreferences.userId],
+  }),
 }));
 
 export const documentsRelations = relations(documents, ({ one, many }) => ({
@@ -338,6 +359,13 @@ export const syncPerformanceMetricsRelations = relations(syncPerformanceMetrics,
   document: one(documents, {
     fields: [syncPerformanceMetrics.documentId],
     references: [documents.id],
+  }),
+}));
+
+export const userAiPreferencesRelations = relations(userAiPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userAiPreferences.userId],
+    references: [users.id],
   }),
 }));
 

@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 
 import { buildInlineContext, type InlineEditorSnapshot } from '@/lib/ai/context';
-import { type AiResponse,buildInlineSystemPrompt } from '@/lib/ai/prompts';
+import { type AiResponse, buildInlineSystemPrompt } from '@/lib/ai/prompts';
 import type { AiSession } from '@/lib/ai/session';
+import { AiProviderFactory } from '@/lib/ai/providers/factory';
 import { getRequiredSession } from '@/lib/auth/session';
-import { env } from '@/lib/env';
+import { db } from '@/lib/db';
+import { userAiPreferences } from '@/lib/db/schema';
 import { aiRateLimiter } from '@/lib/rate-limiter';
+import { eq } from 'drizzle-orm';
 
 type InlineRequest = {
   prompt: string;
@@ -33,44 +36,44 @@ export async function POST(request: Request) {
     const body = (await request.json()) as InlineRequest;
     const context = buildInlineContext(body.snapshot, body.session);
 
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 800,
-        temperature: 0.2,
-        system: buildInlineSystemPrompt(),
-        messages: [
-          {
-            role: 'user',
-            content: JSON.stringify({
-              prompt: body.prompt,
-              context,
-            }),
-          },
-        ],
-      }),
-    });
+    // Get user's AI preferences
+    let provider = AiProviderFactory.createFromEnv();
+    try {
+      const userPrefs = await db.query.userAiPreferences.findFirst({
+        where: eq(userAiPreferences.userId, session.userId),
+      });
 
-    if (!anthropicResponse.ok) {
-      return NextResponse.json({ error: 'Inline AI request failed' }, { status: 502 });
+      if (userPrefs) {
+        provider = AiProviderFactory.createByType(userPrefs.preferredProvider, {
+          apiKey: process.env[`${userPrefs.preferredProvider.toUpperCase()}_API_KEY`],
+          baseUrl: userPrefs.ollamaUrl || process.env[`${userPrefs.preferredProvider.toUpperCase()}_BASE_URL`],
+          model: userPrefs.preferredModel,
+          temperature: userPrefs.customTemperature ? Number(userPrefs.customTemperature) : undefined,
+          maxTokens: userPrefs.customMaxTokens ?? undefined,
+        });
+      }
+    } catch (e) {
+      // Fall back to default provider if preference lookup fails
+      console.error('Failed to load user AI preferences:', e);
     }
 
-    const raw = (await anthropicResponse.json()) as {
-      content?: Array<{ type: string; text?: string }>;
-    };
+    // Use the selected provider for the request
+    const aiResponse = await provider.askInline({
+      prompt: JSON.stringify({
+        prompt: body.prompt,
+        context,
+      }),
+      context: buildInlineSystemPrompt(),
+      temperature: 0.2,
+      maxTokens: 800,
+    });
 
-    const text = raw.content?.find((entry) => entry.type === 'text')?.text ?? '{}';
+    // Parse and validate the response
     let parsed: AiResponse;
     try {
-      parsed = JSON.parse(text) as AiResponse;
+      parsed = JSON.parse(aiResponse.content) as AiResponse;
     } catch {
-      return NextResponse.json({ error: 'Inline AI returned malformed response' }, { status: 502 });
+      return NextResponse.json({ error: 'AI returned malformed response' }, { status: 502 });
     }
 
     return NextResponse.json(parsed);
@@ -79,6 +82,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: await error.text() }, { status: error.status });
     }
 
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
 }

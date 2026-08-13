@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 
 import { buildPanelSystemPrompt } from '@/lib/ai/chat-prompts';
 import { buildPanelContext, type InlineEditorSnapshot, type PanelTurn } from '@/lib/ai/context';
+import { AiProviderFactory } from '@/lib/ai/providers/factory';
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
-import { aiSessions } from '@/lib/db/schema';
-import { env } from '@/lib/env';
+import { aiSessions, userAiPreferences } from '@/lib/db/schema';
 import { aiRateLimiter } from '@/lib/rate-limiter';
+import { eq } from 'drizzle-orm';
 
 type ChatRequest = {
   message: string;
@@ -30,6 +31,27 @@ export async function POST(request: Request) {
     const body = (await request.json()) as ChatRequest;
     const context = buildPanelContext(body.snapshot);
 
+    // Get user's AI preferences
+    let provider = AiProviderFactory.createFromEnv();
+    try {
+      const userPrefs = await db.query.userAiPreferences.findFirst({
+        where: eq(userAiPreferences.userId, session.userId),
+      });
+
+      if (userPrefs) {
+        provider = AiProviderFactory.createByType(userPrefs.preferredProvider, {
+          apiKey: process.env[`${userPrefs.preferredProvider.toUpperCase()}_API_KEY`],
+          baseUrl: userPrefs.ollamaUrl || process.env[`${userPrefs.preferredProvider.toUpperCase()}_BASE_URL`],
+          model: userPrefs.preferredModel,
+          temperature: userPrefs.customTemperature ? Number(userPrefs.customTemperature) : undefined,
+          maxTokens: userPrefs.customMaxTokens ?? undefined,
+        });
+      }
+    } catch (e) {
+      // Fall back to default provider if preference lookup fails
+      console.error('Failed to load user AI preferences:', e);
+    }
+
     const contextMessage = `[Document Context]\n${JSON.stringify({
       title: context.title,
       language: context.language,
@@ -49,35 +71,20 @@ export async function POST(request: Request) {
       { role: 'user', content: body.message },
     ];
 
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
-        system: buildPanelSystemPrompt(),
-        messages,
-        stream: true,
-      }),
+    // Get stream from provider
+    const stream = await provider.chat({
+      messages,
+      systemPrompt: buildPanelSystemPrompt(),
+      maxTokens: 2048,
     });
 
-    if (!anthropicResponse.ok || !anthropicResponse.body) {
-      return NextResponse.json({ error: 'Chat AI request failed' }, { status: 502 });
-    }
-
-    const anthropicBody = anthropicResponse.body;
     const { userId } = session;
     const { documentId, history, message } = body;
 
-    const stream = new ReadableStream({
+    // Process stream and store in database
+    const newStream = new ReadableStream({
       async start(controller) {
-        const reader = anthropicBody.getReader();
-        const decoder = new TextDecoder();
-        const encoder = new TextEncoder();
+        const reader = stream.getReader();
         let fullText = '';
 
         try {
@@ -85,36 +92,28 @@ export async function POST(request: Request) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
+            const chunk = JSON.parse(new TextDecoder().decode(new Uint8Array([...Buffer.from(JSON.stringify(value))]))) as {
+              type: string;
+              content?: string;
+              error?: string;
+            };
 
-            for (const line of lines) {
-              if (!line.startsWith('data: ')) continue;
-              const data = line.slice(6);
-              if (data === '[DONE]') continue;
-
-              try {
-                const event = JSON.parse(data) as {
-                  type?: string;
-                  delta?: { type?: string; text?: string };
-                };
-                if (event.type === 'content_block_delta' && event.delta?.text) {
-                  fullText += event.delta.text;
-                  controller.enqueue(encoder.encode(event.delta.text));
-                }
-              } catch {
-                // skip malformed SSE events
-              }
+            if (chunk.type === 'delta' && chunk.content) {
+              fullText += chunk.content;
+              controller.enqueue(new TextEncoder().encode(chunk.content));
+            } else if (chunk.type === 'error') {
+              throw new Error(chunk.error || 'Unknown streaming error');
             }
           }
 
-          const assistantContent = fullText.replace(/\[ACTION\][\s\S]*?\[\/ACTION\]/g, '').trim();
+          const assistantContent = fullText.trim();
           const updatedTurns: Array<{ role: string; content: string }> = [
             ...history.slice(-20),
             { role: 'user', content: message },
             { role: 'assistant', content: assistantContent },
           ];
 
+          // Save to database (non-blocking)
           void db
             .insert(aiSessions)
             .values({
@@ -130,8 +129,8 @@ export async function POST(request: Request) {
                 updatedAt: new Date(),
               },
             })
-            .catch(() => {
-              // persistence failure is non-fatal
+            .catch((e) => {
+              console.error('Failed to persist AI session:', e);
             });
         } finally {
           reader.releaseLock();
@@ -140,7 +139,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return new Response(stream, {
+    return new Response(newStream, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
         'Cache-Control': 'no-cache',
@@ -151,6 +150,9 @@ export async function POST(request: Request) {
     if (error instanceof Response) {
       return NextResponse.json({ error: await error.text() }, { status: error.status });
     }
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
 }
