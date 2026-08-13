@@ -3,11 +3,11 @@
  * Manages real-time notifications for sync events
  */
 
-import { and, desc,eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
 import { documents, syncActivityLog, syncNotifications } from '@/lib/db/schema';
-import type { SyncActivityLogEntry,SyncNotification } from '@/lib/types/sync';
+import type { SyncActivityLogEntry, SyncNotification } from '@/lib/types/sync';
 
 export class SyncNotificationService {
   /**
@@ -64,7 +64,7 @@ export class SyncNotificationService {
       .offset(offset);
 
     const total = await db
-      .select({ count: db.count() })
+      .select({ count: count() })
       .from(syncNotifications)
       .where(eq(syncNotifications.userId, userId));
 
@@ -113,7 +113,7 @@ export class SyncNotificationService {
    */
   async getUnreadCount(userId: string): Promise<number> {
     const result = await db
-      .select({ count: db.count() })
+      .select({ count: count() })
       .from(syncNotifications)
       .where(
         and(
@@ -166,7 +166,7 @@ export class SyncNotificationService {
       .offset(offset);
 
     const total = await db
-      .select({ count: db.count() })
+      .select({ count: count() })
       .from(syncActivityLog)
       .where(eq(syncActivityLog.userId, userId));
 
@@ -227,7 +227,7 @@ export class SyncNotificationService {
   /**
    * Clean up old activity logs
    */
-  async cleanupActivityLogs(olderThanDays: number = 90): Promise<number> {
+  async cleanupActivityLogs(_olderThanDays: number = 90): Promise<number> {
     // Placeholder - in real implementation would use date filtering
     return 0;
   }

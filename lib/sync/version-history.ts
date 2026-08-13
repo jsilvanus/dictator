@@ -3,7 +3,7 @@
  * Manages version snapshots, metadata, and point-in-time recovery
  */
 
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
 import {
@@ -64,7 +64,7 @@ export class VersionHistoryService {
       .offset(offset);
 
     const total = await db
-      .select({ count: db.count() })
+      .select({ count: count() })
       .from(documentVersionSnapshots)
       .where(eq(documentVersionSnapshots.documentId, documentId));
 

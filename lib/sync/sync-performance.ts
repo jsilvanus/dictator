@@ -3,7 +3,7 @@
  * Tracks and analyzes sync performance for optimization
  */
 
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
 import { syncPerformanceMetrics } from '@/lib/db/schema';
@@ -26,12 +26,26 @@ export class SyncPerformanceService {
         documentId,
         syncTimeMs,
         dataSizeBytes,
-        compressionRatio: compressionRatio || undefined,
+        compressionRatio: compressionRatio !== undefined ? compressionRatio.toString() : null,
         success,
       })
       .returning();
 
-    return result[0] as SyncPerformanceMetric;
+    const record = result[0];
+    return {
+      ...record,
+      compressionRatio: record.compressionRatio ? parseFloat(record.compressionRatio) : undefined,
+    } as SyncPerformanceMetric;
+  }
+
+  /**
+   * Helper: Convert database record compressionRatio to number
+   */
+  private convertMetricRecord(record: any) {
+    return {
+      ...record,
+      compressionRatio: record.compressionRatio ? parseFloat(record.compressionRatio) : undefined,
+    };
   }
 
   /**
@@ -51,11 +65,14 @@ export class SyncPerformanceService {
       .offset(offset);
 
     const total = await db
-      .select({ count: db.count() })
+      .select({ count: count() })
       .from(syncPerformanceMetrics)
       .where(eq(syncPerformanceMetrics.documentId, documentId));
 
-    return { metrics, total: total[0]?.count || 0 };
+    return { 
+      metrics: metrics.map((m) => this.convertMetricRecord(m)), 
+      total: total[0]?.count || 0 
+    };
   }
 
   /**
@@ -90,10 +107,10 @@ export class SyncPerformanceService {
       .from(syncPerformanceMetrics)
       .where(eq(syncPerformanceMetrics.documentId, documentId));
 
-    // Filter by date range
-    const periodMetrics = metrics.filter(
-      (m) => m.timestamp >= startDate && m.timestamp <= now
-    );
+    // Filter by date range and convert
+    const periodMetrics = metrics
+      .filter((m) => m.timestamp >= startDate && m.timestamp <= now)
+      .map((m) => this.convertMetricRecord(m));
 
     // Calculate statistics
     const totalSyncs = periodMetrics.length;
@@ -111,7 +128,7 @@ export class SyncPerformanceService {
         : 0;
 
     const compressionRatios = periodMetrics
-      .filter((m) => m.compressionRatio !== null)
+      .filter((m) => m.compressionRatio !== null && m.compressionRatio !== undefined)
       .map((m) => m.compressionRatio as number);
 
     const compressionRatio =
@@ -208,8 +225,10 @@ export class SyncPerformanceService {
       };
     }
 
-    const compressionRatios = metrics
-      .filter((m) => m.compressionRatio !== null)
+    const convertedMetrics = metrics.map((m) => this.convertMetricRecord(m));
+
+    const compressionRatios = convertedMetrics
+      .filter((m) => m.compressionRatio !== null && m.compressionRatio !== undefined)
       .map((m) => m.compressionRatio as number);
 
     if (compressionRatios.length === 0) {
@@ -224,7 +243,7 @@ export class SyncPerformanceService {
       compressionRatios.reduce((a, b) => a + b, 0) / compressionRatios.length;
 
     const averageDataSize =
-      metrics.reduce((sum, m) => sum + m.dataSizeBytes, 0) / metrics.length;
+      convertedMetrics.reduce((sum, m) => sum + m.dataSizeBytes, 0) / convertedMetrics.length;
 
     const estimatedSavings = averageDataSize * (1 - averageRatio);
 

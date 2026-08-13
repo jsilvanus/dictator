@@ -47,14 +47,14 @@ export async function GET(
     }
 
     // Format response
-    const devices = Array.from(deviceMap.entries()).map(([deviceId, versions]) => ({
+    const devices = Array.from(deviceMap.entries()).map(([deviceId, versions]: [string, any[]]) => ({
       deviceId,
       type: deviceId.startsWith('android') ? 'android' : 'web',
       lastSyncedAt: versions[0]?.syncedAt.toISOString(),
       currentVersion: versions[0]?.deviceVersion || 0,
       status: versions[0]?.status || 'unknown',
       versionCount: versions.length,
-      versions: versions.map((v) => ({
+      versions: versions.map((v: any) => ({
         versionNumber: v.deviceVersion,
         syncedAt: v.syncedAt.toISOString(),
         status: v.status,

@@ -3,10 +3,10 @@
  * Manages version branches for alternative edit paths
  */
 
-import { and, desc,eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { documents,documentVersionSnapshots, versionBranches } from '@/lib/db/schema';
+import { documentVersionSnapshots, versionBranches } from '@/lib/db/schema';
 import type { VersionBranch } from '@/lib/types/sync';
 
 export class VersionBranchingService {
@@ -268,7 +268,6 @@ export class VersionBranchingService {
    * List versions that differ between branches
    */
   async getDifferingVersions(branchId1: string, branchId2: string) {
-    const comparison = await this.compareBranches(branchId1, branchId2);
     const history1 = await this.getBranchHistory(branchId1);
     const history2 = await this.getBranchHistory(branchId2);
 

@@ -3,10 +3,10 @@
  * Handles point-in-time recovery and version restoration
  */
 
-import { and,eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { documents, documentVersions,documentVersionSnapshots } from '@/lib/db/schema';
+import { documents, documentVersions, documentVersionSnapshots } from '@/lib/db/schema';
 
 import { versionHistoryService } from './version-history';
 
@@ -47,7 +47,7 @@ export class RecoveryService {
   /**
    * Get document as it was at a specific time
    */
-  async getDocumentAtTime(documentId: string, timestamp: Date) {
+  async getDocumentAtTime(documentId: string, _timestamp: Date) {
     // Find the most recent snapshot before the given timestamp
     const result = await db
       .select()
@@ -101,7 +101,7 @@ export class RecoveryService {
   async createRecoveryCheckpoint(
     documentId: string,
     versionNumber: number,
-    tag: string
+    _tag: string
   ) {
     return versionHistoryService.markCheckpoint(documentId, versionNumber);
   }
@@ -198,7 +198,7 @@ export class RecoveryService {
         and(
           eq(documentVersionSnapshots.documentId, documentId),
           eq(documentVersionSnapshots.isCheckpoint, false),
-          eq(documentVersionSnapshots.tag, null)
+          isNull(documentVersionSnapshots.tag)
         )
       );
 
