@@ -4,7 +4,20 @@ This guide helps you configure different AI providers for the Dictator applicati
 
 ## Quick Start
 
-### Option 1: Claude (Default - Recommended for simplicity)
+### Option 1: Dictator Service (Zero Configuration)
+
+The Dictator Service is the easiest option - no API keys or configuration needed!
+
+Simply select "Dictator Service" in the AI settings (web or Android) and start using AI features immediately.
+
+**Advantages:**
+- Zero configuration required
+- No API keys to manage
+- Hosted and maintained by Dictator team
+- Always available
+- Fair usage limits for all users
+
+### Option 2: Claude (Default - Recommended for custom API)
 
 1. Get API key from https://console.anthropic.com/
 2. Set in `.env.local`:
@@ -12,7 +25,7 @@ This guide helps you configure different AI providers for the Dictator applicati
 ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
-### Option 2: OpenAI
+### Option 3: OpenAI
 
 1. Get API key from https://platform.openai.com/api-keys
 2. Set in `.env.local`:
@@ -21,7 +34,7 @@ OPENAI_API_KEY=sk-proj-your-key-here
 OPENAI_MODEL=gpt-4o  # or gpt-3.5-turbo
 ```
 
-### Option 3: Ollama (Self-hosted, Free)
+### Option 4: Ollama (Self-hosted, Free)
 
 1. Install Ollama from https://ollama.ai
 2. Run in terminal:
@@ -38,7 +51,7 @@ OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=mistral  # or llama2, neural-chat, etc.
 ```
 
-### Option 4: Generic OpenAI-Compatible
+### Option 5: Generic OpenAI-Compatible
 
 For any service that follows OpenAI's API format (Azure OpenAI, local LLM servers, etc.):
 
@@ -49,6 +62,12 @@ OPENAI_COMPATIBLE_MODEL=your-model-name
 ```
 
 ## Full Configuration Examples
+
+### Using Dictator Service (Simplest - No Configuration)
+
+Users simply select "Dictator Service" in the AI Provider Settings (available on both web and Android apps).
+
+No environment variables needed!
 
 ### Development Environment (Local Ollama)
 
@@ -307,14 +326,48 @@ curl -X POST http://localhost:3000/api/ai/inline \
 
 ## Switching Providers at Runtime
 
-Users can switch providers without restarting the application via the preferences API:
+### Web Application (Settings UI)
+
+1. Go to **Settings** → **AI Provider Settings**
+2. Select your preferred provider from the dropdown:
+   - **Dictator Service** (recommended for simplicity)
+   - **Claude (Anthropic)**
+   - **OpenAI**
+   - **Ollama (Self-hosted)**
+   - **OpenAI-Compatible**
+3. For non-Dictator providers, enter your API key and configuration
+4. Click **Save AI Settings**
+
+### Android Application (Settings Screen)
+
+1. Open the app and go to **Settings**
+2. Under "Direct Provider Configuration", select your provider:
+   - **Dictator Service** (no configuration needed)
+   - **Claude (Anthropic)**
+   - **OpenAI**
+   - **Ollama (Self-hosted)**
+   - **OpenAI-Compatible**
+3. For non-Dictator providers, enter your API key and model settings
+4. Click **Save Settings**
+
+### Via API (Advanced)
+
+Users can also switch providers programmatically via the preferences API:
 
 ```bash
 # Get current preferences
 curl http://localhost:3000/api/ai/preferences \
   -H "Cookie: <your-auth-cookie>"
 
-# Update to OpenAI
+# Switch to Dictator Service
+curl -X POST http://localhost:3000/api/ai/preferences \
+  -H "Content-Type: application/json" \
+  -H "Cookie: <your-auth-cookie>" \
+  -d '{
+    "preferredProvider": "dictator"
+  }'
+
+# Switch to OpenAI
 curl -X POST http://localhost:3000/api/ai/preferences \
   -H "Content-Type: application/json" \
   -H "Cookie: <your-auth-cookie>" \
@@ -327,6 +380,40 @@ curl -X POST http://localhost:3000/api/ai/preferences \
 curl http://localhost:3000/api/ai/preferences \
   -H "Cookie: <your-auth-cookie>"
 ```
+
+## Dictator Service Specifics
+
+### Why Choose Dictator Service?
+
+**Advantages:**
+- **Zero Configuration**: Select and use immediately
+- **No API Keys**: Nothing to manage or secure
+- **Reliable**: Hosted and maintained by Dictator team
+- **Fair Usage**: Transparent usage limits for all users
+- **Always Available**: Enterprise-grade uptime
+
+**Limitations:**
+- **Fair Usage Limits**: To ensure service availability for all users
+- **Limited Customization**: Can't change model or parameters
+
+### Dictator Service API Endpoints
+
+The Dictator Service uses the following endpoints:
+
+- **Inline Requests**: `https://ai.dictator.dev/v1/inline`
+- **Chat/Panel Requests**: `https://ai.dictator.dev/v1/chat`
+- **Streaming**: Supported for both endpoints
+
+### Fallback Behavior
+
+If Dictator Service is unavailable:
+1. Dictator Service will display an error message
+2. Users can switch to their configured backup provider
+3. No data loss - documents are auto-saved locally
+
+## Switching Providers at Runtime
+
+### Legacy API Approach (Pre-Dictator Service)
 
 ## Support
 

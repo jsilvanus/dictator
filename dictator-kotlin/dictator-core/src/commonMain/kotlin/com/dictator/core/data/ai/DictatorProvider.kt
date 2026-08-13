@@ -7,9 +7,13 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
@@ -58,10 +62,10 @@ class DictatorProvider(
         try {
             val messagesArray = buildJsonArray {
                 request.messages.forEach { msg ->
-                    addJsonObject {
+                    add(buildJsonObject {
                         put("role", msg.role)
                         put("content", msg.content)
-                    }
+                    })
                 }
             }
 
