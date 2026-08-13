@@ -420,6 +420,9 @@ private fun DirectProviderConfig(
                         onMaxTokensChange = onMaxTokensChange
                     )
                 }
+                ModelProvider.DICTATOR -> {
+                    DictatorProviderConfig()
+                }
             }
         }
     }
@@ -721,4 +724,46 @@ private fun MaxTokensInput(
         ),
         singleLine = true
     )
+}
+
+@Composable
+private fun DictatorProviderConfig() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+    ) {
+        Text(
+            "Dictator Service Configuration",
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Text(
+            "Using Dictator Service - no additional configuration needed. This is the Dictator-hosted AI service.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(8.dp)
+        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    "✓ Zero-configuration AI service",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    "✓ No API keys required",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    "✓ Hosted by Dictator team",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
 }

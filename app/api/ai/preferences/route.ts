@@ -6,7 +6,7 @@ import { AiProviderFactory } from '@/lib/ai/providers/factory';
 import { eq } from 'drizzle-orm';
 
 type PreferencesUpdateRequest = {
-  preferredProvider: 'claude' | 'openai' | 'ollama' | 'openai-compatible';
+  preferredProvider: 'claude' | 'openai' | 'ollama' | 'openai-compatible' | 'dictator';
   preferredModel?: string;
   customTemperature?: number;
   customMaxTokens?: number;

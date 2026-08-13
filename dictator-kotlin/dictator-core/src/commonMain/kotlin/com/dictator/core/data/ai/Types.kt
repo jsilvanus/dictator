@@ -7,7 +7,8 @@ enum class ModelProvider {
     CLAUDE,
     OPENAI,
     OLLAMA,
-    OPENAI_COMPATIBLE
+    OPENAI_COMPATIBLE,
+    DICTATOR
 }
 
 /**

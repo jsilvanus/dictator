@@ -17,7 +17,7 @@ export const roleEnum = pgEnum('role', ['admin', 'editor']);
 export const sharePermissionEnum = pgEnum('share_permission', ['read', 'edit']);
 export const aiSessionModeEnum = pgEnum('ai_session_mode', ['inline', 'panel']);
 export const syncConflictStatusEnum = pgEnum('sync_conflict_status', ['none', 'resolved', 'unresolved']);
-export const aiProviderEnum = pgEnum('ai_provider', ['claude', 'openai', 'ollama', 'openai-compatible']);
+export const aiProviderEnum = pgEnum('ai_provider', ['claude', 'openai', 'ollama', 'openai-compatible', 'dictator']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),

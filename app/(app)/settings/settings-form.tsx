@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { AiSettings } from './ai-settings';
 import { DictionarySettings } from './dictionary-settings';
 import { useSettings } from '@/components/providers/SettingsProvider';
 
@@ -160,6 +161,8 @@ export function SettingsForm({
 
         {status ? <p>{status}</p> : null}
       </div>
+
+      <AiSettings />
 
       <DictionarySettings />
     </div>

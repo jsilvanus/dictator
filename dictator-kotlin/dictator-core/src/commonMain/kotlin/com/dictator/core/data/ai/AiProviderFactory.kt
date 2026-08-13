@@ -33,6 +33,10 @@ object AiProviderFactory {
                 val baseUrl = config.baseUrl ?: throw IllegalArgumentException("Generic OpenAI provider requires baseUrl")
                 GenericOpenAiProvider(httpClient, baseUrl, apiKey, config.model ?: "gpt-3.5-turbo")
             }
+
+            ModelProvider.DICTATOR -> {
+                DictatorProvider(httpClient, config.baseUrl ?: "https://ai.dictator.dev", config.model ?: "dictator-ai-default")
+            }
         }
     }
 
@@ -102,6 +106,9 @@ object AiProviderFactory {
             !System.getenv("OPENAI_COMPATIBLE_API_KEY").isNullOrEmpty()
         providers.add(AvailableProvider(ModelProvider.OPENAI_COMPATIBLE, "OpenAI-Compatible", isCompatibleConfigured))
 
+        // Dictator service is always available as it's a public service
+        providers.add(AvailableProvider(ModelProvider.DICTATOR, "Dictator Service", true))
+
         return providers
     }
 
@@ -135,6 +142,10 @@ object AiProviderFactory {
                 if (config.baseUrl.isNullOrEmpty()) {
                     errors.add("OpenAI-compatible provider requires baseUrl")
                 }
+            }
+
+            ModelProvider.DICTATOR -> {
+                // Dictator service is always valid, no configuration needed
             }
         }
 

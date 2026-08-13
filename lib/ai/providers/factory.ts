@@ -2,6 +2,7 @@ import { ClaudeProvider } from './claude';
 import { OpenAiProvider } from './openai';
 import { OllamaProvider } from './ollama';
 import { GenericOpenAiProvider } from './generic-openai';
+import { DictatorProvider } from './dictator';
 import { AiProvider, ModelProvider, ProviderConfig } from './types';
 
 /**
@@ -34,6 +35,9 @@ export class AiProviderFactory {
           throw new Error('Generic OpenAI provider requires both apiKey and baseUrl');
         }
         return new GenericOpenAiProvider(config.baseUrl, config.apiKey, config.model || 'gpt-3.5-turbo');
+
+      case 'dictator':
+        return new DictatorProvider(config.baseUrl, config.model);
 
       default:
         throw new Error(`Unknown provider type: ${config.type}`);
@@ -132,6 +136,13 @@ export class AiProviderFactory {
       configured: !!(process.env.OPENAI_COMPATIBLE_BASE_URL && process.env.OPENAI_COMPATIBLE_API_KEY),
     });
 
+    // Dictator service is always available as it's a public service
+    providers.push({
+      type: 'dictator',
+      name: 'Dictator Service',
+      configured: true,
+    });
+
     return providers;
   }
 
@@ -154,6 +165,9 @@ export class AiProviderFactory {
       case 'openai-compatible':
         if (!config.apiKey) errors.push('OpenAI-compatible provider requires apiKey');
         if (!config.baseUrl) errors.push('OpenAI-compatible provider requires baseUrl');
+        break;
+      case 'dictator':
+        // Dictator service is always valid
         break;
     }
 
