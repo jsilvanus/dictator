@@ -8,12 +8,14 @@ import { db } from '@/lib/db';
 import { aiSessions, userAiPreferences } from '@/lib/db/schema';
 import { aiRateLimiter } from '@/lib/rate-limiter';
 import { eq } from 'drizzle-orm';
+import { streamChatWithTools } from '@/lib/ai/tools/chat-integration';
 
 type ChatRequest = {
   message: string;
   snapshot: InlineEditorSnapshot & { fullText: string };
   documentId: string;
   history: PanelTurn[];
+  enableTools?: boolean;
 };
 
 export async function POST(request: Request) {
@@ -71,12 +73,171 @@ export async function POST(request: Request) {
       { role: 'user', content: body.message },
     ];
 
-    // Get stream from provider
-    const stream = await provider.chat({
-      messages,
-      systemPrompt: buildPanelSystemPrompt(),
-      maxTokens: 2048,
+    const { userId } = session;
+    const { documentId, history, message } = body;
+    const enableTools = body.enableTools ?? false;
+
+    // Create response stream with tool support if enabled
+    let responseStream: ReadableStream<Uint8Array>;
+
+    if (enableTools) {
+      // Use tool-enabled chat streaming
+      responseStream = new ReadableStream({
+        async start(controller) {
+          try {
+            // Stream tool-enabled chat responses
+            let fullText = '';
+            let assistantToolCalls = [];
+
+            for await (const chunk of streamChatWithTools(provider, {
+              messages,
+              systemPrompt: buildPanelSystemPrompt(),
+              maxTokens: 2048,
+            }, {
+              context: {
+                userId,
+                documentId,
+                sessionId: `session-${Date.now()}`,
+                requestId: request.headers.get('x-request-id') || `req-${Date.now()}`,
+              },
+              maxToolCalls: 10,
+              maxToolLoops: 3,
+            })) {
+              if (chunk.type === 'delta' && chunk.content) {
+                fullText += chunk.content;
+                controller.enqueue(new TextEncoder().encode(chunk.content));
+              } else if (chunk.type === 'tool-call' && chunk.toolCall) {
+                // Encode tool call as JSON for client to handle
+                controller.enqueue(new TextEncoder().encode(`\n[TOOL_CALL:${JSON.stringify(chunk.toolCall)}]\n`));
+                assistantToolCalls.push(chunk.toolCall);
+              } else if (chunk.type === 'tool-result') {
+                // Encode tool result
+                controller.enqueue(new TextEncoder().encode(`\n[TOOL_RESULT:${JSON.stringify(chunk.result)}]\n`));
+              }
+            }
+
+            const assistantContent = fullText.trim();
+            const updatedTurns: Array<{ role: string; content: string }> = [
+              ...history.slice(-20),
+              { role: 'user', content: message },
+              { role: 'assistant', content: assistantContent },
+            ];
+
+            // Save to database (non-blocking)
+            void db
+              .insert(aiSessions)
+              .values({
+                documentId,
+                userId,
+                mode: 'panel',
+                turns: updatedTurns,
+              })
+              .onConflictDoUpdate({
+                target: [aiSessions.documentId, aiSessions.userId, aiSessions.mode],
+                set: {
+                  turns: updatedTurns,
+                  updatedAt: new Date(),
+                },
+              })
+              .catch((e) => {
+                console.error('Failed to persist AI session:', e);
+              });
+          } catch (error) {
+            controller.enqueue(new TextEncoder().encode(`\n[ERROR:${error instanceof Error ? error.message : String(error)}]\n`));
+          } finally {
+            controller.close();
+          }
+        },
+      });
+    } else {
+      // Use standard chat without tools
+      const stream = await provider.chat({
+        messages,
+        systemPrompt: buildPanelSystemPrompt(),
+        maxTokens: 2048,
+      });
+
+      // Process stream and store in database
+      responseStream = new ReadableStream({
+        async start(controller) {
+          const reader = stream.getReader();
+          let fullText = '';
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              const chunk = JSON.parse(new TextDecoder().decode(new Uint8Array([...Buffer.from(JSON.stringify(value))]))) as {
+                type: string;
+                content?: string;
+                error?: string;
+              };
+
+              if (chunk.type === 'delta' && chunk.content) {
+                fullText += chunk.content;
+                controller.enqueue(new TextEncoder().encode(chunk.content));
+              } else if (chunk.type === 'error') {
+                throw new Error(chunk.error || 'Unknown streaming error');
+              }
+            }
+
+            const assistantContent = fullText.trim();
+            const updatedTurns: Array<{ role: string; content: string }> = [
+              ...history.slice(-20),
+              { role: 'user', content: message },
+              { role: 'assistant', content: assistantContent },
+            ];
+
+            // Save to database (non-blocking)
+            void db
+              .insert(aiSessions)
+              .values({
+                documentId,
+                userId,
+                mode: 'panel',
+                turns: updatedTurns,
+              })
+              .onConflictDoUpdate({
+                target: [aiSessions.documentId, aiSessions.userId, aiSessions.mode],
+                set: {
+                  turns: updatedTurns,
+                  updatedAt: new Date(),
+                },
+              })
+              .catch((e) => {
+                console.error('Failed to persist AI session:', e);
+              });
+          } finally {
+            reader.releaseLock();
+            controller.close();
+          }
+        },
+      });
+    }
+
+    return new Response(responseStream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
     });
+  } catch (error) {
+    if (error instanceof Response) {
+      return error;
+    }
+
+    console.error('Chat endpoint error:', error);
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    );
+  }
+}
 
     const { userId } = session;
     const { documentId, history, message } = body;
