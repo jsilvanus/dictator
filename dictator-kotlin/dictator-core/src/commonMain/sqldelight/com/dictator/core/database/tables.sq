@@ -1,0 +1,109 @@
+-- src/commonMain/sqldelight/com/dictator/core/database/tables.sq
+
+-- Users table
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    name TEXT,
+    createdAt INTEGER NOT NULL
+);
+
+-- Folders table
+CREATE TABLE folders (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    userId TEXT NOT NULL,
+    parentId TEXT,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+-- Documents table
+CREATE TABLE documents (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    folderId TEXT NOT NULL,
+    userId TEXT,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    lastModifiedDevice TEXT DEFAULT 'kotlin',
+    deviceVersion INTEGER DEFAULT 1,
+    FOREIGN KEY (folderId) REFERENCES folders(id),
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+-- Document versions table
+CREATE TABLE documentVersions (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    content TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    createdBy TEXT,
+    createdAt INTEGER NOT NULL,
+    deviceSource TEXT DEFAULT 'kotlin',
+    deviceVersion INTEGER DEFAULT 1,
+    FOREIGN KEY (documentId) REFERENCES documents(id)
+);
+
+-- Shares table
+CREATE TABLE shares (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    sharedWithUserId TEXT NOT NULL,
+    permission TEXT NOT NULL,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (documentId) REFERENCES documents(id),
+    FOREIGN KEY (sharedWithUserId) REFERENCES users(id)
+);
+
+-- AI Sessions table
+CREATE TABLE aiSessions (
+    id TEXT PRIMARY KEY,
+    userId TEXT,
+    mode TEXT NOT NULL,
+    turnsJson TEXT NOT NULL,
+    metadata TEXT,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+-- Sync metadata table
+CREATE TABLE syncMetadata (
+    documentId TEXT PRIMARY KEY,
+    lastSyncedAt INTEGER,
+    localVersion INTEGER NOT NULL DEFAULT 1,
+    remoteVersion INTEGER NOT NULL DEFAULT 1,
+    pendingChanges INTEGER DEFAULT 0,
+    conflictStatus TEXT DEFAULT 'none',
+    updatedAt INTEGER NOT NULL,
+    FOREIGN KEY (documentId) REFERENCES documents(id)
+);
+
+-- Pending sync queue table
+CREATE TABLE pendingSyncQueue (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    userId TEXT,
+    deviceId TEXT NOT NULL DEFAULT 'kotlin',
+    changeDataJson TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    retryCount INTEGER DEFAULT 0,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    FOREIGN KEY (documentId) REFERENCES documents(id),
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+-- Document conflicts table
+CREATE TABLE documentConflicts (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    baseVersionJson TEXT NOT NULL,
+    androidVersionJson TEXT NOT NULL,
+    webVersionJson TEXT NOT NULL,
+    resolvedVersionJson TEXT,
+    status TEXT DEFAULT 'unresolved',
+    createdAt INTEGER NOT NULL,
+    resolvedAt INTEGER,
+    FOREIGN KEY (documentId) REFERENCES documents(id)
+);

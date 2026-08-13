@@ -1,0 +1,69 @@
+# Gradle build files and directories
+.gradle/
+build/
+out/
+*.jar
+*.war
+*.ear
+*.class
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Kotlin
+bin/
+out/
+.kotlin/
+
+# Build artifacts
+gradle-app.setting
+gradlew.bat
+!gradlew
+
+# Generated files
+buildNumber.properties
+.classpath
+build/
+.gradle
+*.class
+*.log
+*.ctxt
+.mtj.tmp/
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# Local environment file
+.env
+.env.local
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Kotlin DSL
+.kotlin.build.log
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
