@@ -2,7 +2,7 @@
 
 Working title: **Dictator**
 Organisation: Evangelical Lutheran Church of Finland (initial deployment)
-Stack: Next.js 15 App Router · ESM · Tiptap · Auth.js · PostgreSQL · Drizzle ORM · Anthropic API · Docker
+Stack: Next.js 15 App Router · ESM · Tiptap · Auth.js · PostgreSQL · Drizzle ORM · Multi-Model AI (Claude, OpenAI, Ollama) · Docker
 
 ---
 
@@ -49,8 +49,10 @@ dictator/
       shares/
         link/route.ts               POST create link share, GET resolve token
       ai/
-        inline/route.ts             POST: dictation-mode AI
-        chat/route.ts               POST: panel-mode AI (streaming)
+        inline/route.ts             POST: dictation-mode AI (multi-provider)
+        chat/route.ts               POST: panel-mode AI streaming (multi-provider)
+        models/route.ts             GET: available AI providers
+        preferences/route.ts         GET/POST: user AI model preferences
       users/
         [id]/settings/route.ts      GET, PUT
       health/route.ts
@@ -64,10 +66,18 @@ dictator/
       punctuation.ts                inline symbol map
       help.ts                       help command data
     ai/
-      context.ts                    Tiptap doc → clean text for prompts
-      session.ts                    AiSession + AiTurn types, action log helpers
-      commands.ts                   AiResponse → editor.chain() calls
-      prompts.ts                    system prompt templates
+      providers/                 provider abstraction layer
+        types.ts                 TypeScript types and enums
+        base.ts                  BaseAiProvider abstract class
+        factory.ts               AiProviderFactory for provider instantiation
+        claude.ts                ClaudeProvider (Anthropic)
+        openai.ts                OpenAiProvider
+        ollama.ts                OllamaProvider (self-hosted)
+        generic-openai.ts        GenericOpenAiProvider
+      context.ts                 Tiptap doc → clean text for prompts
+      session.ts                 AiSession + AiTurn types, action log helpers
+      commands.ts                AiResponse → editor.chain() calls
+      prompts.ts                 system prompt templates
   components/
     dashboard/
       DocumentRow.tsx               single document row (72px min height)
@@ -87,6 +97,84 @@ dictator/
   Dockerfile
   docker-compose.yml
   docker-compose.override.yml       local dev: hot reload, exposed DB port
+```
+
+---
+
+## 2.5 AI Model Provider Support
+
+Dictator supports multiple AI model providers for inline editing and chat. Users can select their preferred provider, and developers can configure available providers via environment variables.
+
+### Supported Providers
+
+- **Claude (Anthropic)** — Recommended default. Advanced reasoning and instruction following.
+- **OpenAI** — GPT-4 and GPT-3.5-turbo with Azure OpenAI support.
+- **Ollama** — Free, self-hosted models (Mistral, Llama2, etc.). No API costs.
+- **Generic OpenAI-Compatible** — Any OpenAI-API-compatible service.
+
+### Quick Start
+
+**Development (Local Ollama - Free):**
+```bash
+# 1. Install Ollama from https://ollama.ai
+# 2. In one terminal
+ollama serve
+
+# 3. In another, pull a model
+ollama pull mistral
+
+# 4. Set in .env.local
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=mistral
+
+# 5. Start Dictator
+npm run dev
+```
+
+**Production (Claude - Recommended):**
+```bash
+ANTHROPIC_API_KEY=sk-ant-...
+CLAUDE_MODEL=claude-sonnet-4-6
+```
+
+### Configuration & Documentation
+
+- **[AI_PROVIDER_CONFIG.md](./AI_PROVIDER_CONFIG.md)** — Complete setup guide for all providers
+- **[OLLAMA_SETUP.md](./OLLAMA_SETUP.md)** — Detailed Ollama installation and usage
+- **[AI_MULTI_MODEL_IMPLEMENTATION.md](./AI_MULTI_MODEL_IMPLEMENTATION.md)** — Technical architecture and implementation details
+
+### Environment Variables
+
+At least one provider must be configured:
+
+```bash
+# Claude (Default if available)
+ANTHROPIC_API_KEY=sk-ant-...
+CLAUDE_MODEL=claude-sonnet-4-6
+
+# OpenAI
+OPENAI_API_KEY=sk-proj-...
+OPENAI_MODEL=gpt-4o
+
+# Ollama (Self-hosted, Free)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=mistral
+
+# Generic OpenAI-Compatible
+OPENAI_COMPATIBLE_BASE_URL=https://...
+OPENAI_COMPATIBLE_API_KEY=sk-...
+```
+
+### User Model Selection
+
+Users can switch between configured providers via `/api/ai/preferences`:
+
+```typescript
+GET /api/ai/preferences                    // Get current preference
+POST /api/ai/preferences                   // Update preference
+  { "preferredProvider": "openai", "preferredModel": "gpt-4o" }
+
+GET /api/ai/models                         // List available providers
 ```
 
 ---
