@@ -287,8 +287,12 @@ export const httpPostTool: RegisteredTool = {
 /**
  * Register HTTP tools
  */
-export function registerHttpTools(): void {
-  const { registerTool } = require('./registry');
-  registerTool(httpGetTool);
-  registerTool(httpPostTool);
+export async function registerHttpTools(): Promise<void> {
+  try {
+    const { registerTool } = await import('./registry');
+    registerTool(httpGetTool);
+    registerTool(httpPostTool);
+  } catch (error) {
+    console.error('Failed to register HTTP tools:', error);
+  }
 }

@@ -295,11 +295,15 @@ export const textDeleteTool: RegisteredTool = {
 /**
  * Register text tools
  */
-export function registerTextTools(): void {
-  const { registerTool } = require('./registry');
-  registerTool(textEditTool);
-  registerTool(textInsertTool);
-  registerTool(textDeleteTool);
+export async function registerTextTools(): Promise<void> {
+  try {
+    const { registerTool } = await import('./registry');
+    registerTool(textEditTool);
+    registerTool(textInsertTool);
+    registerTool(textDeleteTool);
+  } catch (error) {
+    console.error('Failed to register text tools:', error);
+  }
 }
 
 /**

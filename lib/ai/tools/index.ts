@@ -65,22 +65,29 @@ export {
  * Initialize all built-in tools
  * This is called automatically on module import
  */
-export function initializeTools(): void {
-  const { registerTool } = require('./registry');
+export async function initializeTools(): Promise<void> {
+  try {
+    const { registerTool } = await import('./registry');
+    const httpTools = await import('./http-tools');
+    const textTools = await import('./text-tools');
+    const docTools = await import('./document-tools');
 
-  // Register HTTP tools
-  registerTool(require('./http-tools').httpGetTool);
-  registerTool(require('./http-tools').httpPostTool);
+    // Register HTTP tools
+    registerTool(httpTools.httpGetTool);
+    registerTool(httpTools.httpPostTool);
 
-  // Register text tools
-  registerTool(require('./text-tools').textEditTool);
-  registerTool(require('./text-tools').textInsertTool);
-  registerTool(require('./text-tools').textDeleteTool);
+    // Register text tools
+    registerTool(textTools.textEditTool);
+    registerTool(textTools.textInsertTool);
+    registerTool(textTools.textDeleteTool);
 
-  // Register document tools
-  registerTool(require('./document-tools').searchDocumentTool);
-  registerTool(require('./document-tools').getDocumentSectionTool);
-  registerTool(require('./document-tools').getParagraphTool);
+    // Register document tools
+    registerTool(docTools.searchDocumentTool);
+    registerTool(docTools.getDocumentSectionTool);
+    registerTool(docTools.getParagraphTool);
+  } catch (error) {
+    console.error('Failed to initialize AI tools:', error);
+  }
 }
 
 // Automatically initialize tools on module load
@@ -88,8 +95,10 @@ export function initializeTools(): void {
 if (typeof window === 'undefined') {
   // Only initialize in Node.js environment, not in browser
   try {
-    initializeTools();
+    initializeTools().catch((error) => {
+      console.error('Failed to initialize AI tools:', error);
+    });
   } catch (error) {
-    console.error('Failed to initialize tools:', error);
+    console.error('Failed to initialize AI tools:', error);
   }
 }

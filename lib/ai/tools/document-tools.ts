@@ -282,11 +282,15 @@ export const getParagraphTool: RegisteredTool = {
 /**
  * Register document tools
  */
-export function registerDocumentTools(): void {
-  const { registerTool } = require('./registry');
-  registerTool(searchDocumentTool);
-  registerTool(getDocumentSectionTool);
-  registerTool(getParagraphTool);
+export async function registerDocumentTools(): Promise<void> {
+  try {
+    const { registerTool } = await import('./registry');
+    registerTool(searchDocumentTool);
+    registerTool(getDocumentSectionTool);
+    registerTool(getParagraphTool);
+  } catch (error) {
+    console.error('Failed to register document tools:', error);
+  }
 }
 
 /**
