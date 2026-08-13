@@ -150,6 +150,31 @@ private fun ListeningState(viewModel: VoiceViewModel, state: VoiceUiState) {
             color = MaterialTheme.colorScheme.error
         )
 
+        // IMPROVEMENT: Recording duration feedback
+        val durationSeconds = (state.recordingDuration / 1000).toInt()
+        val maxSeconds = 30
+        Text(
+            text = "$durationSeconds / $maxSeconds seconds",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        LinearProgressIndicator(
+            progress = (state.recordingDuration / 30000f).coerceIn(0f, 1f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+        )
+
+        // IMPROVEMENT: Silence detection feedback
+        if (state.silenceDuration > 0L) {
+            Text(
+                text = "Silence detected (${(state.silenceDuration / 1000)}s)",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.warning
+            )
+        }
+
         // Waveform animation
         Row(
             modifier = Modifier
