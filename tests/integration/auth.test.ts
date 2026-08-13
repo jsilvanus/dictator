@@ -52,4 +52,59 @@ describe('authenticateCredentials', () => {
 
     expect(result).toBeNull();
   });
+
+  it('returns null when user is deactivated', async () => {
+    const bcrypt = (await import('bcryptjs')).default;
+    const deps = {
+      findByEmail: vi.fn().mockResolvedValue({
+        id: 'user-1',
+        name: 'Jane',
+        email: 'jane@example.com',
+        role: 'editor',
+        passwordHash: 'hash',
+        deactivatedAt: new Date(),
+      }),
+    };
+
+    vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+    const result = await authenticateCredentials('jane@example.com', 'secret', deps);
+
+    expect(result).toBeNull();
+  });
+
+  it('returns null when user is not found', async () => {
+    const deps = {
+      findByEmail: vi.fn().mockResolvedValue(null),
+    };
+
+    const result = await authenticateCredentials('nonexistent@example.com', 'secret', deps);
+
+    expect(result).toBeNull();
+  });
+
+  it('returns role and name in session object', async () => {
+    const bcrypt = (await import('bcryptjs')).default;
+    const deps = {
+      findByEmail: vi.fn().mockResolvedValue({
+        id: 'user-1',
+        name: 'Admin User',
+        email: 'admin@example.com',
+        role: 'admin',
+        passwordHash: 'hash',
+        deactivatedAt: null,
+      }),
+    };
+
+    vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+    const result = await authenticateCredentials('admin@example.com', 'secret', deps);
+
+    expect(result).toEqual({
+      id: 'user-1',
+      name: 'Admin User',
+      email: 'admin@example.com',
+      role: 'admin',
+    });
+  });
 });
