@@ -10,6 +10,7 @@ import { type AiResponse } from '@/lib/ai/prompts';
 import { type AiSession,markAccepted, markDiscarded, recordTurn } from '@/lib/ai/session';
 import { genId, speakText } from '@/lib/utils/tts-id';
 import { executeCommand, parseTriggers } from '@/lib/voice/commands';
+import { tryMatchCustomCommand } from '@/lib/voice/custom-commands';
 import { helpCategories, type HelpCategory } from '@/lib/voice/help';
 import { normalizeSpokenPunctuation } from '@/lib/voice/punctuation';
 
@@ -298,18 +299,40 @@ export function VoiceDock({
 
           const lower = segment.content.toLowerCase().trim();
 
-          if (lower.includes('new paragraph')) {
-            editor.chain().focus().splitBlock().run();
+          // Try custom dictation commands first
+          const customMatched = tryMatchCustomCommand(
+            lower,
+            settings.dictationCommands,
+            editor,
+            inlineAiSession,
+            {
+              lastDictatedRange,
+              setStatus,
+              onSave: onSaveNow,
+              onCreateDocument,
+              onSetTitle,
+              onPrint: () => window.print(),
+              onMicStop: () => speech.stop(),
+              onMicPause: () => speech.pause(),
+              onMicResume: () => speech.resume(),
+              onOpenHelp,
+              onTemporaryTriggerChange: setTemporaryTrigger,
+              onSpeak: (spoken) => {
+                if (settings.ttsEnabled) {
+                  speakText(spoken, settings.ttsVoice);
+                }
+              },
+              clearDocumentConfirmUntil,
+              setClearDocumentConfirmUntil,
+            },
+          );
+
+          if (customMatched) {
             handledText = true;
             continue;
           }
 
-          if (lower.includes('new line')) {
-            editor.chain().focus().insertContent('\n').run();
-            handledText = true;
-            continue;
-          }
-
+          // Fallback to standard text insertion
           const from = editor.state.selection.from;
           editor.chain().focus().insertContent(segment.content).run();
           const to = editor.state.selection.from;
