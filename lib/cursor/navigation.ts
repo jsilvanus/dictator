@@ -9,59 +9,69 @@ import type { CursorPosition, CursorSize, TextBoundary } from '@/lib/types/curso
  * Find the start and end of a paragraph containing the given offset
  */
 export function findParagraphBoundary(text: string, offset: number, direction: 'next' | 'prev'): TextBoundary {
+  // Split by double newline to find paragraphs
+  const parts = text.split('\n\n');
+  let currentPos = 0;
+  let currentParaIndex = -1;
+
+  // Find which paragraph contains the offset
+  for (let i = 0; i < parts.length; i++) {
+    const paraStart = currentPos;
+    const paraEnd = currentPos + parts[i].length;
+
+    if (offset >= paraStart && offset < paraEnd) {
+      currentParaIndex = i;
+      break;
+    }
+    currentPos = paraEnd + 2; // Account for \n\n
+  }
+
   if (direction === 'next') {
-    // Find the start of the next paragraph
-    const currentParagraphEnd = text.indexOf('\n\n', offset);
-    if (currentParagraphEnd === -1) {
-      // Last paragraph
+    if (currentParaIndex < 0 || currentParaIndex >= parts.length - 1) {
+      // No next paragraph
       return {
-        start: offset,
+        start: text.length,
         end: text.length,
-        text: text.slice(offset),
+        text: '',
       };
     }
 
-    const nextParagraphStart = currentParagraphEnd + 2;
-    const nextParagraphEnd = text.indexOf('\n\n', nextParagraphStart);
-    if (nextParagraphEnd === -1) {
-      return {
-        start: nextParagraphStart,
-        end: text.length,
-        text: text.slice(nextParagraphStart),
-      };
+    const nextIndex = currentParaIndex + 1;
+    let nextStart = 0;
+    for (let i = 0; i < nextIndex; i++) {
+      nextStart += parts[i].length + 2; // +2 for \n\n
     }
+
+    const nextEnd = nextStart + parts[nextIndex].length;
 
     return {
-      start: nextParagraphStart,
-      end: nextParagraphEnd,
-      text: text.slice(nextParagraphStart, nextParagraphEnd),
+      start: nextStart,
+      end: nextEnd,
+      text: parts[nextIndex],
     };
   } else {
-    // Find the start of the previous paragraph
-    const currentParagraphStart = Math.max(
-      0,
-      text.lastIndexOf('\n\n', Math.max(0, offset - 1)) + 2,
-    );
-
-    if (currentParagraphStart === 1) {
-      // First paragraph
+    // previous
+    if (currentParaIndex <= 0) {
+      // No previous paragraph
       return {
         start: 0,
-        end: text.indexOf('\n\n'),
-        text: text.slice(0, text.indexOf('\n\n')),
+        end: 0,
+        text: '',
       };
     }
 
-    const prevParagraphEnd = currentParagraphStart - 2;
-    const prevParagraphStart = Math.max(
-      0,
-      text.lastIndexOf('\n\n', Math.max(0, prevParagraphEnd - 1)) + 2,
-    );
+    const prevIndex = currentParaIndex - 1;
+    let prevStart = 0;
+    for (let i = 0; i < prevIndex; i++) {
+      prevStart += parts[i].length + 2;
+    }
+
+    const prevEnd = prevStart + parts[prevIndex].length;
 
     return {
-      start: prevParagraphStart,
-      end: prevParagraphEnd,
-      text: text.slice(prevParagraphStart, prevParagraphEnd),
+      start: prevStart,
+      end: prevEnd,
+      text: parts[prevIndex],
     };
   }
 }
@@ -73,93 +83,75 @@ export function findWordBoundary(text: string, offset: number, direction: 'next'
   const wordPattern = /\b\w+\b/g;
   let match;
   let currentWord: TextBoundary | null = null;
+  const allMatches: RegExpExecArray[] = [];
 
+  // Find all words and track which one contains offset
   while ((match = wordPattern.exec(text)) !== null) {
+    allMatches.push(match);
     if (match.index <= offset && offset < match.index + match[0].length) {
       currentWord = {
         start: match.index,
         end: match.index + match[0].length,
         text: match[0],
       };
-      break;
-    }
-  }
-
-  if (!currentWord) {
-    // If no word at offset, treat it as whitespace
-    if (direction === 'next') {
-      wordPattern.lastIndex = offset;
-      const nextMatch = wordPattern.exec(text);
-      if (!nextMatch) {
-        return {
-          start: text.length,
-          end: text.length,
-          text: '',
-        };
-      }
-      return {
-        start: nextMatch.index,
-        end: nextMatch.index + nextMatch[0].length,
-        text: nextMatch[0],
-      };
-    } else {
-      // Find previous word
-      const previousMatches: typeof match[] = [];
-      wordPattern.lastIndex = 0;
-      while ((match = wordPattern.exec(text)) !== null && match.index < offset) {
-        previousMatches.push(match);
-      }
-      if (previousMatches.length === 0) {
-        return {
-          start: 0,
-          end: 0,
-          text: '',
-        };
-      }
-      const prevMatch = previousMatches[previousMatches.length - 1];
-      return {
-        start: prevMatch.index,
-        end: prevMatch.index + prevMatch[0].length,
-        text: prevMatch[0],
-      };
     }
   }
 
   if (direction === 'next') {
-    wordPattern.lastIndex = currentWord.end;
-    const nextMatch = wordPattern.exec(text);
-    if (!nextMatch) {
-      return {
-        start: text.length,
-        end: text.length,
-        text: '',
-      };
+    if (!currentWord) {
+      // No word at offset, find next word
+      for (const m of allMatches) {
+        if (m.index >= offset) {
+          return {
+            start: m.index,
+            end: m.index + m[0].length,
+            text: m[0],
+          };
+        }
+      }
+      return { start: text.length, end: text.length, text: '' };
     }
-    return {
-      start: nextMatch.index,
-      end: nextMatch.index + nextMatch[0].length,
-      text: nextMatch[0],
-    };
+
+    // Find next word after currentWord
+    for (const m of allMatches) {
+      if (m.index >= currentWord.end) {
+        return {
+          start: m.index,
+          end: m.index + m[0].length,
+          text: m[0],
+        };
+      }
+    }
+    return { start: text.length, end: text.length, text: '' };
   } else {
-    // Find previous word
-    const previousMatches: typeof match[] = [];
-    wordPattern.lastIndex = 0;
-    while ((match = wordPattern.exec(text)) !== null && match.index < currentWord.start) {
-      previousMatches.push(match);
+    // previous
+    if (!currentWord) {
+      // No word at offset, find previous word
+      for (let i = allMatches.length - 1; i >= 0; i--) {
+        if (allMatches[i].index < offset) {
+          const m = allMatches[i];
+          return {
+            start: m.index,
+            end: m.index + m[0].length,
+            text: m[0],
+          };
+        }
+      }
+      return { start: 0, end: 0, text: '' };
     }
-    if (previousMatches.length === 0) {
-      return {
-        start: 0,
-        end: 0,
-        text: '',
-      };
+
+    // Find previous word before currentWord
+    for (let i = allMatches.length - 1; i >= 0; i--) {
+      const m = allMatches[i];
+      if (m.index + m[0].length <= currentWord.start) {
+        return {
+          start: m.index,
+          end: m.index + m[0].length,
+          text: m[0],
+        };
+      }
     }
-    const prevMatch = previousMatches[previousMatches.length - 1];
-    return {
-      start: prevMatch.index,
-      end: prevMatch.index + prevMatch[0].length,
-      text: prevMatch[0],
-    };
+    return { start: 0, end: 0, text: '' };
   }
 }
 
