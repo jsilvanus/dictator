@@ -34,6 +34,7 @@ class DictatorProvider(
                 if (request.context != null) put("context", request.context)
                 put("temperature", request.temperature ?: 0.7)
                 put("maxTokens", request.maxTokens ?: 2048)
+                if (request.thinkingBudgetTokens != null) put("thinkingBudgetTokens", request.thinkingBudgetTokens)
                 put("model", model)
             }
 
@@ -47,6 +48,7 @@ class DictatorProvider(
                 val jsonResponse = Json.parseToJsonElement(responseBody) as? JsonObject
                 AiResponse(
                     content = jsonResponse?.get("content")?.toString()?.trim('"') ?: "",
+                    thinking = jsonResponse?.get("thinking")?.toString()?.trim('"'),
                     stopReason = jsonResponse?.get("stopReason")?.toString()?.trim('"')
                 )
             } else {
@@ -74,6 +76,7 @@ class DictatorProvider(
                 if (request.systemPrompt != null) put("systemPrompt", request.systemPrompt)
                 put("temperature", request.temperature ?: 0.7)
                 put("maxTokens", request.maxTokens ?: 2048)
+                if (request.thinkingBudgetTokens != null) put("thinkingBudgetTokens", request.thinkingBudgetTokens)
                 put("model", model)
                 put("stream", true)
             }
@@ -86,14 +89,20 @@ class DictatorProvider(
             if (response.status.value in 200..299) {
                 val responseBody = response.bodyAsText()
                 val lines = responseBody.split("\n")
-                
+                 
                 for (line in lines) {
                     if (line.startsWith("data: ")) {
                         try {
                             val data = Json.parseToJsonElement(line.substring(6)) as? JsonObject
-                            val content = data?.get("content")?.toString()?.trim('"')
-                            if (!content.isNullOrEmpty()) {
-                                emit(AiStreamChunk.Delta(content))
+                            data?.get("thinking")?.toString()?.trim('"')?.let { thinking ->
+                                if (thinking.isNotEmpty()) {
+                                    emit(AiStreamChunk.ThinkingDelta(thinking))
+                                }
+                            }
+                            data?.get("content")?.toString()?.trim('"')?.let { content ->
+                                if (content.isNotEmpty()) {
+                                    emit(AiStreamChunk.Delta(content))
+                                }
                             }
                         } catch (e: Exception) {
                             Napier.d("Failed to parse stream chunk", e)

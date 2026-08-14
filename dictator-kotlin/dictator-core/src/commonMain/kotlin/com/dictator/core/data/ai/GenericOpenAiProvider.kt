@@ -14,11 +14,15 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 /**
- * Generic OpenAI-Compatible Provider for Kotlin
- * Implements provider interface for any service that follows OpenAI's API format
- */
+* Generic OpenAI-Compatible Provider for Kotlin
+* Implements provider interface for any service that follows OpenAI's API format
+*/
 class GenericOpenAiProvider(
     private val httpClient: HttpClient,
     baseUrl: String,
@@ -32,6 +36,10 @@ class GenericOpenAiProvider(
 
     override fun getProviderType(): ModelProvider = ModelProvider.OPENAI_COMPATIBLE
 
+    private fun supportsExtendedThinking(): Boolean {
+        return model.contains("o1") || model.contains("o3")
+    }
+
     override suspend fun askInline(request: AiInlineRequest): AiResponse {
         if (!isConfigured()) {
             throw IllegalStateException("Generic OpenAI provider not configured: missing base URL or API key")
@@ -40,26 +48,38 @@ class GenericOpenAiProvider(
         val (temperature, maxTokens) = mergeRequestParams(request)
 
         return try {
+            val messageList = listOf(
+                GenericOpenAiMessage(role = "system", content = request.context ?: "You are a helpful AI assistant."),
+                GenericOpenAiMessage(role = "user", content = request.prompt)
+            )
+
+            val requestBody = buildJsonObject {
+                put("model", model)
+                put("max_tokens", maxTokens)
+                put("temperature", temperature)
+                put("messages", Json.encodeToJsonElement(messageList))
+                 
+                // Add thinking support for o1 and other extended thinking models
+                if (request.thinkingBudgetTokens != null && supportsExtendedThinking()) {
+                    putJsonObject("thinking") {
+                        put("type", "enabled")
+                        put("budget_tokens", request.thinkingBudgetTokens)
+                    }
+                }
+            }
+
             val response: GenericOpenAiResponse = httpClient.post("$baseUrl/chat/completions") {
                 contentType(ContentType.Application.Json)
                 header("Authorization", "******")
-                setBody(
-                    GenericOpenAiRequest(
-                        model = model,
-                        maxTokens = maxTokens,
-                        temperature = temperature,
-                        messages = listOf(
-                            GenericOpenAiMessage(role = "system", content = request.context ?: "You are a helpful AI assistant."),
-                            GenericOpenAiMessage(role = "user", content = request.prompt)
-                        )
-                    )
-                )
+                setBody(requestBody.toString())
             }.body()
 
             val content = response.choices.firstOrNull()?.message?.content ?: ""
+            val thinking = response.choices.firstOrNull()?.message?.thinking
 
             AiResponse(
                 content = content,
+                thinking = thinking,
                 usage = response.usage?.let {
                     AiUsage(
                         inputTokens = it.promptTokens,
@@ -88,19 +108,27 @@ class GenericOpenAiProvider(
         messages.addAll(request.messages.map { GenericOpenAiMessage(it.role, it.content) })
 
         try {
+            val requestBody = buildJsonObject {
+                put("model", model)
+                put("max_tokens", maxTokens)
+                put("temperature", temperature)
+                put("messages", Json.encodeToJsonElement(messages))
+                put("stream", true)
+                 
+                // Add thinking support for o1 and other extended thinking models
+                if (request.thinkingBudgetTokens != null && supportsExtendedThinking()) {
+                    putJsonObject("thinking") {
+                        put("type", "enabled")
+                        put("budget_tokens", request.thinkingBudgetTokens)
+                    }
+                }
+            }
+
             @OptIn(InternalAPI::class)
             val response = httpClient.post("$baseUrl/chat/completions") {
                 contentType(ContentType.Application.Json)
                 header("Authorization", "******")
-                setBody(
-                    GenericOpenAiStreamRequest(
-                        model = model,
-                        maxTokens = maxTokens,
-                        temperature = temperature,
-                        messages = messages,
-                        stream = true
-                    )
-                )
+                setBody(requestBody.toString())
             }
 
             if (!response.status.isSuccess()) {
@@ -119,6 +147,9 @@ class GenericOpenAiProvider(
 
                     try {
                         val event = Json.decodeFromString<GenericOpenAiStreamEvent>(data)
+                        event.choices.firstOrNull()?.delta?.thinking?.let { thinking ->
+                            emit(AiStreamChunk.ThinkingDelta(thinking))
+                        }
                         event.choices.firstOrNull()?.delta?.content?.let { content ->
                             emit(AiStreamChunk.Delta(content))
                         }
@@ -142,41 +173,23 @@ class GenericOpenAiProvider(
 }
 
 @Serializable
-data class GenericOpenAiRequest(
-    val model: String,
-    @SerialName("max_tokens")
-    val maxTokens: Int,
-    val temperature: Double,
-    val messages: List<GenericOpenAiMessage>
-)
-
-@Serializable
-data class GenericOpenAiStreamRequest(
-    val model: String,
-    @SerialName("max_tokens")
-    val maxTokens: Int,
-    val temperature: Double,
-    val messages: List<GenericOpenAiMessage>,
-    val stream: Boolean = true
+data class GenericOpenAiChoice(
+    val message: GenericOpenAiMessage? = null,
+    @SerialName("finish_reason")
+    val finishReason: String? = null
 )
 
 @Serializable
 data class GenericOpenAiMessage(
     val role: String,
-    val content: String
+    val content: String,
+    val thinking: String? = null
 )
 
 @Serializable
 data class GenericOpenAiResponse(
     val choices: List<GenericOpenAiChoice>,
     val usage: GenericOpenAiUsage? = null
-)
-
-@Serializable
-data class GenericOpenAiChoice(
-    val message: GenericOpenAiMessage? = null,
-    @SerialName("finish_reason")
-    val finishReason: String? = null
 )
 
 @Serializable
@@ -201,5 +214,6 @@ data class GenericOpenAiStreamChoice(
 
 @Serializable
 data class GenericOpenAiStreamDelta(
-    val content: String? = null
+    val content: String? = null,
+    val thinking: String? = null
 )
