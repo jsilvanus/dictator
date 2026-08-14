@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { AiSettings } from './ai-settings';
 import { DictionarySettings } from './dictionary-settings';
+import { VoiceSettings } from './voice-settings';
 import { useSettings } from '@/components/providers/SettingsProvider';
 
 export function SettingsForm({
@@ -163,6 +164,8 @@ export function SettingsForm({
       </div>
 
       <AiSettings />
+
+      <VoiceSettings />
 
       <DictionarySettings />
     </div>

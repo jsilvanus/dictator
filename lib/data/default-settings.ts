@@ -6,6 +6,21 @@ export type DictationCommand = {
   description?: string;
 };
 
+export type ActivationCommand = {
+  type: 'command' | 'ai'; // 'command' for commandTrigger, 'ai' for aiTrigger
+  phrases: string[];
+  description?: string;
+};
+
+export type VoiceNotificationLight = {
+  enabled: boolean;
+  listening: string; // color code for listening state (e.g., "#0066ff")
+  commandRecognized: string; // color code for command recognized
+  aiRecognized: string; // color code for AI activation
+  error: string; // color code for error state
+  intensity: 'low' | 'medium' | 'high'; // animation intensity
+};
+
 export type UserSettings = {
   commandTrigger: string;
   aiTrigger: string;
@@ -16,6 +31,8 @@ export type UserSettings = {
   holdToTalk: boolean;
   viewFontSize: FontSizeLevel;
   dictationCommands?: DictationCommand[];
+  activationCommands?: Record<string, ActivationCommand[]>; // per-language activation commands
+  voiceNotificationLight?: VoiceNotificationLight; // notification light settings
 };
 
 // Default dictation commands for English
@@ -45,6 +62,22 @@ export const defaultSwedishCommands: DictationCommand[] = [
   { name: 'delete word', voicePhrases: ['radera ord'], description: 'Radera sista ordet' },
 ];
 
+// Default activation commands (language-specific)
+export const defaultEnglishActivationCommands: ActivationCommand[] = [
+  { type: 'command', phrases: ['Computer'], description: 'Activate dictation mode' },
+  { type: 'ai', phrases: ['Assistant'], description: 'Activate AI mode' },
+];
+
+export const defaultFinnishActivationCommands: ActivationCommand[] = [
+  { type: 'command', phrases: ['Tietokone'], description: 'Aktivoi sanelutila' },
+  { type: 'ai', phrases: ['Avustaja'], description: 'Aktivoi AI-tila' },
+];
+
+export const defaultSwedishActivationCommands: ActivationCommand[] = [
+  { type: 'command', phrases: ['Dator'], description: 'Aktivera dikteringsläge' },
+  { type: 'ai', phrases: ['Assistent'], description: 'Aktivera AI-läge' },
+];
+
 export function getDefaultCommandsForLanguage(language: string): DictationCommand[] {
   switch (language) {
     case 'fi-FI':
@@ -57,6 +90,41 @@ export function getDefaultCommandsForLanguage(language: string): DictationComman
   }
 }
 
+export function getDefaultActivationCommandsForLanguage(language: string): ActivationCommand[] {
+  switch (language) {
+    case 'fi-FI':
+      return defaultFinnishActivationCommands;
+    case 'sv-SE':
+      return defaultSwedishActivationCommands;
+    case 'en-US':
+    default:
+      return defaultEnglishActivationCommands;
+  }
+}
+
+/**
+ * Get the primary activation command phrase for a given language and type.
+ * Extracts the first phrase from the activation commands for backward compatibility.
+ */
+export function getActivationCommandForLanguage(
+  language: string,
+  type: 'command' | 'ai',
+  activationCommands?: Record<string, ActivationCommand[]>,
+): string {
+  const commands = activationCommands?.[language] ?? getDefaultActivationCommandsForLanguage(language);
+  const cmd = commands.find((c) => c.type === type);
+  return cmd?.phrases[0] ?? (type === 'command' ? 'Computer' : 'Assistant');
+}
+
+export const defaultNotificationLight: VoiceNotificationLight = {
+  enabled: true,
+  listening: '#0066ff', // Blue for listening
+  commandRecognized: '#00cc00', // Green for command recognized
+  aiRecognized: '#ffaa00', // Orange for AI recognized
+  error: '#ff0000', // Red for error
+  intensity: 'medium',
+};
+
 export const defaultSettings: UserSettings = {
   commandTrigger: 'Computer',
   aiTrigger: 'Assistant',
@@ -67,6 +135,12 @@ export const defaultSettings: UserSettings = {
   holdToTalk: false,
   viewFontSize: 'M',
   dictationCommands: defaultEnglishCommands,
+  activationCommands: {
+    'en-US': defaultEnglishActivationCommands,
+    'fi-FI': defaultFinnishActivationCommands,
+    'sv-SE': defaultSwedishActivationCommands,
+  },
+  voiceNotificationLight: defaultNotificationLight,
 };
 
 export const fontSizePx: Record<FontSizeLevel, number> = {

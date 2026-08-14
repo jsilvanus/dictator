@@ -11,10 +11,12 @@ import { type AiSession,markAccepted, markDiscarded, recordTurn } from '@/lib/ai
 import { genId, speakText } from '@/lib/utils/tts-id';
 import { executeCommand, parseTriggers } from '@/lib/voice/commands';
 import { tryMatchCustomCommand } from '@/lib/voice/custom-commands';
+import { getActivationCommandForLanguage } from '@/lib/data/default-settings';
 import { helpCategories, type HelpCategory } from '@/lib/voice/help';
 import { normalizeSpokenPunctuation } from '@/lib/voice/punctuation';
 
 import { TriggerChip } from './TriggerChip';
+import { NotificationLight, type LightState } from './NotificationLight';
 
 type PendingAiChange =
   | {
@@ -92,10 +94,16 @@ export function VoiceDock({
   const [commandDetected, setCommandDetected] = useState(false);
   const [runningCommand, setRunningCommand] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
+  const [lightState, setLightState] = useState<LightState>('idle');
   const clearHighlightTimeoutRef = useRef<number | null>(null);
   const pendingAiChangeRef = useRef<PendingAiChange | null>(null);
 
   const activeCommandTrigger = temporaryTrigger ?? settings.commandTrigger;
+  
+  const languageSpecificAiTrigger = useMemo(
+    () => getActivationCommandForLanguage(settings.language, 'ai', settings.activationCommands),
+    [settings.language, settings.activationCommands]
+  );
 
   useEffect(() => {
     onActiveTriggerInfo(activeCommandTrigger, temporaryTrigger !== null);
@@ -120,6 +128,19 @@ export function VoiceDock({
   useEffect(() => {
     pendingAiChangeRef.current = pendingAiChange;
   }, [pendingAiChange]);
+
+  useEffect(() => {
+    // Update light state based on voice recognition and processing state
+    if (aiThinking) {
+      setLightState('ai');
+    } else if (runningCommand) {
+      setLightState('command');
+    } else if (speech.listening) {
+      setLightState('listening');
+    } else {
+      setLightState('idle');
+    }
+  }, [speech.listening, runningCommand, aiThinking]);
 
   const stageHighlight = (from: number, to: number) => {
     if (!editor) {
@@ -272,7 +293,7 @@ export function VoiceDock({
   const speech = useSpeechRecognition({
     language: settings.language,
     commandTrigger: activeCommandTrigger,
-    aiTrigger: settings.aiTrigger,
+    aiTrigger: languageSpecificAiTrigger,
     onInterim: () => setStatus('Listening…'),
     onFinal: (rawText) => {
       if (!editor) {
@@ -280,7 +301,7 @@ export function VoiceDock({
       }
 
       const normalized = normalizeSpokenPunctuation(rawText);
-      const segments = parseTriggers(normalized, activeCommandTrigger, settings.aiTrigger);
+      const segments = parseTriggers(normalized, activeCommandTrigger, languageSpecificAiTrigger);
       let handledText = false;
 
       if (segments.some((segment) => segment.type === 'command')) {
@@ -450,7 +471,13 @@ export function VoiceDock({
   return (
     <div className="panel" style={{ marginTop: 8 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <NotificationLight 
+            state={lightState}
+            settings={settings.voiceNotificationLight}
+            size="small"
+          />
+          <button
           type="button"
           style={micStyle}
           onClick={handleMicClick}
@@ -472,6 +499,7 @@ export function VoiceDock({
         >
           🎙️ Mic
         </button>
+        </div>
         <button
           type="button"
           style={{
@@ -488,7 +516,7 @@ export function VoiceDock({
         <TriggerChip
           baseTrigger={settings.commandTrigger}
           activeTrigger={activeCommandTrigger}
-          aiTrigger={settings.aiTrigger}
+          aiTrigger={languageSpecificAiTrigger}
           onChange={setTemporaryTrigger}
         />
         <label>

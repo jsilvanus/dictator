@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { type AiSession } from '@/lib/ai/session';
-import { fontSizePx } from '@/lib/data/default-settings';
+import { fontSizePx, getActivationCommandForLanguage } from '@/lib/data/default-settings';
 import { type HelpCategory } from '@/lib/voice/help';
 
 import { AiHighlight } from './AiHighlight';
@@ -43,6 +43,11 @@ export function VoiceEditor({
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [voiceToPanel, setVoiceToPanel] = useState<string | null>(null);
   const inlineAiSessionRef = useRef<AiSession>({ turns: [], currentDocVersion: 0 });
+
+  const languageSpecificAiTrigger = useMemo(
+    () => getActivationCommandForLanguage(settings.language, 'ai', settings.activationCommands),
+    [settings.language, settings.activationCommands]
+  );
 
   const editor = useEditor({
     extensions: [StarterKit, Placeholder.configure({ placeholder: 'Start dictating...' }), CharacterCount, Underline, AiHighlight],
@@ -201,7 +206,7 @@ export function VoiceEditor({
         open={helpOpen}
         category={helpCategory}
         commandTrigger={activeCommandTrigger}
-        aiTrigger={settings.aiTrigger}
+        aiTrigger={languageSpecificAiTrigger}
         hasOverride={hasTriggerOverride}
         onClose={() => setHelpOpen(false)}
       />
