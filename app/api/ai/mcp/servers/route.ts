@@ -30,18 +30,31 @@ export async function GET(request: NextRequest) {
       .from(mcpServers)
       .where(eq(mcpServers.userId, session.user.id));
 
-    // Convert to response format
-    const response = servers.map((server) => ({
-      id: server.id,
-      name: server.name,
-      enabled: server.enabled,
-      transportType: server.transportType,
-      serverCommand: server.serverCommand,
-      serverArgs: server.serverArgs ? JSON.parse(server.serverArgs) : undefined,
-      serverUrl: server.serverUrl,
-      createdAt: server.createdAt,
-      updatedAt: server.updatedAt,
-    }));
+    // Convert to response format with safe JSON parsing
+    const response = servers.map((server) => {
+      let parsedArgs: any = undefined;
+      if (server.serverArgs) {
+        try {
+          parsedArgs = JSON.parse(server.serverArgs);
+        } catch (e) {
+          console.error(`Failed to parse serverArgs for server ${server.id}:`, e);
+          // Return empty object instead of crashing
+          parsedArgs = {};
+        }
+      }
+      
+      return {
+        id: server.id,
+        name: server.name,
+        enabled: server.enabled,
+        transportType: server.transportType,
+        serverCommand: server.serverCommand,
+        serverArgs: parsedArgs,
+        serverUrl: server.serverUrl,
+        createdAt: server.createdAt,
+        updatedAt: server.updatedAt,
+      };
+    });
 
     return NextResponse.json(response);
   } catch (error) {
@@ -198,6 +211,16 @@ export async function PUT(request: NextRequest) {
     }
 
     const server = updated[0];
+    
+    let parsedArgs: any = undefined;
+    if (server.serverArgs) {
+      try {
+        parsedArgs = JSON.parse(server.serverArgs);
+      } catch (e) {
+        console.error(`Failed to parse serverArgs for server ${server.id}:`, e);
+        parsedArgs = {};
+      }
+    }
 
     return NextResponse.json({
       id: server.id,
@@ -205,7 +228,7 @@ export async function PUT(request: NextRequest) {
       enabled: server.enabled,
       transportType: server.transportType,
       serverCommand: server.serverCommand,
-      serverArgs: server.serverArgs ? JSON.parse(server.serverArgs) : undefined,
+      serverArgs: parsedArgs,
       serverUrl: server.serverUrl,
       createdAt: server.createdAt,
       updatedAt: server.updatedAt,

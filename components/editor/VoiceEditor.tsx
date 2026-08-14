@@ -66,19 +66,32 @@ export function VoiceEditor({
     setStatus('Saving…');
     const nextCount = saveCount + 1;
 
-    await fetch(`/api/documents/${documentId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        content: editor.getJSON(),
-        wordCount: editor.storage.characterCount.words(),
-        saveCount: nextCount,
-      }),
-    });
+    try {
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          content: editor.getJSON(),
+          wordCount: editor.storage.characterCount.words(),
+          saveCount: nextCount,
+        }),
+      });
 
-    setSaveCount(nextCount);
-    setStatus('Saved');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `Save failed: ${response.statusText}`
+        );
+      }
+
+      setSaveCount(nextCount);
+      setStatus('Saved');
+    } catch (error) {
+      console.error('Document save error:', error);
+      setStatus('Error saving');
+      // Optionally show error to user or retry
+    }
   }, [documentId, editor, saveCount, title]);
 
   useEffect(() => {

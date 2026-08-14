@@ -84,8 +84,14 @@ export function AiPanel({
   // Handle voice-routed messages — only when not already streaming so we don't drop them
   useEffect(() => {
     if (voiceMessage && open && !isStreaming) {
-      void sendMessage(voiceMessage);
-      onVoiceMessageHandled();
+      // Send the message and handle completion/errors
+      sendMessage(voiceMessage).catch((error) => {
+        console.error('Failed to send voice message:', error);
+        // Optionally notify user of failure
+      }).finally(() => {
+        // Always notify that we've processed the voice message
+        onVoiceMessageHandled();
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceMessage, open, isStreaming]);

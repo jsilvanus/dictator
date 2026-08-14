@@ -72,21 +72,33 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const versions = await versionsQuery.orderBy(desc(documentVersions.savedAt));
 
-    // Get or create sync metadata
-    let metadata = await db.select().from(syncMetadata).where(eq(syncMetadata.documentId, id));
+    // Get or create sync metadata using atomic upsert to avoid race conditions
+    const existingMetadata = await db
+      .select()
+      .from(syncMetadata)
+      .where(eq(syncMetadata.documentId, id));
+
+    let metadata = existingMetadata;
 
     if (metadata.length === 0) {
-      // Create initial sync metadata
-      await db.insert(syncMetadata).values({
-        documentId: id,
-        lastSyncedAt: new Date(),
-        localVersion: docData.deviceVersion,
-        remoteVersion: docData.deviceVersion,
-        pendingChanges: 0,
-        conflictStatus: 'none',
-      });
+      // Use upsert to handle concurrent requests safely
+      await db
+        .insert(syncMetadata)
+        .values({
+          documentId: id,
+          lastSyncedAt: new Date(),
+          localVersion: docData.deviceVersion,
+          remoteVersion: docData.deviceVersion,
+          pendingChanges: 0,
+          conflictStatus: 'none',
+        })
+        .onConflictDoNothing(); // Ignore if another concurrent request already inserted
 
-      metadata = await db.select().from(syncMetadata).where(eq(syncMetadata.documentId, id));
+      // Fetch again - one of the concurrent requests will have succeeded
+      metadata = await db
+        .select()
+        .from(syncMetadata)
+        .where(eq(syncMetadata.documentId, id));
     }
 
     const response: SyncResponse = {

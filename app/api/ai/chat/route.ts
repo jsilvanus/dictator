@@ -170,7 +170,8 @@ export async function POST(request: Request) {
               const { done, value } = await reader.read();
               if (done) break;
 
-              const chunk = JSON.parse(new TextDecoder().decode(new Uint8Array([...Buffer.from(JSON.stringify(value))]))) as {
+              // Value from ReadableStream<AiStreamChunk> is already an object, not bytes
+              const chunk = value as {
                 type: string;
                 content?: string;
                 error?: string;
@@ -255,7 +256,8 @@ export async function POST(request: Request) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = JSON.parse(new TextDecoder().decode(new Uint8Array([...Buffer.from(JSON.stringify(value))]))) as {
+            // Value from ReadableStream<AiStreamChunk> is already an object, not bytes
+            const chunk = value as {
               type: string;
               content?: string;
               error?: string;
