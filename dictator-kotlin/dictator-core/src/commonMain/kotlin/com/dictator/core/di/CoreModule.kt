@@ -9,6 +9,8 @@ import com.dictator.core.service.McpService
 import com.dictator.core.service.McpServiceImpl
 import com.dictator.core.service.PrivacyService
 import com.dictator.core.service.PrivacyServiceImpl
+import com.dictator.core.service.ToolService
+import com.dictator.core.service.ToolServiceImpl
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 import io.ktor.client.*
@@ -89,6 +91,14 @@ val coreModule = module {
     singleOf(::com.dictator.core.util.validation.Validators)
     singleOf(::com.dictator.core.data.privacy.SensitiveDataDetector)
     singleOf(::com.dictator.core.data.privacy.ProviderPolicyManager)
+    singleOf(::com.dictator.core.data.tools.ToolRegistry)
+    singleOf(::com.dictator.core.data.tools.ToolPermissionsManager)
+    single {
+        com.dictator.core.data.tools.ToolExecutor(
+            registry = get(),
+            permissionsManager = get()
+        )
+    }
     
     single {
         com.dictator.core.data.privacy.TelemetryService(
@@ -168,6 +178,15 @@ val coreModule = module {
             telemetryService = get(),
             providerPolicyManager = get(),
             privacyRepository = get()
+        )
+    }
+    
+    single<ToolService> {
+        ToolServiceImpl(
+            toolRegistry = get(),
+            permissionsManager = get(),
+            toolExecutor = get(),
+            remoteApiService = get()
         )
     }
 }

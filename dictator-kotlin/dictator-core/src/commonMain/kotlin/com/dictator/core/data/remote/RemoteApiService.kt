@@ -666,6 +666,60 @@ class RemoteApiService(
         }
     }
     
+    // ============= Tool Management =============
+    
+    suspend fun saveToolPermission(permission: com.dictator.core.data.tools.ToolPermission): Result<com.dictator.core.data.tools.ToolPermission> {
+        return try {
+            val response = httpClient.post("$baseUrl/api/tools/permissions") {
+                contentType(ContentType.Application.Json)
+                authToken?.let { header("Authorization", "******") }
+                setBody(permission)
+            }
+            
+            if (response.status.isSuccess()) {
+                Result.success(response.body())
+            } else {
+                Result.failure(DataException.ServerError("Failed to save tool permission", response.status.value))
+            }
+        } catch (e: Exception) {
+            Result.failure(DataException.NetworkError("Tool permission save error", e))
+        }
+    }
+    
+    suspend fun deleteToolPermission(permissionId: String): Result<Unit> {
+        return try {
+            val response = httpClient.delete("$baseUrl/api/tools/permissions/$permissionId") {
+                contentType(ContentType.Application.Json)
+                authToken?.let { header("Authorization", "******") }
+            }
+            
+            if (response.status.isSuccess()) {
+                Result.success(Unit)
+            } else {
+                Result.failure(DataException.ServerError("Failed to delete tool permission", response.status.value))
+            }
+        } catch (e: Exception) {
+            Result.failure(DataException.NetworkError("Tool permission delete error", e))
+        }
+    }
+    
+    suspend fun listToolPermissions(): Result<List<com.dictator.core.data.tools.ToolPermission>> {
+        return try {
+            val response = httpClient.get("$baseUrl/api/tools/permissions") {
+                contentType(ContentType.Application.Json)
+                authToken?.let { header("Authorization", "******") }
+            }
+            
+            if (response.status.isSuccess()) {
+                Result.success(emptyList())
+            } else {
+                Result.failure(DataException.ServerError("Failed to list tool permissions", response.status.value))
+            }
+        } catch (e: Exception) {
+            Result.failure(DataException.NetworkError("Tool permissions listing error", e))
+        }
+    }
+    
     fun setAuthToken(token: String) {
         authToken = token
     }

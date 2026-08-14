@@ -112,3 +112,24 @@ interface PrivacyService {
     suspend fun updatePrivacySettings(userId: String, settings: com.dictator.core.data.privacy.UserPrivacySettings)
     suspend fun logPrivacyEvent(userId: String, eventType: String, details: String)
 }
+
+/**
+ * Tool service for tool execution and permissions management.
+ */
+interface ToolService {
+    suspend fun registerTool(tool: com.dictator.core.data.tools.RegisteredTool): Result<Unit>
+    suspend fun getTool(name: String): com.dictator.core.data.tools.RegisteredTool?
+    suspend fun getAllTools(): List<com.dictator.core.data.tools.RegisteredTool>
+    suspend fun searchTools(query: String): List<com.dictator.core.data.tools.RegisteredTool>
+    suspend fun executeTool(toolName: String, arguments: Map<String, Any?>, context: com.dictator.core.data.tools.ToolExecutionContext): Result<com.dictator.core.data.tools.ToolResult>
+    suspend fun hasPermission(userId: String, target: String, toolType: String, documentId: String? = null): Boolean
+    suspend fun grantPermission(permission: com.dictator.core.data.tools.ToolPermission): Result<com.dictator.core.data.tools.ToolPermission>
+    suspend fun revokePermission(permissionId: String): Result<Unit>
+    suspend fun getPermissionsForUser(userId: String): List<com.dictator.core.data.tools.ToolPermission>
+    suspend fun requestPermission(request: com.dictator.core.data.tools.PermissionRequest): Result<com.dictator.core.data.tools.PermissionRequest>
+    suspend fun approvePermissionRequest(requestId: String, mode: com.dictator.core.data.tools.ToolPermissionMode): Result<com.dictator.core.data.tools.ToolPermission>
+    suspend fun rejectPermissionRequest(requestId: String): Result<Unit>
+    suspend fun getPendingRequests(userId: String): List<com.dictator.core.data.tools.PermissionRequest>
+    suspend fun getToolLogs(toolName: String): List<com.dictator.core.data.tools.ToolExecutionLog>
+    suspend fun getUserLogs(userId: String): List<com.dictator.core.data.tools.ToolExecutionLog>
+}
