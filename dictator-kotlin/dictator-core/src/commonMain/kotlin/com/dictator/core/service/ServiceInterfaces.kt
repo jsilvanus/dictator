@@ -77,3 +77,19 @@ interface ShareService {
     suspend fun revokeShare(shareId: String)
     suspend fun getSharedDocuments(userId: String): List<com.dictator.core.domain.entity.Document>
 }
+
+/**
+ * MCP (Model Context Protocol) service for managing MCP servers and tools.
+ */
+interface McpService {
+    suspend fun registerServer(config: com.dictator.core.data.mcp.McpServerConfig): Result<Unit>
+    suspend fun unregisterServer(serverId: String): Result<Unit>
+    suspend fun getServer(serverId: String): com.dictator.core.data.mcp.McpServerState?
+    suspend fun getAllServers(): List<com.dictator.core.data.mcp.McpServerState>
+    suspend fun getTool(serverId: String, toolName: String): com.dictator.core.data.mcp.McpToolDefinition?
+    suspend fun getAllTools(): Map<String, Pair<String, com.dictator.core.data.mcp.McpToolDefinition>>
+    suspend fun callTool(serverId: String, toolName: String, arguments: Map<String, Any?>): Result<com.dictator.core.data.mcp.McpToolResult>
+    suspend fun reconnectServer(serverId: String): Result<Unit>
+    suspend fun getConnectedServersCount(): Int
+    suspend fun getServerTools(serverId: String): Map<String, com.dictator.core.data.mcp.McpToolDefinition>
+}

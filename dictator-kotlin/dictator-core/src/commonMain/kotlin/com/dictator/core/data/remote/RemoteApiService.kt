@@ -592,6 +592,80 @@ class RemoteApiService(
         }
     }
     
+    // ============= MCP (Model Context Protocol) =============
+    
+    suspend fun registerMcpServer(config: com.dictator.core.data.mcp.McpServerConfig): Result<com.dictator.core.data.mcp.McpServerConfig> {
+        return try {
+            val response = httpClient.post("$baseUrl/api/ai/mcp/servers") {
+                contentType(ContentType.Application.Json)
+                authToken?.let { header("Authorization", "******") }
+                setBody(config)
+            }
+            
+            if (response.status.isSuccess()) {
+                Result.success(response.body())
+            } else {
+                Result.failure(DataException.ServerError("Failed to register MCP server", response.status.value))
+            }
+        } catch (e: Exception) {
+            Result.failure(DataException.NetworkError("MCP server registration error", e))
+        }
+    }
+    
+    suspend fun unregisterMcpServer(serverId: String): Result<Unit> {
+        return try {
+            val response = httpClient.delete("$baseUrl/api/ai/mcp/servers/$serverId") {
+                contentType(ContentType.Application.Json)
+                authToken?.let { header("Authorization", "******") }
+            }
+            
+            if (response.status.isSuccess()) {
+                Result.success(Unit)
+            } else {
+                Result.failure(DataException.ServerError("Failed to unregister MCP server", response.status.value))
+            }
+        } catch (e: Exception) {
+            Result.failure(DataException.NetworkError("MCP server unregistration error", e))
+        }
+    }
+    
+    suspend fun listMcpServers(): Result<List<com.dictator.core.data.mcp.McpServerConfig>> {
+        return try {
+            val response = httpClient.get("$baseUrl/api/ai/mcp/servers") {
+                contentType(ContentType.Application.Json)
+                authToken?.let { header("Authorization", "******") }
+            }
+            
+            if (response.status.isSuccess()) {
+                val body = response.bodyAsText()
+                // Parse JSON array - simplified for now
+                Result.success(emptyList())
+            } else {
+                Result.failure(DataException.ServerError("Failed to list MCP servers", response.status.value))
+            }
+        } catch (e: Exception) {
+            Result.failure(DataException.NetworkError("MCP server listing error", e))
+        }
+    }
+    
+    suspend fun listMcpTools(): Result<List<com.dictator.core.data.mcp.McpToolDefinition>> {
+        return try {
+            val response = httpClient.get("$baseUrl/api/ai/mcp/tools") {
+                contentType(ContentType.Application.Json)
+                authToken?.let { header("Authorization", "******") }
+            }
+            
+            if (response.status.isSuccess()) {
+                // Parse JSON array - simplified for now
+                Result.success(emptyList())
+            } else {
+                Result.failure(DataException.ServerError("Failed to list MCP tools", response.status.value))
+            }
+        } catch (e: Exception) {
+            Result.failure(DataException.NetworkError("MCP tools listing error", e))
+        }
+    }
+    
     fun setAuthToken(token: String) {
         authToken = token
     }

@@ -5,6 +5,8 @@ import com.dictator.core.data.local.*
 import com.dictator.core.data.remote.HttpClientFactory
 import com.dictator.core.data.remote.RemoteApiService
 import com.dictator.core.domain.repository.*
+import com.dictator.core.service.McpService
+import com.dictator.core.service.McpServiceImpl
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 import io.ktor.client.*
@@ -135,6 +137,13 @@ val coreModule = module {
         ShareServiceImpl(
             shareRepository = get(),
             documentRepository = get(),
+            remoteApiService = get()
+        )
+    }
+    
+    single<McpService> {
+        McpServiceImpl(
+            httpClient = get(),
             remoteApiService = get()
         )
     }
