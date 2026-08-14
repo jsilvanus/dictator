@@ -33,27 +33,37 @@ export class OpenAiProvider extends BaseAiProvider {
     const params = this.mergeRequestParams(request);
 
     try {
+      const body: Record<string, unknown> = {
+        model: this.model,
+        max_tokens: params.maxTokens,
+        temperature: params.temperature,
+        messages: [
+          {
+            role: 'system',
+            content: request.context || 'You are a helpful AI assistant.',
+          },
+          {
+            role: 'user',
+            content: request.prompt,
+          },
+        ],
+      };
+
+      // Add thinking support for o1 and other extended thinking models
+      if (request.thinkingBudgetTokens && this.supportsExtendedThinking()) {
+        body.thinking = {
+          type: 'enabled',
+          budget_tokens: request.thinkingBudgetTokens,
+        };
+      }
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: 'Bearer ' + this.apiKey,
         },
-        body: JSON.stringify({
-          model: this.model,
-          max_tokens: params.maxTokens,
-          temperature: params.temperature,
-          messages: [
-            {
-              role: 'system',
-              content: request.context || 'You are a helpful AI assistant.',
-            },
-            {
-              role: 'user',
-              content: request.prompt,
-            },
-          ],
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -62,14 +72,16 @@ export class OpenAiProvider extends BaseAiProvider {
       }
 
       const data = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
+        choices?: Array<{ message?: { content?: string; thinking?: string } }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
 
       const content = data.choices?.[0]?.message?.content ?? '';
+      const thinking = data.choices?.[0]?.message?.thinking;
 
       return {
         content,
+        thinking,
         usage: {
           inputTokens: data.usage?.prompt_tokens ?? 0,
           outputTokens: data.usage?.completion_tokens ?? 0,
@@ -88,7 +100,7 @@ export class OpenAiProvider extends BaseAiProvider {
     const params = this.mergeRequestParams(request);
 
     try {
-      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
+      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | object }> = [];
 
       if (request.systemPrompt) {
         messages.push({
@@ -99,19 +111,41 @@ export class OpenAiProvider extends BaseAiProvider {
 
       messages.push(...(request.messages as Array<{ role: 'user' | 'assistant'; content: string }>));
 
+      const body: Record<string, unknown> = {
+        model: this.model,
+        max_tokens: params.maxTokens,
+        temperature: params.temperature,
+        messages,
+        stream: true,
+      };
+
+      // Add tools if provided (OpenAI format)
+      if (request.tools && request.tools.length > 0) {
+        body.tools = request.tools.map((tool) => ({
+          type: 'function',
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.inputSchema,
+          },
+        }));
+      }
+
+      // Add thinking support for o1 and other extended thinking models
+      if (request.thinkingBudgetTokens && this.supportsExtendedThinking()) {
+        body.thinking = {
+          type: 'enabled',
+          budget_tokens: request.thinkingBudgetTokens,
+        };
+      }
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: 'Bearer ' + this.apiKey,
         },
-        body: JSON.stringify({
-          model: this.model,
-          max_tokens: params.maxTokens,
-          temperature: params.temperature,
-          messages,
-          stream: true,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -129,12 +163,14 @@ export class OpenAiProvider extends BaseAiProvider {
 
   /**
    * Convert OpenAI's SSE stream format to our internal format
+   * Handles text deltas, tool calls, and thinking blocks
    */
   private createStreamFromResponse(body: ReadableStream<Uint8Array>): ReadableStream<AiStreamChunk> {
     return new ReadableStream({
       async start(controller) {
         const reader = body.getReader();
         const decoder = new TextDecoder();
+        let toolCallBuffer: Record<string, { id: string; function?: { name: string; arguments: string } }> = {};
 
         try {
           while (true) {
@@ -154,12 +190,26 @@ export class OpenAiProvider extends BaseAiProvider {
               try {
                 const event = JSON.parse(data) as {
                   choices?: Array<{
-                    delta?: { content?: string };
+                    delta?: { 
+                      content?: string;
+                      thinking?: string;
+                      tool_calls?: Array<{ index: number; id: string; function?: { name: string; arguments: string } }>;
+                    };
                     finish_reason?: string | null;
                   }>;
                 };
 
                 const choice = event.choices?.[0];
+                
+                // Handle thinking delta
+                if (choice?.delta?.thinking) {
+                  controller.enqueue({
+                    type: 'thinking-delta',
+                    content: choice.delta.thinking,
+                  });
+                }
+
+                // Handle text delta
                 if (choice?.delta?.content) {
                   controller.enqueue({
                     type: 'delta',
@@ -167,7 +217,42 @@ export class OpenAiProvider extends BaseAiProvider {
                   });
                 }
 
-                if (choice?.finish_reason !== null && choice?.finish_reason) {
+                // Handle tool call deltas
+                if (choice?.delta?.tool_calls) {
+                  for (const toolCall of choice.delta.tool_calls) {
+                    const idx = String(toolCall.index);
+                    if (!toolCallBuffer[idx]) {
+                      toolCallBuffer[idx] = { id: toolCall.id, function: { name: '', arguments: '' } };
+                    }
+                    if (toolCall.id) {
+                      toolCallBuffer[idx].id = toolCall.id;
+                    }
+                    if (toolCall.function?.name) {
+                      toolCallBuffer[idx].function!.name = toolCall.function.name;
+                    }
+                    if (toolCall.function?.arguments) {
+                      toolCallBuffer[idx].function!.arguments = (toolCallBuffer[idx].function?.arguments ?? '') + toolCall.function.arguments;
+                    }
+                  }
+                }
+
+                // Handle completion - emit tool calls if any
+                if (choice?.finish_reason && choice?.finish_reason !== null) {
+                  // Emit any buffered tool calls
+                  const toolCalls = Object.values(toolCallBuffer);
+                  if (toolCalls.length > 0) {
+                    for (const toolCall of toolCalls) {
+                      const parsed = this.parseToolCalls([toolCall]);
+                      for (const call of parsed) {
+                        controller.enqueue({
+                          type: 'tool-call',
+                          toolCall: call,
+                        });
+                      }
+                    }
+                    toolCallBuffer = {};
+                  }
+
                   controller.enqueue({
                     type: 'complete',
                   });
@@ -215,6 +300,14 @@ export class OpenAiProvider extends BaseAiProvider {
     } catch {
       return {};
     }
+  }
+
+  /**
+   * Check if the model supports extended thinking
+   * OpenAI's o1 and o1-preview models support extended thinking
+   */
+  private supportsExtendedThinking(): boolean {
+    return this.model.includes('o1') || this.model.includes('o3');
   }
 }
 

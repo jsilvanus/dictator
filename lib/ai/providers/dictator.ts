@@ -26,6 +26,7 @@ export class DictatorProvider implements AiProvider {
           context: request.context,
           temperature: request.temperature ?? 0.7,
           maxTokens: request.maxTokens ?? 2048,
+          thinkingBudgetTokens: request.thinkingBudgetTokens,
           model: this.model,
         }),
       });
@@ -38,6 +39,7 @@ export class DictatorProvider implements AiProvider {
       const data = (await response.json()) as {
         content?: string;
         stopReason?: string;
+        thinking?: string;
         toolCalls?: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
         usage?: { inputTokens: number; outputTokens: number };
       };
@@ -45,6 +47,7 @@ export class DictatorProvider implements AiProvider {
       return {
         content: data.content || '',
         stopReason: data.stopReason,
+        thinking: data.thinking,
         toolCalls: data.toolCalls,
         usage: data.usage,
       };
@@ -66,6 +69,7 @@ export class DictatorProvider implements AiProvider {
             systemPrompt: request.systemPrompt,
             temperature: request.temperature ?? 0.7,
             maxTokens: request.maxTokens ?? 2048,
+            thinkingBudgetTokens: request.thinkingBudgetTokens,
             model: this.model,
             tools: request.tools,
             stream: true,
@@ -114,8 +118,16 @@ export class DictatorProvider implements AiProvider {
               try {
                 const data = JSON.parse(line.slice(6)) as {
                   content?: string;
+                  thinking?: string;
                   toolCall?: { id: string; name: string; arguments: Record<string, unknown> };
                 };
+
+                if (data.thinking) {
+                  controller.enqueue({
+                    type: 'thinking-delta',
+                    content: data.thinking,
+                  });
+                }
 
                 if (data.content) {
                   controller.enqueue({
