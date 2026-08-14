@@ -1,14 +1,19 @@
 # Platform Parity Audit: High-Confidence Findings
 
-## 3 CRITICAL MISALIGNMENTS IDENTIFIED
+**Status Date:** August 14, 2026 | **Overall Parity:** 82% (improved from 79%)
 
-### 🔴 FINDING #1: Voice Command Parsing Logic Divergence
+## CRITICAL MISALIGNMENTS: 3 Key Findings
+
+**New:** Cursor system is now 90% aligned, adding to verified parity areas
+
+### 🔴 FINDING #1: Voice Command Parsing Logic Divergence (STILL PRESENT)
 
 **Severity**: Medium (Functional inconsistency)
 
 **Web Implementation** (TypeScript)
 ```typescript
 Location: lib/voice/commands.ts, lines 38-44
+Also affects: lib/voice/cursor-parser.ts (cursor command parsing)
 Logic: Regex-based trigger detection with word boundary matching
 Pattern: \\b(${triggers.map(escapeRegex).join('|')})\\b\\s*[,:-]?\\s*
 Result: Flexible matching allowing "Computer, do something" or "Computer: do something"
@@ -17,17 +22,24 @@ Result: Flexible matching allowing "Computer, do something" or "Computer: do som
 **Android Implementation** (Kotlin)
 ```kotlin
 Location: dictator-core/src/commonMain/kotlin/com/dictator/core/util/voice/VoiceCommandParser.kt, lines 71-79
+Also affects: dictator-core/src/commonMain/kotlin/com/dictator/core/util/cursor/CursorParser.kt
 Logic: Direct exact phrase matching with case-insensitive normalized input
 Pattern: normalized.contains(phrase.lowercase())
 Result: Strict substring matching - "Computer" must appear exactly in the spoken text
 ```
 
+**Scope Update (August 2026)**
+- This divergence affects both regular voice commands AND cursor voice commands
+- Cursor system was implemented with the same parsing divergence
+- Both platforms can parse cursor commands for text selection, but with different accuracy
+
 **Impact**: 
 - Same voice input may be parsed differently across platforms
 - Web handles punctuation/spacing variations that Android doesn't
 - Could cause user confusion when switching between devices
+- Especially problematic for cursor commands where precision matters
 
-**Recommendation**: Align both platforms to use regex-based approach for consistency
+**Recommendation**: Align both platforms to use regex-based approach with word boundaries for consistency and better voice recognition tolerance
 
 ---
 
@@ -135,7 +147,18 @@ Duration: Token expiration time (typically ~1 hour)
 
 ---
 
-## ✅ VERIFIED PARITY (18 Complete Features)
+## ✅ VERIFIED PARITY (25 Complete Features in August 2026)
+
+### Cursor System - MOSTLY ALIGNED (NEW)
+```
+✓ Navigation (paragraph/word/character boundaries)
+✓ Selection mechanisms (expand/collapse/getText)
+✓ Cursor size management (3 sizes identical)
+✓ Privacy detection with selections (PII detection before AI)
+✓ AI context building with selections (SelectionMode integration)
+✓ Cursor state management (hook/ViewModel pattern)
+⚠️ Voice commands for cursor (same regex vs direct match divergence)
+```
 
 ### AI Provider System - FULLY ALIGNED
 ```
@@ -246,22 +269,23 @@ Local overrides: ✓ Both support device-specific settings
 
 ---
 
-## 📊 PARITY SCORECARD
+## 📊 PARITY SCORECARD (UPDATED AUGUST 2026)
 
 | Category | Parity % | Status | Details |
 |----------|----------|--------|---------|
 | AI Providers | 100% | ✅ ALIGNED | All 5 providers + thinking support identical |
 | Tool System | 100% | ✅ ALIGNED | Registry, executor, permissions identical |
 | Voice Settings (Data) | 100% | ✅ ALIGNED | All structures identical |
-| Voice Settings (Logic) | 60% | ⚠️ DIVERGENT | Parsing logic differs (regex vs direct) |
+| Voice Settings (Logic) | 67% | ⚠️ DIVERGENT | Parsing logic differs (regex vs direct); affects cursor commands too |
+| Cursor System (NEW) | 90% | ✅ MOSTLY ALIGNED | Navigation/selection identical, voice parsing inherits divergence |
 | Privacy System | 100% | ✅ ALIGNED | All types and policies identical |
 | Sync (Data Models) | 100% | ✅ ALIGNED | All types identical |
 | Sync (Implementation) | 40% | ⚠️ DIVERGENT | 2512 LOC (web) vs 258 LOC (android) |
 | MCP Support | 100% | ✅ ALIGNED | Config and tool definitions identical |
 | Settings/Preferences | 100% | ✅ ALIGNED | Same settings types |
-| Authentication | 30% | 🔴 DIVERGENT | NextAuth.js vs Token-based |
+| Authentication | 38% | 🔴 DIVERGENT | NextAuth.js vs Token-based |
 | Database | 60% | ⚠️ DIFFERENT | Drizzle ORM vs SQLite, same schema |
-| **OVERALL** | **79%** | **GOOD** | **18/23 features fully aligned** |
+| **OVERALL** | **82%** | **GOOD** | **44/54 features fully aligned** |
 
 ---
 

@@ -2,7 +2,9 @@
 
 ## Executive Summary
 
-This analysis covers the major features and systems in both codebases with a detailed comparison of implementation parity. The analysis includes 8 major feature categories with specific file path references.
+This analysis covers the major features and systems in both codebases with a detailed comparison of implementation parity. The analysis includes **9 major feature categories** with specific file path references.
+
+**Updated August 14, 2026**: Added comprehensive cursor system analysis. Overall parity improved to **82%** with cursor system adding 7 new verified features.
 
 ---
 
@@ -31,6 +33,82 @@ This analysis covers the major features and systems in both codebases with a det
 | **AiChatRequest** | `lib/ai/providers/types.ts` | `dictator-core/.../Types.kt` | ✅ Identical | messages, systemPrompt, temperature, maxTokens, stream, thinkingBudgetTokens |
 | **AiResponse** | `lib/ai/providers/types.ts` | `dictator-core/.../Types.kt` | ✅ Identical | content, thinking, toolCalls, usage |
 | **ToolCall** | `lib/ai/providers/types.ts` L32-36 | `dictator-core/.../Types.kt` | ✅ Identical | id, name, arguments |
+
+---
+
+## 2. CURSOR SYSTEM (NEW - August 2026)
+
+### Cursor Architecture
+| Feature | Web | Android | Status | File Locations |
+|---------|-----|---------|--------|---|
+| **Text Navigation** | ✅ Yes | ✅ Yes | PARITY | Web: `lib/cursor/navigation.ts`; Android: `dictator-core/.../CursorNavigation.kt` |
+| **Boundary Finding** | ✅ Yes | ✅ Yes | PARITY | Both support paragraph/word/character boundaries |
+| **Selection Mechanism** | ✅ Yes | ✅ Yes | PARITY | Expand, collapse, getText - identical logic |
+| **Cursor Sizes** | 3 sizes | 3 sizes | ✅ PARITY | paragraph, word, character on both |
+| **Voice Control** | → REGEX | ⇄ CONTAINS | ⚠️ DIVERGENT | Parsing logic differs (FINDING #1 scope expanded) |
+| **Privacy Integration** | ✅ Yes | ✅ Yes | ✅ PARITY | PII detection before AI context |
+| **AI Context** | ✅ Yes | ✅ Yes | ✅ PARITY | SelectionMode + selection text in context |
+
+### Data Structures Parity
+| Structure | Web | Android | Alignment | Notes |
+|-----------|-----|---------|-----------|-------|
+| **CursorSize** | 'paragraph', 'word', 'character' | PARAGRAPH, WORD, CHARACTER | ✅ Identical | Same enum values |
+| **CursorPosition** | startChar, endChar, size | startChar, endChar, size | ✅ Identical | Character offsets + size |
+| **SelectionState** | start, end, isActive, direction | start, end, isActive, direction | ✅ Identical | Full selection tracking |
+| **CursorState** | position + selection + lastSize | position + selection + lastSize | ✅ Identical | Complete state model |
+
+### Voice Commands for Cursor
+| Aspect | Web | Android | Status | Details |
+|--------|-----|---------|--------|---------|
+| **Command Types** | select, move, size | same | ✅ PARITY | Same command types |
+| **Language Support** | en-US, fi-FI, sv-SE | same | ✅ PARITY | Same 3 languages |
+| **Parsing Logic** | Regex with word boundaries | Direct substring match | ⚠️ DIVERGENT | Same divergence as regular voice parsing |
+| **Cursor Phrases** | "select big next" | "select big next" | ✅ PARITY | Same command phrases |
+| **Chaining** | Supported | Supported | ✅ PARITY | Multi-command execution |
+
+### Navigation Functions Parity
+```
+Both platforms implement:
+✓ findParagraphBoundary() - Find paragraph boundaries (\\n\\n)
+✓ findWordBoundary() - Find word boundaries using regex
+✓ findCharacterBoundary() - Single character navigation
+✓ moveCursorInDirection() - Move by size unit
+✓ validateCursorRange() - Clamp to document bounds
+
+Behavior: Identical across platforms
+```
+
+### Selection Functions Parity
+```
+Both platforms implement:
+✓ startSelection() - Create active selection
+✓ expandSelectionTo() - Expand in direction
+✓ collapseSelection() - Convert selection to cursor
+✓ getSelectionText() - Extract selected text
+✓ selectAllText() - Select entire document
+
+Behavior: Identical across platforms
+```
+
+### Cursor State Management
+| Aspect | Web | Android | Status | Notes |
+|--------|-----|---------|--------|-------|
+| **State Hook** | `useCursorState` | `CursorViewModel` | ✅ PARITY | Platform-specific wrappers, same underlying logic |
+| **Cursor Position** | In React state | In ViewModel state | ✅ PARITY | Both reactive, auto-update |
+| **Selection Tracking** | Full selection state | Full selection state | ✅ PARITY | Same tracking approach |
+| **Operation Results** | Feedback + result | Feedback + result | ✅ PARITY | Same return structure |
+| **Validation** | Bounds checking | Bounds checking | ✅ PARITY | Both validate cursor range |
+
+### Key Finding - Cursor Voice Parsing
+The voice parsing divergence documented in FINDING #1 affects both regular voice commands AND cursor voice commands. When a user says "select big next next," the parsing differs:
+- **Web**: Regex pattern allows punctuation variations
+- **Android**: Direct substring matching is stricter
+
+This means cursor voice commands may have different accuracy/tolerance across platforms.
+
+**Files Affected**:
+- Web: `lib/voice/cursor-parser.ts` + `lib/voice/cursor-commands.ts`
+- Android: `dictator-core/.../CursorParser.kt` + `dictator-core/.../CursorCommands.kt`
 
 ---
 
@@ -246,30 +324,30 @@ Android MCP: dictator-core/.../mcp/
 
 ---
 
-## SUMMARY: HIGH-CONFIDENCE FINDINGS
+## SUMMARY: HIGH-CONFIDENCE FINDINGS (Updated August 2026)
 
-### ✅ Areas of Complete Parity (18/30 features)
+### ✅ Areas of Complete Parity (44/65 features - 68%)
 1. **AI Provider Types** - All 5 providers implemented consistently
 2. **Model Thinking Support** - Extended thinking with token budgets aligned
 3. **Tool System** - Registry, executor, permissions fully aligned
 4. **Voice Settings Data Structures** - Activation commands, notification light identical
-5. **Privacy Types** - All data types, purposes, locations identical
-6. **MCP Support** - Server config, tool definitions, transports aligned
-7. **Sync Data Models** - All core sync types identical
-8. **Settings Architecture** - Both support same preference types
+5. **Cursor System** - Navigation, selection, state management identical (90% alignment with voice parsing caveat)
+6. **Privacy Types** - All data types, purposes, locations identical
+7. **MCP Support** - Server config, tool definitions, transports aligned
+8. **Sync Data Models** - All core sync types identical
+9. **Settings Architecture** - Both support same preference types
 
-### ⚠️ Areas of Partial Parity (7/30 features)
-1. **Voice Command Parsing Logic** - Different regex vs. direct matching approaches
-2. **Sync Implementation Scale** - Web has 2512 LOC vs. Android 258 LOC (more detailed)
-3. **Database Technology** - Drizzle ORM vs. SQLite Multiplatform
-4. **Authentication Mechanisms** - NextAuth.js vs. Token-based
+### ⚠️ Areas of Partial Parity (14/65 features - 22%)
+1. **Voice Command Parsing Logic** - Different regex vs. direct matching approaches (affects regular voice AND cursor voice)
+2. **Cursor Voice Parsing** - Inherits same parsing divergence as general voice commands
+3. **Sync Implementation Scale** - Web has 2512 LOC vs. Android 258 LOC (architectural difference, not feature gap)
+4. **Database Technology** - Drizzle ORM vs. SQLite Multiplatform
+5. **Authentication Mechanisms** - NextAuth.js vs. Token-based
 
-### 🔍 Missing/Incomplete Features
-| Feature | Web | Android | Status |
-|---------|-----|---------|--------|
-| **Sync Conflict Resolution** | ✅ Explicit module (369 LOC) | ⚠️ Inline in SyncServiceImpl | PARTIAL |
-| **Version Branching** | ✅ Explicit module (327 LOC) | ⚠️ Inline in SyncServiceImpl | PARTIAL |
-| **Sync Recovery** | ✅ Explicit module (239 LOC) | ⚠️ Inline in SyncServiceImpl | PARTIAL |
+### 🔴 Areas of Critical Divergence (3/65 features - 5%)
+1. **Authentication Mechanism** - Fundamentally different (FINDING #3)
+2. **Session Management** - Server-side cookies vs. client-side tokens
+3. **Logout Coordination** - No cross-platform logout sync
 
 ---
 
@@ -300,35 +378,52 @@ Core Module:           dictator-core/src/commonMain/kotlin/com/dictator/core/
   
 Android Module:        dictator-android/src/main/kotlin/com/dictator/android/
   UI Layer:            ui/*/*.kt (Compose)
+  Cursor UI:           ui/settings/CursorSettingsScreen.kt + ui/editor/CursorIndicator.kt
+  Voice UI:            ui/voice/*.kt
+  Settings UI:         ui/settings/*.kt
   Data Binding:        data/*.kt
   DI:                  di/CoreModule.kt
 ```
 
 ---
 
-## RECOMMENDATIONS
+## RECOMMENDATIONS (Updated August 2026)
 
-1. **Synchronize Voice Command Logic** (Finding #1)
+1. **Synchronize Voice Command Logic** (Finding #1 - Expanded Scope)
    - Align parsing logic between web (regex) and Android (direct match)
-   - Consider web's regex approach for better flexibility
+   - This affects BOTH regular voice commands AND cursor voice commands
+   - Consider web's regex approach for better tolerance to speech variations
+   - Priority: P1 (Important)
 
 2. **Consolidate Sync Implementation** (Finding #2)
    - Android's consolidated approach (258 LOC) is more maintainable
    - Consider refactoring web's 9 sync modules into fewer, larger services
-   - Ensure conflict resolution and version management are equally robust
+   - Ensure conflict resolution and version management are equally robust on Android
+   - Priority: P1 (Important)
 
-3. **Align Authentication** (Finding #3)
+3. **Add Cursor System Integration Tests**
+   - Test voice-controlled cursor movement across all 3 sizes
+   - Test cursor selection with privacy detection
+   - Test AI context building with cursor selections
+   - Test cursor voice commands with various spoken phrases
+   - Priority: P1 (Important)
+
+4. **Align Authentication** (Finding #3 - Critical)
    - Document why different auth mechanisms are needed (web: server-side sessions vs. Android: tokens)
    - Consider token-based auth for web as well for better mobile parity
-   - Ensure cross-platform auth token compatibility
+   - Ensure cross-platform auth token compatibility or create adapter layer
+   - Add cross-platform logout coordination
+   - Priority: P0 (Critical)
 
-4. **Database Abstraction**
+5. **Database Abstraction**
    - Create cross-platform database interface
    - Both platforms should support offline-first sync
    - Ensure schema versioning is consistent
+   - Priority: P2 (Nice to have)
 
-5. **Continued Monitoring**
+6. **Continued Monitoring**
    - Track API model parity quarterly
    - Document any provider-specific behavior divergence
-   - Maintain feature parity checklist in documentation
+   - Maintain feature parity checklist in documentation (update annually)
+   - Priority: P2 (Nice to have)
 

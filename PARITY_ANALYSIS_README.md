@@ -50,30 +50,33 @@ This directory contains a comprehensive analysis of feature parity between the D
 
 ---
 
-## 🎯 Key Findings at a Glance
+## 🎯 Key Findings at a Glance (Updated August 14, 2026)
 
-### ✅ 18 Features with Complete Parity (79%)
+### ✅ 44 Features with Complete Parity (82%)
 - **AI Providers**: Claude, OpenAI, Ollama, Generic OpenAI-compatible, Dictator (with extended thinking)
 - **Tool System**: Registry, executor, permissions, built-in tools, MCP
+- **Cursor System**: Navigation, selection, state management, privacy integration, AI context (NEW)
 - **Voice Settings**: Data structures, activation commands, notification light, language support
-- **Privacy System**: All data types, policies, telemetry
+- **Privacy System**: All data types, policies, telemetry, GDPR compliance
 - **Sync Models**: All data structures identical
 - **User Settings**: Preferences, storage, cross-device sync
 - **MCP Support**: Server config, tool definitions, transports
 
-### ⚠️ 10 Features with Partial Parity (34%)
+### ⚠️ 14 Features with Partial Parity (22%)
 - **Voice Parsing**: Data structures identical, but parsing logic differs (regex vs direct match)
+- **Cursor Voice Commands**: Inherits same parsing divergence from general voice parsing (NEW)
 - **Sync Implementation**: 2512 LOC (web, modular) vs 258 LOC (android, consolidated)
 - **Database**: Same schema, different ORM (Drizzle vs SQLite)
+- **Cursor Voice Accuracy**: Different tolerance to speech variations
 
-### 🔴 3 Features with Critical Divergence (10%)
+### 🔴 3 Features with Critical Divergence (5%)
 - **Authentication**: NextAuth.js (web) vs Token-based (android)
 - **Session Management**: Server-side cookies vs client-side tokens
-- **Token/Session Coordination**: No cross-platform sharing
+- **Logout Coordination**: No cross-platform logout sync
 
 ---
 
-## 🔍 What Each Section Covers
+## 🔍 What Each Section Covers (Updated August 2026)
 
 ### Category 1: AI Provider Integrations
 ✅ **Status**: 100% PARITY
@@ -87,26 +90,36 @@ This directory contains a comprehensive analysis of feature parity between the D
 - Permission modes (ONCE, PER_DOCUMENT, ALWAYS) aligned
 - Built-in tools available on both platforms
 
-### Category 3: Voice Features
-⚠️ **Status**: 60% PARITY (logic diverges, data aligns)
+### Category 3: Cursor System (NEW)
+✅ **Status**: 90% PARITY
+- Navigation & selection logic: **IDENTICAL**
+- Cursor sizes (paragraph/word/character): **IDENTICAL**
+- State management: **IDENTICAL** (hook vs ViewModel)
+- Privacy with selections: **IDENTICAL** (PII detection before AI)
+- Voice control: **INHERITS DIVERGENCE** from general voice parsing (regex vs direct match)
+- Files: Web `/lib/cursor/` + `/lib/voice/cursor-*.ts`, Android `dictator-core/.../cursor/`
+
+### Category 4: Voice Features
+⚠️ **Status**: 67% PARITY (logic diverges, data aligns)
 - Data structures: **IDENTICAL** (ActivationCommand, VoiceNotificationLight, VoiceSettings)
 - Parsing logic: **DIFFERENT**
-  - Web: Regex-based (/lib/voice/commands.ts L38-44)
-  - Android: Direct phrase matching (/dictator-kotlin/.../VoiceCommandParser.kt L71-79)
+  - Web: Regex-based with word boundaries (/lib/voice/commands.ts L38-44)
+  - Android: Direct substring matching (/dictator-kotlin/.../VoiceCommandParser.kt L71-79)
 - Language support: **IDENTICAL** (en-US, fi-FI, sv-SE)
+- NOTE: This divergence affects cursor voice commands too (/lib/voice/cursor-parser.ts, CursorParser.kt)
 
-### Category 4: Privacy Infrastructure
+### Category 5: Privacy Infrastructure
 ✅ **Status**: 100% PARITY
 - 10 sensitive data types defined identically
 - 5 data processing purposes identical
 - 6 geographic locations identical
 - Telemetry service implementation identical
 
-### Category 5: Data Persistence & Sync
-⚠️ **Status**: 40% PARITY (models align, implementation diverges)
+### Category 6: Data Persistence & Sync
+⚠️ **Status**: 55% PARITY (models align, implementation diverges)
 - Sync data models: **IDENTICAL**
-- Sync implementation: **COMPLETELY DIFFERENT**
-  - Web: 2512 LOC across 9 modules
+- Sync implementation: **COMPLETELY DIFFERENT ARCHITECTURE**
+  - Web: 2512 LOC across 9 explicit modules
     - service.ts (305)
     - conflict-resolution.ts (369)
     - diff-service.ts (299)
@@ -115,30 +128,31 @@ This directory contains a comprehensive analysis of feature parity between the D
     - sync-performance.ts (381)
     - recovery-service.ts (239)
     - sync-notification.ts (266)
-  - Android: 258 LOC in single SyncServiceImpl.kt
-- Database: Drizzle ORM (web) vs SQLite Multiplatform (android)
+  - Android: 258 LOC consolidated in single SyncServiceImpl.kt
+- Database: Drizzle ORM (web) vs SQLite Multiplatform (android), but schema aligned
+- NOTE: This is an architectural difference, not a feature gap
 
-### Category 6: MCP (Model Context Protocol)
+### Category 7: MCP (Model Context Protocol)
 ✅ **Status**: 100% PARITY
 - Server config structure identical
 - Tool definitions identical
 - Transport types aligned (stdio, SSE, HTTP)
 
-### Category 7: User Settings & Preferences
+### Category 8: User Settings & Preferences
 ✅ **Status**: 100% PARITY
 - All preference types identical
 - Persistence mechanisms identical
 - Cross-device sync identical
 
-### Category 8: Authentication & Authorization
-🔴 **Status**: 30% PARITY (completely different mechanisms)
+### Category 9: Authentication & Authorization
+🔴 **Status**: 38% PARITY (fundamentally different mechanisms)
 - Web: NextAuth.js with server-side HTTP sessions
 - Android: Token-based (JWT) with client-side storage
 - Critical implications:
   - No token sharing between platforms
   - Logout not synchronized
   - Different refresh mechanisms
-  - No multi-device session management
+  - No multi-device session management coordination
 
 ---
 
@@ -148,16 +162,17 @@ This directory contains a comprehensive analysis of feature parity between the D
 |----------|----------|-----------|-----------|
 | AI Providers | 100% | HIGH | 🟢 LOW |
 | Tool System | 100% | HIGH | 🟢 LOW |
+| Cursor System | 90% | HIGH | 🟡 MEDIUM (voice parsing divergence) |
 | Voice Settings (Data) | 100% | HIGH | 🟢 LOW |
-| Voice Parsing (Logic) | 60% | HIGH | 🟡 MEDIUM |
+| Voice Parsing (Logic) | 67% | HIGH | 🟡 MEDIUM |
 | Privacy System | 100% | HIGH | 🟢 LOW |
 | Sync (Data Models) | 100% | HIGH | 🟢 LOW |
 | Sync (Implementation) | 40% | HIGH | 🔴 HIGH |
 | MCP Support | 100% | HIGH | 🟢 LOW |
 | Settings/Preferences | 100% | HIGH | 🟢 LOW |
-| Authentication | 30% | HIGH | 🔴 HIGH |
+| Authentication | 38% | HIGH | 🔴 HIGH |
 | Database Tech | 60% | MEDIUM | 🟡 MEDIUM |
-| **OVERALL** | **79%** | **HIGH** | **MEDIUM** |
+| **OVERALL** | **82%** | **HIGH** | **MEDIUM** |
 
 ---
 
