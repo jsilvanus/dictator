@@ -1,3 +1,13 @@
+/**
+ * Default Settings and Types for Dictator Voice Recognition
+ * 
+ * Backward Compatibility:
+ * - New fields (activationCommands, voiceNotificationLight) are optional
+ * - Existing users without these fields will automatically get defaults applied
+ * - The SettingsProvider normalizes all settings to ensure required fields are present
+ * - Language-specific activation commands fall back to commandTrigger/aiTrigger if not set
+ */
+
 export type FontSizeLevel = 'S' | 'M' | 'L' | 'XL' | 'XXL';
 
 export type DictationCommand = {

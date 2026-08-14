@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useState } from 'react';
 
-import { defaultSettings, UserSettings } from '@/lib/data/default-settings';
+import { defaultSettings, UserSettings, defaultNotificationLight, getDefaultActivationCommandsForLanguage } from '@/lib/data/default-settings';
 
 type SettingsContextValue = {
   settings: UserSettings;
@@ -12,6 +12,43 @@ type SettingsContextValue = {
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
+/**
+ * Normalize settings for backward compatibility.
+ * Ensures all required fields are present and uses defaults for missing ones.
+ */
+function normalizeSettings(initial?: Partial<UserSettings>): UserSettings {
+  const base = { ...defaultSettings, ...initial };
+
+  // Ensure voiceNotificationLight has all required fields
+  if (!base.voiceNotificationLight) {
+    base.voiceNotificationLight = defaultNotificationLight;
+  } else {
+    base.voiceNotificationLight = {
+      ...defaultNotificationLight,
+      ...base.voiceNotificationLight,
+    };
+  }
+
+  // Ensure activationCommands is populated for the user's language
+  if (!base.activationCommands) {
+    base.activationCommands = {
+      'en-US': getDefaultActivationCommandsForLanguage('en-US'),
+      'fi-FI': getDefaultActivationCommandsForLanguage('fi-FI'),
+      'sv-SE': getDefaultActivationCommandsForLanguage('sv-SE'),
+    };
+  } else {
+    // Add missing languages to activationCommands
+    const languages = ['en-US', 'fi-FI', 'sv-SE'];
+    for (const lang of languages) {
+      if (!base.activationCommands[lang]) {
+        base.activationCommands[lang] = getDefaultActivationCommandsForLanguage(lang);
+      }
+    }
+  }
+
+  return base;
+}
+
 export function SettingsProvider({
   children,
   initial,
@@ -19,13 +56,13 @@ export function SettingsProvider({
   children: React.ReactNode;
   initial?: Partial<UserSettings>;
 }) {
-  const [settings, setSettings] = useState<UserSettings>({ ...defaultSettings, ...initial });
+  const [settings, setSettings] = useState<UserSettings>(normalizeSettings(initial));
 
   const value = useMemo(
     () => ({
       settings,
       setSettings,
-      patchSettings: (next: Partial<UserSettings>) => setSettings((prev) => ({ ...prev, ...next })),
+      patchSettings: (next: Partial<UserSettings>) => setSettings((prev) => normalizeSettings({ ...prev, ...next })),
     }),
     [settings],
   );
