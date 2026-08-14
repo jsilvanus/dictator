@@ -88,7 +88,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/auth/logout") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
             }
             
             if (response.status.isSuccess()) {
@@ -106,7 +106,7 @@ class RemoteApiService(
     suspend fun getSession(): User? {
         return try {
             val response = httpClient.get("$baseUrl/api/auth/session") {
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
             }
             
             if (response.status.isSuccess()) {
@@ -129,7 +129,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/auth/validate") {
                 contentType(ContentType.Application.Json)
-                header("Authorization", "******")
+                header("Authorization", token)
                 setBody(mapOf("token" to token))
             }
             response.status.isSuccess()
@@ -142,7 +142,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/auth/refresh") {
                 contentType(ContentType.Application.Json)
-                header("Authorization", "******")
+                header("Authorization", token)
                 setBody(mapOf("token" to token))
             }
             
@@ -163,7 +163,7 @@ class RemoteApiService(
     suspend fun getDocuments(userId: String): List<Document> {
         return try {
             val response = httpClient.get("$baseUrl/api/documents") {
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 parameter("userId", userId)
             }
             
@@ -191,7 +191,7 @@ class RemoteApiService(
     suspend fun getDocument(id: String): Document {
         return try {
             val response = httpClient.get("$baseUrl/api/documents/$id") {
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
             }
             
             if (response.status.isSuccess()) {
@@ -220,7 +220,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/documents") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(DocumentRequest(title, folderId))
             }
             
@@ -248,7 +248,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.put("$baseUrl/api/documents/$id") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(DocumentRequest(title, folderId))
             }
             
@@ -275,7 +275,7 @@ class RemoteApiService(
     suspend fun deleteDocument(id: String): Boolean {
         return try {
             val response = httpClient.delete("$baseUrl/api/documents/$id") {
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
             }
             
             response.status.isSuccess()
@@ -289,7 +289,7 @@ class RemoteApiService(
     suspend fun getFolders(userId: String): List<Folder> {
         return try {
             val response = httpClient.get("$baseUrl/api/folders") {
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 parameter("userId", userId)
             }
             
@@ -315,7 +315,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/folders") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(FolderRequest(name, parentId))
             }
             
@@ -340,7 +340,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.put("$baseUrl/api/folders/$id") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(FolderRequest(name))
             }
             
@@ -364,7 +364,7 @@ class RemoteApiService(
     suspend fun deleteFolder(id: String): Boolean {
         return try {
             val response = httpClient.delete("$baseUrl/api/folders/$id") {
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
             }
             
             response.status.isSuccess()
@@ -379,7 +379,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/shares") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(ShareRequest(documentId, withUserId, permission))
             }
             
@@ -403,7 +403,7 @@ class RemoteApiService(
     suspend fun revokeShare(shareId: String): Boolean {
         return try {
             val response = httpClient.delete("$baseUrl/api/shares/$shareId") {
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
             }
             
             response.status.isSuccess()
@@ -416,7 +416,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.put("$baseUrl/api/shares/$shareId") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(mapOf("permission" to permission))
             }
             
@@ -440,7 +440,7 @@ class RemoteApiService(
     suspend fun getSharedDocuments(userId: String): List<Document> {
         return try {
             val response = httpClient.get("$baseUrl/api/documents/shared") {
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 parameter("userId", userId)
             }
             
@@ -471,7 +471,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/ai/inline") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(AiInlineRequest(prompt, context))
             }
             
@@ -493,7 +493,7 @@ class RemoteApiService(
     suspend fun getDocumentVersions(documentId: String, since: Long = 0): List<DocumentVersion> {
         return try {
             val response = httpClient.get("$baseUrl/api/documents/$documentId/versions") {
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 if (since > 0) {
                     parameter("since", since)
                 }
@@ -524,7 +524,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/documents/$documentId/sync") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(mapOf(
                     "changes" to changes,
                     "deviceId" to deviceId,
@@ -544,7 +544,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/ai/session") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(AiSessionRequest(mode))
             }
             
@@ -570,7 +570,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/ai/session/$sessionId/turn") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(AiTurnRequest(role, content))
             }
             
@@ -595,7 +595,7 @@ class RemoteApiService(
     suspend fun fetchAiHistory(documentId: String, limit: Int = 50, offset: Int = 0): AiHistoryResponse {
         return try {
             val response = httpClient.get("$baseUrl/api/documents/$documentId/ai-history") {
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 parameter("limit", limit)
                 parameter("offset", offset)
             }
@@ -616,7 +616,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/ai/mcp/servers") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(config)
             }
             
@@ -634,7 +634,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.delete("$baseUrl/api/ai/mcp/servers/$serverId") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
             }
             
             if (response.status.isSuccess()) {
@@ -651,7 +651,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.get("$baseUrl/api/ai/mcp/servers") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
             }
             
             if (response.status.isSuccess()) {
@@ -670,7 +670,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.get("$baseUrl/api/ai/mcp/tools") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
             }
             
             if (response.status.isSuccess()) {
@@ -690,7 +690,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.post("$baseUrl/api/tools/permissions") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
                 setBody(permission)
             }
             
@@ -708,7 +708,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.delete("$baseUrl/api/tools/permissions/$permissionId") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
             }
             
             if (response.status.isSuccess()) {
@@ -725,7 +725,7 @@ class RemoteApiService(
         return try {
             val response = httpClient.get("$baseUrl/api/tools/permissions") {
                 contentType(ContentType.Application.Json)
-                authToken?.let { header("Authorization", "******") }
+                authToken?.let { header("Authorization", it) }
             }
             
             if (response.status.isSuccess()) {

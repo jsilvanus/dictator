@@ -1,9 +1,17 @@
 package com.dictator.android.ui.document
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.dictator.core.domain.entity.Document as DomainDocument
+import com.dictator.core.domain.repository.DocumentRepository
+import com.dictator.core.data.error.DataException
+import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class Document(
     val id: String,
@@ -24,7 +32,10 @@ data class DocumentListUiState(
     val showDetailDialog: Boolean = false
 )
 
-class DocumentViewModel : ViewModel() {
+@HiltViewModel
+class DocumentViewModel @Inject constructor(
+    private val documentRepository: DocumentRepository
+) : ViewModel() {
     private val _state = MutableStateFlow(DocumentListUiState())
     val state: StateFlow<DocumentListUiState> = _state.asStateFlow()
 
@@ -33,34 +44,39 @@ class DocumentViewModel : ViewModel() {
     }
 
     fun loadDocuments() {
-        _state.value = _state.value.copy(isLoading = true)
-        // Simulate loading documents from the core service
-        // In real implementation, this would call the DocumentService
-        val sampleDocuments = listOf(
-            Document(
-                id = "1",
-                title = "Welcome to Dictator",
-                wordCount = 1250,
-                folder = "Getting Started"
-            ),
-            Document(
-                id = "2",
-                title = "Writing Tips",
-                wordCount = 2890,
-                folder = "Documents"
-            ),
-            Document(
-                id = "3",
-                title = "Project Notes",
-                wordCount = 456,
-                folder = "Projects",
-                lastModified = System.currentTimeMillis() - 3600000
-            )
-        )
-        _state.value = _state.value.copy(
-            documents = sampleDocuments,
-            isLoading = false
-        )
+        _state.value = _state.value.copy(isLoading = true, errorMessage = null)
+        viewModelScope.launch {
+            try {
+                // Load documents from the actual DocumentService
+                val domainDocuments = documentRepository.getAllDocuments()
+                val uiDocuments = domainDocuments.map { doc ->
+                    Document(
+                        id = doc.id,
+                        title = doc.title,
+                        folder = "Documents",  // TODO: Get folder info from repository
+                        lastModified = doc.updatedAt,
+                        isSynced = true
+                    )
+                }
+                _state.value = _state.value.copy(
+                    documents = uiDocuments,
+                    isLoading = false,
+                    errorMessage = null
+                )
+            } catch (e: DataException) {
+                Napier.e("Error loading documents", e)
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "Failed to load documents"
+                )
+            } catch (e: Exception) {
+                Napier.e("Unexpected error loading documents", e)
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "An unexpected error occurred"
+                )
+            }
+        }
     }
 
     fun onSearchQueryChanged(query: String) {

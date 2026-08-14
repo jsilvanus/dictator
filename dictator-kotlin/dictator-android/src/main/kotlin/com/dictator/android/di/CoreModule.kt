@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.dictator.android.BuildConfig
 import com.dictator.android.data.AndroidSharedPreferences
 import com.dictator.core.data.local.*
 import com.dictator.core.data.remote.HttpClientFactory
@@ -51,7 +52,7 @@ object CoreModule {
     fun provideRemoteApiService(httpClient: HttpClient): RemoteApiService =
         RemoteApiService(
             httpClient = httpClient,
-            baseUrl = "http://localhost:3000"  // TODO: Make configurable
+            baseUrl = BuildConfig.API_BASE_URL
         )
 
     // Repository bindings

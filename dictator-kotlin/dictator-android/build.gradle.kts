@@ -21,6 +21,9 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        
+        // API configuration
+        buildConfigField("String", "API_BASE_URL", "\"http://localhost:3000\"")
     }
 
     buildTypes {
@@ -30,6 +33,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("String", "API_BASE_URL", "\"https://api.dictator.app\"")
+        }
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000\"")  // Android emulator localhost
         }
     }
 

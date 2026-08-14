@@ -1,10 +1,16 @@
 package com.dictator.android.ui.voice
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dictator.core.data.voice.ActivationCommand
 import com.dictator.core.data.voice.VoiceSettings
 import com.dictator.core.data.local.VoiceSettingsRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.cancel
+import javax.inject.Inject
 
 enum class VoiceState {
     IDLE, LISTENING, PROCESSING, ERROR, SUCCESS
@@ -32,7 +39,8 @@ data class VoiceUiState(
     val activationCommands: List<ActivationCommand> = emptyList()
 )
 
-class VoiceViewModel(
+@HiltViewModel
+class VoiceViewModel @Inject constructor(
     private val voiceSettingsRepository: VoiceSettingsRepository? = null
 ) : ViewModel() {
     private val _state = MutableStateFlow(VoiceUiState())
@@ -40,6 +48,9 @@ class VoiceViewModel(
 
     private var recordingJob: Job? = null
     private var silenceDetectionJob: Job? = null
+    
+    // Callback for permission request results from the UI
+    var onPermissionResult: ((Boolean) -> Unit)? = null
 
     companion object {
         // IMPROVEMENT: Timeout configuration
@@ -68,7 +79,7 @@ class VoiceViewModel(
                 }
             } catch (e: Exception) {
                 // Log error but don't crash
-                e.printStackTrace()
+                Napier.e("Error loading voice settings", e)
             }
         }
     }
@@ -89,7 +100,7 @@ class VoiceViewModel(
                     )
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Napier.e("Error setting language", e)
             }
         }
     }
@@ -110,9 +121,24 @@ class VoiceViewModel(
             .flatMap { it.phrases }
     }
 
+    /**
+     * Request microphone permission from the user.
+     * The UI should use rememberLauncherForActivityResult to call this
+     * and then call setPermissionGranted() when the result comes back.
+     */
     fun requestMicrophonePermission() {
-        // In real implementation, this would handle Android permission requests
-        _state.value = _state.value.copy(isPermissionGranted = true)
+        // The UI layer (Compose) is responsible for launching the permission request
+        // This ViewModel just tracks the result when permission is granted/denied
+        Napier.d("Permission request initiated - waiting for user response")
+    }
+    
+    /**
+     * Called by the UI layer after permission request completes
+     */
+    fun setPermissionGranted(granted: Boolean) {
+        _state.value = _state.value.copy(isPermissionGranted = granted)
+        Napier.d("Microphone permission result: $granted")
+        onPermissionResult?.invoke(granted)
     }
 
     fun startListening() {

@@ -1,16 +1,25 @@
 package com.dictator.android.ui.auth
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.dictator.core.data.error.DataException
+import com.dictator.core.service.AuthService
 import com.dictator.core.util.validation.Validators
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /**
  * ViewModel for authentication screens.
  * Manages login/signup form state with validation and password strength checking.
  */
-class AuthViewModel : ViewModel() {
+@HiltViewModel
+class AuthViewModel @Inject constructor(
+    private val authService: AuthService
+) : ViewModel() {
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
 
@@ -98,16 +107,38 @@ class AuthViewModel : ViewModel() {
             errorMessage = null
         )
 
-        // Simulate API call delay
-        // In real implementation, this would call the AuthService
-        _state.value = current.copy(
-            isLoading = false,
-            successMessage = if (current.isSignUp) 
-                "Account created successfully!" 
-            else 
-                "Logged in successfully!",
-            errorMessage = null
-        )
+        // Call actual AuthService
+        viewModelScope.launch {
+            try {
+                if (current.isSignUp) {
+                    authService.signup(current.email, current.name, current.password)
+                    _state.value = current.copy(
+                        isLoading = false,
+                        successMessage = "Account created successfully!",
+                        errorMessage = null
+                    )
+                } else {
+                    authService.login(current.email, current.password)
+                    _state.value = current.copy(
+                        isLoading = false,
+                        successMessage = "Logged in successfully!",
+                        errorMessage = null
+                    )
+                }
+            } catch (e: DataException) {
+                _state.value = current.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "Authentication failed",
+                    successMessage = null
+                )
+            } catch (e: Exception) {
+                _state.value = current.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "An unexpected error occurred",
+                    successMessage = null
+                )
+            }
+        }
     }
 
     private fun calculatePasswordStrength(password: String): PasswordStrength {

@@ -176,8 +176,11 @@ class AndroidVoiceServiceImpl(
     }
 
     override suspend fun transcribe(audioBytes: ByteArray): String {
-        // This is a placeholder - in real implementation, would process audio data
-        return "Transcribed text from audio"
+        // Android uses callback-based speech recognition through SpeechRecognizer
+        // This method is not used in Android implementation since recognition happens
+        // through the listener callbacks (startListening -> onResults)
+        // For offline transcription, would need a separate speech-to-text library
+        throw NotImplementedError("Use startListening() with setListener() for Android speech recognition")
     }
 
     override suspend fun startVoiceCommand(): String {
