@@ -1,9 +1,14 @@
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+// Load environment variables from .env file into process.env
+dotenv.config({ path: '.env' });
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   NEXTAUTH_SECRET: z.string().min(1),
   NEXTAUTH_URL: z.string().min(1),
+  DB_PORT: z.string().default('5432'),
   // AI Provider Configuration - at least one must be configured
   ANTHROPIC_API_KEY: z.string().optional(),
   CLAUDE_MODEL: z.string().default('claude-sonnet-4-6').optional(),
