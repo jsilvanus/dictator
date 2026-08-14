@@ -1,4 +1,8 @@
+import { config } from 'dotenv';
 import bcrypt from 'bcryptjs';
+
+// Load local env file so this script works when run directly (not via Next.js)
+config({ path: '.env.local' });
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db';

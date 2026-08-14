@@ -29,8 +29,12 @@ export async function GET() {
 
     return NextResponse.json(rows);
   } catch (error) {
+    console.error('GET /api/documents error', error);
     if (error instanceof Response) {
       return NextResponse.json({ error: await error.text() }, { status: error.status });
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      return NextResponse.json({ error: String(error) }, { status: 500 });
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -40,6 +44,8 @@ export async function POST(request: Request) {
   try {
     const session = await getRequiredSession();
     const body = (await request.json()) as { folderId?: string };
+
+    console.log('POST /api/documents - creating document', { userId: session.userId, body });
 
     const [created] = await db
       .insert(documents)
@@ -51,10 +57,16 @@ export async function POST(request: Request) {
       })
       .returning();
 
+    console.log('POST /api/documents - created', { id: created?.id });
+
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
+    console.error('POST /api/documents error', error);
     if (error instanceof Response) {
       return NextResponse.json({ error: await error.text() }, { status: error.status });
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      return NextResponse.json({ error: String(error) }, { status: 500 });
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
