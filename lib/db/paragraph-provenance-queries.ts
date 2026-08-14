@@ -5,22 +5,23 @@
  * Integrates with existing database schema defined in migrations 0015 and 0016.
  */
 
+import { and, desc, eq, gt, inArray,lt } from 'drizzle-orm';
+
 import { db } from '@/lib/db';
 import {
-  paragraph_provenances,
-  paragraph_provenance_events,
   c2pa_manifests,
   document_versions_with_provenance,
   export_history,
+  paragraph_provenance_events,
+  paragraph_provenances,
 } from '@/lib/db/schema';
-import { eq, and, desc, gt, lt, inArray } from 'drizzle-orm';
+import { ParagraphProvenanceService } from '@/lib/provenance/paragraph-provenance-service';
 import type {
+  C2PAManifest,
   ParagraphProvenance,
   ParagraphProvenanceEvent,
-  C2PAManifest,
   ProvenanceQuery,
 } from '@/lib/provenance/types';
-import { ParagraphProvenanceService } from '@/lib/provenance/paragraph-provenance-service';
 
 /**
  * Database service for paragraph provenance operations.

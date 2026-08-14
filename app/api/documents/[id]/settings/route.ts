@@ -1,8 +1,9 @@
+import { and,eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
 import { documents } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
 
 type DocumentSettingsUpdateRequest = {
   systemPromptOverride?: string;

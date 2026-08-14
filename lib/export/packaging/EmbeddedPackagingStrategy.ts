@@ -39,7 +39,7 @@ export class EmbeddedPackagingStrategy implements IPackagingStrategy {
         mainContent = this.embedInMarkdown(content, provenance, c2paManifest, embeddedOptions);
         break;
       case 'html':
-        mainContent = this.embedInHtml(content, provenance, c2paManifest);
+        mainContent = this.embedInHtml(content, provenance, c2paManifest, embeddedOptions);
         break;
       case 'json':
         mainContent = this.embedInJson(content, provenance, c2paManifest, embeddedOptions);
@@ -99,7 +99,8 @@ END PROVENANCE METADATA -->`;
   private embedInHtml(
     content: string,
     provenance: ParagraphProvenance[],
-    c2paManifest?: C2PAManifest
+    c2paManifest?: C2PAManifest,
+    options?: EmbeddedPackagingOptions
   ): string {
     const provenanceData = this.createProvenanceStructure(provenance, c2paManifest);
     
@@ -140,7 +141,7 @@ ${jsonContent}
     content: string,
     provenance: ParagraphProvenance[],
     c2paManifest?: C2PAManifest,
-    options?: EmbeddedPackagingOptions
+    _options?: EmbeddedPackagingOptions
   ): string {
     try {
       const jsonContent = JSON.parse(content);

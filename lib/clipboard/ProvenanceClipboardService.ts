@@ -13,9 +13,9 @@
  * - application/x-dictator-provenance: Rich provenance metadata
  */
 
-import type { ParagraphProvenance, ParagraphProvenanceEvent } from '@/lib/provenance/types';
-import { ParagraphProvenanceService } from '@/lib/provenance/paragraph-provenance-service';
 import { generateParagraphId } from '@/lib/provenance/paragraph-id';
+import { ParagraphProvenanceService } from '@/lib/provenance/paragraph-provenance-service';
+import type { ParagraphProvenance, ParagraphProvenanceEvent } from '@/lib/provenance/types';
 
 /**
  * Format for clipboard provenance data (not literal JSON, but structured metadata)

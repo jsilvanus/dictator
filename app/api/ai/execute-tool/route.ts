@@ -4,6 +4,7 @@
  */
 
 import { NextResponse } from 'next/server';
+
 import { ToolCall, ToolResult } from '@/lib/ai/providers/types';
 import { getGlobalExecutor } from '@/lib/ai/tools/executor';
 import { getRequiredSession } from '@/lib/auth/session';

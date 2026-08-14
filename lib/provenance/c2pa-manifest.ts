@@ -5,16 +5,16 @@
  * Creates standard C2PA structures suitable for signing and embedding.
  */
 
-import type {
-  ParagraphProvenance,
-  ParagraphProvenanceEvent,
-  ParagraphC2PAReference,
-} from '@/lib/provenance/types';
+import { hashContent } from '@/lib/provenance/content-hashing';
 import {
   createTextualRegionSelector,
   type TextualRegionSelector,
 } from '@/lib/provenance/text-selectors';
-import { hashContent } from '@/lib/provenance/content-hashing';
+import type {
+  ParagraphC2PAReference,
+  ParagraphProvenance,
+  ParagraphProvenanceEvent,
+} from '@/lib/provenance/types';
 
 /**
  * C2PA Action representing a single provenance claim.

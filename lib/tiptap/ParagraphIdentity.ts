@@ -23,8 +23,9 @@
  */
 
 import { Extension } from '@tiptap/core';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+
 import { generateParagraphId, isParagraphId } from '@/lib/provenance/paragraph-id';
 
 interface ParagraphIdentityStorage {

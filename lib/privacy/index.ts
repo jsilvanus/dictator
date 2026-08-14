@@ -16,48 +16,45 @@
  * - Types: Privacy-related type definitions
  */
 
-export * from './types';
-export * from './TelemetryService';
-export * from './SensitiveDataDetector';
 export * from './ProviderPolicyManager';
+export * from './SensitiveDataDetector';
+export * from './TelemetryService';
+export * from './types';
 // export * from './EncryptedStorage'; // Coming in Phase 2
 
 // Re-exports for convenience
+export {
+  type AiProviderPolicy,
+  createDefaultPolicyManager,
+  getPolicyManager,
+  initializePolicyManager,
+  ProviderPolicyManager,
+} from './ProviderPolicyManager';
+export {
+  createDefaultDetector,
+  type DetectedSensitiveData,
+  getSensitiveDataWarning,
+  scanForSensitiveData,
+  SensitiveDataDetector,
+  type SensitiveDataScanResult,
+} from './SensitiveDataDetector';
 export {
   getTelemetryService,
   initializeTelemetry,
   type TelemetryConfig,
   type TelemetryEvent,
-  type TelemetryEventType,
   type TelemetryEventMetrics,
+  type TelemetryEventType,
 } from './TelemetryService';
-
 export {
-  createDefaultDetector,
-  scanForSensitiveData,
-  getSensitiveDataWarning,
-  SensitiveDataDetector,
-  type SensitiveDataScanResult,
-  type DetectedSensitiveData,
-} from './SensitiveDataDetector';
-
-export {
-  createDefaultPolicyManager,
-  getPolicyManager,
-  initializePolicyManager,
-  ProviderPolicyManager,
-  type AiProviderPolicy,
-} from './ProviderPolicyManager';
-
-export {
-  type AiTurnProvenance,
   type AiContentSource,
-  type AiRequestScope,
   type AiRequestPolicy,
-  type DataProcessingPurpose,
-  type SensitiveDataType,
-  type BackupPolicy,
+  type AiRequestScope,
+  type AiTurnProvenance,
   type BackupInclusionPolicy,
-  type DeletionRecord,
+  type BackupPolicy,
   type ContentScope,
+  type DataProcessingPurpose,
+  type DeletionRecord,
+  type SensitiveDataType,
 } from './types';

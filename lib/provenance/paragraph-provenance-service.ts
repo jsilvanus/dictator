@@ -5,16 +5,16 @@
  * Coordinates between document model and provenance events.
  */
 
+import type { AiContentSource, AiRequestScope } from '@/lib/privacy/types';
+import { hashContent } from '@/lib/provenance/content-hashing';
+import { generateParagraphId, type ParagraphId } from '@/lib/provenance/paragraph-id';
 import type {
   ParagraphProvenance,
   ParagraphProvenanceEvent,
   ParagraphProvenanceEventType,
-  ParagraphProvenanceSummary,
   ParagraphProvenanceQuery,
+  ParagraphProvenanceSummary,
 } from '@/lib/provenance/types';
-import { hashContent } from '@/lib/provenance/content-hashing';
-import { generateParagraphId, type ParagraphId } from '@/lib/provenance/paragraph-id';
-import type { AiContentSource, AiRequestScope } from '@/lib/privacy/types';
 
 /**
  * Paragraph Provenance Service

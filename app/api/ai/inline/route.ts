@@ -1,14 +1,14 @@
+import { and,eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { buildInlineContext, type InlineEditorSnapshot } from '@/lib/ai/context';
 import { type AiResponse, buildInlineSystemPrompt } from '@/lib/ai/prompts';
-import type { AiSession } from '@/lib/ai/session';
 import { AiProviderFactory } from '@/lib/ai/providers/factory';
+import type { AiSession } from '@/lib/ai/session';
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
-import { userAiPreferences, documents } from '@/lib/db/schema';
+import { documents,userAiPreferences } from '@/lib/db/schema';
 import { aiRateLimiter } from '@/lib/rate-limiter';
-import { eq, and } from 'drizzle-orm';
 
 type InlineRequest = {
   prompt: string;

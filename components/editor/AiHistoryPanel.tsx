@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Clock, Cpu, Eye, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 type AiContentSource = 'human-dictated' | 'human-written' | 'ai-generated' | 'ai-modified';
 type AiRequestScope = 'full-document' | 'selected-text' | 'context-snippet';

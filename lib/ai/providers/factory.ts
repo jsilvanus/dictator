@@ -1,8 +1,8 @@
 import { ClaudeProvider } from './claude';
-import { OpenAiProvider } from './openai';
-import { OllamaProvider } from './ollama';
-import { GenericOpenAiProvider } from './generic-openai';
 import { DictatorProvider } from './dictator';
+import { GenericOpenAiProvider } from './generic-openai';
+import { OllamaProvider } from './ollama';
+import { OpenAiProvider } from './openai';
 import { AiProvider, ModelProvider, ProviderConfig } from './types';
 
 /**

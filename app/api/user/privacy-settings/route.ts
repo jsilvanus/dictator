@@ -11,12 +11,13 @@
  * - Data encryption
  */
 
+import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
+
+import { authOptions } from '@/lib/auth/auth.config';
 import { db } from '@/lib/db';
 import { userPrivacySettings } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import { authOptions } from '@/lib/auth/auth.config';
 import type { UserPrivacySettings } from '@/lib/privacy/types';
 
 export async function GET(request: NextRequest) {

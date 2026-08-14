@@ -15,18 +15,19 @@
  * - For embedded packaging: Single file with embedded provenance metadata
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { documents } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { getRequiredSession } from '@/lib/auth/session';
-import { createExportPipelineFromEnv } from '@/lib/export/ExportPipeline';
-import { getParagraphProvenanceForDocument } from '@/lib/db/paragraph-provenance-queries';
 import archiver from 'archiver';
+import { and,eq } from 'drizzle-orm';
 import { createWriteStream } from 'fs';
 import { createReadStream } from 'fs';
+import { NextRequest, NextResponse } from 'next/server';
 import { tmpdir } from 'os';
 import { join } from 'path';
+
+import { getRequiredSession } from '@/lib/auth/session';
+import { db } from '@/lib/db';
+import { getParagraphProvenanceForDocument } from '@/lib/db/paragraph-provenance-queries';
+import { documents } from '@/lib/db/schema';
+import { createExportPipelineFromEnv } from '@/lib/export/ExportPipeline';
 
 export const maxDuration = 60; // Long operation timeout
 

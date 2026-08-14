@@ -1,6 +1,7 @@
-import { AiChatRequest, AiInlineRequest, AiProvider, AiResponse, AiStreamChunk, ModelProvider } from './types';
 import { getPolicyManager } from '@/lib/privacy/ProviderPolicyManager';
 import type { AiProviderPolicy } from '@/lib/privacy/types';
+
+import { AiChatRequest, AiInlineRequest, AiProvider, AiResponse, AiStreamChunk, ModelProvider } from './types';
 
 /**
  * Base abstract class for AI providers

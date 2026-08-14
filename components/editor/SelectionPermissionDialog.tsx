@@ -6,11 +6,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { SensitiveDataType } from '@/lib/privacy/types';
+
 import {
   formatPiiTypesForVoice,
   generatePermissionVoiceFeedback,
 } from '@/lib/privacy/SelectionPermissionManager';
+import type { SensitiveDataType } from '@/lib/privacy/types';
 
 interface SelectionPermissionDialogProps {
   isOpen: boolean;

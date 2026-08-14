@@ -4,8 +4,9 @@
  * Provides authOptions for use with getServerSession
  */
 
-import { auth } from '@/auth';
 import type { NextAuthOptions } from 'next-auth';
+
+import { auth } from '@/auth';
 
 /**
  * NextAuth configuration options

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { getDefaultCommandsForLanguage, type DictationCommand } from '@/lib/data/default-settings';
+import { type DictationCommand,getDefaultCommandsForLanguage } from '@/lib/data/default-settings';
 
 export function DictionarySettings() {
   const { settings, patchSettings } = useSettings();

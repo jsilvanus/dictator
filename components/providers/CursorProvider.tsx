@@ -5,32 +5,33 @@
 
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import type {
-  CursorSize,
-  CursorPosition,
-  CursorState,
-  SelectionState,
-  CursorOperationResult,
-} from '@/lib/types/cursor';
+import { createContext, ReactNode,useCallback, useContext, useState } from 'react';
+
 import {
-  expandSelectionTo,
-  collapseSelection,
-  getSelectionText,
-  clearSelection,
-  validateSelection,
-  startSelection,
-  selectAllText,
-  getSelectedText,
-  hasSelection,
-} from '@/lib/cursor/selection';
-import {
+  getCursorAtDocEnd,
+  getCursorAtDocStart,
+  getTextAtCursor,
   moveCursorInDirection,
   validateCursorRange,
-  getCursorAtDocStart,
-  getCursorAtDocEnd,
-  getTextAtCursor,
 } from '@/lib/cursor/navigation';
+import {
+  clearSelection,
+  collapseSelection,
+  expandSelectionTo,
+  getSelectedText,
+  getSelectionText,
+  hasSelection,
+  selectAllText,
+  startSelection,
+  validateSelection,
+} from '@/lib/cursor/selection';
+import type {
+  CursorOperationResult,
+  CursorPosition,
+  CursorSize,
+  CursorState,
+  SelectionState,
+} from '@/lib/types/cursor';
 
 export interface CursorContextType {
   cursorState: CursorState;

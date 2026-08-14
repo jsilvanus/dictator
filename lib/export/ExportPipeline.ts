@@ -10,10 +10,10 @@
  * 5. Format-specific packaging
  */
 
+import { type C2PAManifest,C2PAManifestService } from '@/lib/provenance/c2pa-manifest';
+import { C2PASigningService, type SignedC2PAManifest } from '@/lib/provenance/c2pa-signing';
 import type { ParagraphProvenance } from '@/lib/provenance/types';
 
-import { C2PAManifestService, type C2PAManifest } from '@/lib/provenance/c2pa-manifest';
-import { C2PASigningService, type SignedC2PAManifest } from '@/lib/provenance/c2pa-signing';
 import { ExportPackagingManager } from './packaging/ExportPackagingManager';
 
 /**

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useState } from 'react';
 
-import { defaultSettings, UserSettings, defaultNotificationLight, getDefaultActivationCommandsForLanguage } from '@/lib/data/default-settings';
+import { defaultNotificationLight, defaultSettings, getDefaultActivationCommandsForLanguage,UserSettings } from '@/lib/data/default-settings';
 
 type SettingsContextValue = {
   settings: UserSettings;

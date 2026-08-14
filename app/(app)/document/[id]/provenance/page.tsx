@@ -16,8 +16,8 @@ import React, { useState } from 'react';
 import { ExportDialog } from '@/components/provenance';
 import {
   C2PAManifestViewer,
-  ProvenanceViewer,
   type ExportOptions,
+  ProvenanceViewer,
 } from '@/components/provenance';
 
 interface DocumentProvenancePageProps {

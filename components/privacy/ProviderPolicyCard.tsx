@@ -10,6 +10,7 @@
 'use client';
 
 import React from 'react';
+
 import type { AiProviderPolicy } from '@/lib/privacy/types';
 
 interface ProviderPolicyCardProps {

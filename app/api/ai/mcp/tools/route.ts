@@ -5,8 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
 import { auth } from '@/auth';
-import { getGlobalMcpManager, getAllMcpTools } from '@/lib/ai/mcp/registry';
+import { getAllMcpTools,getGlobalMcpManager } from '@/lib/ai/mcp/registry';
 
 /**
  * GET /api/ai/mcp/tools - List all tools from all connected MCP servers

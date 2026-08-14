@@ -3,7 +3,8 @@
  * Handles expanding, collapsing, and manipulating text selections
  */
 
-import type { CursorPosition, SelectionState, CursorState } from '@/lib/types/cursor';
+import type { CursorPosition, CursorState,SelectionState } from '@/lib/types/cursor';
+
 import { moveCursorInDirection, validateCursorRange } from './navigation';
 
 /**
