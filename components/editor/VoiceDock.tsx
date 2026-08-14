@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { clearAiHighlight, setAiHighlight } from '@/components/editor/AiHighlight';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useCursorState } from '@/components/providers/CursorProvider';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { type AiResponse } from '@/lib/ai/prompts';
 import { type AiSession,markAccepted, markDiscarded, recordTurn } from '@/lib/ai/session';
@@ -14,6 +15,8 @@ import { tryMatchCustomCommand } from '@/lib/voice/custom-commands';
 import { getActivationCommandForLanguage } from '@/lib/data/default-settings';
 import { helpCategories, type HelpCategory } from '@/lib/voice/help';
 import { normalizeSpokenPunctuation } from '@/lib/voice/punctuation';
+import { containsCursorKeywords } from '@/lib/voice/cursor-parser';
+import { handleCursorCommand } from '@/lib/voice/cursor-commands';
 
 import { TriggerChip } from './TriggerChip';
 import { NotificationLight, type LightState } from './NotificationLight';
@@ -87,6 +90,7 @@ export function VoiceDock({
   onAiPanelMessage: (content: string) => void;
 }) {
   const { settings, patchSettings } = useSettings();
+  const cursor = useCursorState();
   const [status, setStatus] = useState('Idle');
   const [temporaryTrigger, setTemporaryTrigger] = useState<string | null>(null);
   const [clearDocumentConfirmUntil, setClearDocumentConfirmUntil] = useState<number | null>(null);
@@ -364,42 +368,88 @@ export function VoiceDock({
 
         if (segment.type === 'command') {
           setRunningCommand(true);
-          const matched = executeCommand(segment.content, editor, inlineAiSession, {
-            lastDictatedRange,
-            setStatus,
-            onSave: onSaveNow,
-            onCreateDocument,
-            onSetTitle,
-            onPrint: () => window.print(),
-            onMicStop: () => speech.stop(),
-            onMicPause: () => speech.pause(),
-            onMicResume: () => speech.resume(),
-            onOpenHelp: (category) => {
-              if (!category) {
-                if (settings.ttsEnabled) {
-                  speakText(`Help categories: ${helpCategories.join(', ')}`, settings.ttsVoice);
+          
+          // Check if this might be a cursor command
+          const docText = editor?.state.doc.textBetween(0, editor.state.doc.content.size, '\n', '\n') || '';
+          const isCursorCommand = containsCursorKeywords(segment.content, settings.language);
+          
+          let matched = false;
+          
+          // Try cursor command first if it looks like a cursor command
+          if (isCursorCommand && editor) {
+            // Handle cursor command asynchronously
+            handleCursorCommand(
+              segment.content,
+              cursor.cursorState,
+              docText,
+              settings.language,
+              {
+                onSetCursorSize: cursor.setCursorSize,
+                onMoveCursor: (direction) => cursor.moveCursor(direction, docText),
+                onExpandSelection: (direction) => cursor.expandSelection(direction, docText),
+                onStartSelection: () => cursor.startSelectMode(docText),
+                onEndSelection: () => cursor.endSelection(),
+                onSelectAll: () => cursor.selectAll(docText),
+                customAliases: (settings as any).customCommandAliases || {},
+              }
+            )
+              .then((result) => {
+                if (result.success) {
+                  setStatus(result.feedback.join('. '));
+                  if (settings.ttsEnabled && result.feedback.length > 0) {
+                    speakText(result.feedback[0], settings.ttsVoice);
+                  }
                 }
-                onOpenHelp();
-                return;
-              }
+              })
+              .catch((error) => {
+                console.error('Cursor command error:', error);
+                setStatus(`Command error: ${segment.content}`);
+              })
+              .finally(() => {
+                setRunningCommand(false);
+              });
+            
+            matched = true;
+          } else {
+            // Standard command handling
+            matched = executeCommand(segment.content, editor, inlineAiSession, {
+              lastDictatedRange,
+              setStatus,
+              onSave: onSaveNow,
+              onCreateDocument,
+              onSetTitle,
+              onPrint: () => window.print(),
+              onMicStop: () => speech.stop(),
+              onMicPause: () => speech.pause(),
+              onMicResume: () => speech.resume(),
+              onOpenHelp: (category) => {
+                if (!category) {
+                  if (settings.ttsEnabled) {
+                    speakText(`Help categories: ${helpCategories.join(', ')}`, settings.ttsVoice);
+                  }
+                  onOpenHelp();
+                  return;
+                }
 
-              onOpenHelp(category as HelpCategory);
-            },
-            onTemporaryTriggerChange: setTemporaryTrigger,
-            onSpeak: (spoken) => {
-              if (settings.ttsEnabled) {
-                speakText(spoken, settings.ttsVoice);
-              }
-            },
-            clearDocumentConfirmUntil,
-            setClearDocumentConfirmUntil,
-          });
+                onOpenHelp(category as HelpCategory);
+              },
+              onTemporaryTriggerChange: setTemporaryTrigger,
+              onSpeak: (spoken) => {
+                if (settings.ttsEnabled) {
+                  speakText(spoken, settings.ttsVoice);
+                }
+              },
+              clearDocumentConfirmUntil,
+              setClearDocumentConfirmUntil,
+            });
 
-          if (!matched) {
-            setStatus(`Unknown command: ${segment.content}`);
+            if (!matched) {
+              setStatus(`Unknown command: ${segment.content}`);
+            }
+
+            setRunningCommand(false);
           }
-
-          setRunningCommand(false);
+          
           continue;
         }
 
@@ -527,6 +577,30 @@ export function VoiceDock({
             <option value="sv-SE">sv-SE</option>
           </select>
         </label>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>Cursor:</span>
+          {(['paragraph', 'word', 'character'] as const).map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() => cursor.setCursorSize(size)}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.875rem',
+                background: cursor.cursorState.current.size === size ? 'var(--teal)' : 'transparent',
+                color: cursor.cursorState.current.size === size ? 'white' : 'inherit',
+                border: `1px solid ${cursor.cursorState.current.size === size ? 'var(--teal)' : 'var(--muted)'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              title={`Cursor size: ${size}`}
+              aria-label={`Set cursor size to ${size}`}
+            >
+              {size === 'paragraph' ? '¶' : size === 'word' ? 'W' : 'C'}
+            </button>
+          ))}
+        </div>
         {commandDetected ? <span className="badge command-detected-badge">Command mode</span> : null}
       </div>
       <p style={{ marginTop: 8, color: 'var(--muted)', fontStyle: speech.interimText ? 'italic' : 'normal' }}>
