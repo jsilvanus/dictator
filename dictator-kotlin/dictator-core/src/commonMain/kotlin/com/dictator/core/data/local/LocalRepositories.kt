@@ -5,6 +5,7 @@ import com.dictator.core.domain.entity.*
 import com.dictator.core.domain.repository.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
 
 /**
@@ -160,13 +161,15 @@ class LocalDocumentRepository(
     }
     
     override fun observeDocument(id: String): Flow<Document?> {
-        // TODO: Implement Flow-based observation
-        return flowOf(null)
+        return queries.getDocumentById(id).asFlow().map { result ->
+            result.executeAsOneOrNull()?.toDomainEntity()
+        }
     }
     
     override fun observeDocumentsByUserId(userId: String): Flow<List<Document>> {
-        // TODO: Implement Flow-based observation
-        return flowOf(emptyList())
+        return queries.getDocumentsByUserId(userId).asFlow().map { result ->
+            result.executeAsList().map { it.toDomainEntity() }
+        }
     }
 }
 
@@ -208,8 +211,9 @@ class LocalDocumentVersionRepository(
     }
     
     override fun observeVersions(documentId: String): Flow<List<DocumentVersion>> {
-        // TODO: Implement Flow-based observation
-        return flowOf(emptyList())
+        return queries.getVersionsByDocumentId(documentId).asFlow().map { result ->
+            result.executeAsList().map { it.toDomainEntity() }
+        }
     }
 }
 
@@ -312,8 +316,9 @@ class LocalAiSessionRepository(
     }
     
     override fun observeSession(id: String): Flow<AiSession?> {
-        // TODO: Implement Flow-based observation
-        return flowOf(null)
+        return queries.getSessionById(id).asFlow().map { result ->
+            result.executeAsOneOrNull()?.toDomainEntity()
+        }
     }
 }
 
@@ -409,8 +414,9 @@ class LocalPendingSyncRepository(
     }
     
     override fun observePendingItems(status: String): Flow<List<PendingSyncItem>> {
-        // TODO: Implement Flow-based observation
-        return flowOf(emptyList())
+        return queries.getPendingItems(status).asFlow().map { result ->
+            result.executeAsList().map { it.toDomainEntity() }
+        }
     }
 }
 
