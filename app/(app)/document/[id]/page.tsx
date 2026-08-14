@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
 import { VoiceEditor } from '@/components/editor/VoiceEditor';
+import { CursorProvider } from '@/components/providers/CursorProvider';
 import { SettingsProvider } from '@/components/providers/SettingsProvider';
 import { AppTopbar } from '@/components/shared/AppTopbar';
 import { db } from '@/lib/db';
@@ -36,7 +37,9 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
     <main className="page-shell">
       <AppTopbar title="Document" />
       <SettingsProvider initial={(record.settings ?? {}) as Record<string, unknown>}>
-        <VoiceEditor documentId={id} initialTitle={record.title} initialContent={record.content} />
+        <CursorProvider>
+          <VoiceEditor documentId={id} initialTitle={record.title} initialContent={record.content} />
+        </CursorProvider>
       </SettingsProvider>
     </main>
   );

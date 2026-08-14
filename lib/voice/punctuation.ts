@@ -10,6 +10,8 @@ const punctuationMap: Array<[RegExp, string]> = [
   [/\bclose parenthesis\b/gi, ')'],
   [/\bem dash\b/gi, '—'],
   [/\bhyphen\b/gi, '-'],
+  [/\bnew line\b/gi, '\n'],
+  [/\bnew paragraph\b/gi, '\n\n'],
 ];
 
 export function normalizeSpokenPunctuation(text: string) {

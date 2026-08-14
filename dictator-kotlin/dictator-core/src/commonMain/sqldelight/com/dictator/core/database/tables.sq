@@ -1,0 +1,310 @@
+-- src/commonMain/sqldelight/com/dictator/core/database/tables.sq
+
+-- Users table
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    name TEXT,
+    createdAt INTEGER NOT NULL
+);
+
+-- Folders table
+CREATE TABLE folders (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    userId TEXT NOT NULL,
+    parentId TEXT,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+-- Documents table
+CREATE TABLE documents (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    folderId TEXT NOT NULL,
+    userId TEXT,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    lastModifiedDevice TEXT DEFAULT 'kotlin',
+    deviceVersion INTEGER DEFAULT 1,
+    FOREIGN KEY (folderId) REFERENCES folders(id),
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+-- Document versions table
+CREATE TABLE documentVersions (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    content TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    createdBy TEXT,
+    createdAt INTEGER NOT NULL,
+    deviceSource TEXT DEFAULT 'kotlin',
+    deviceVersion INTEGER DEFAULT 1,
+    FOREIGN KEY (documentId) REFERENCES documents(id)
+);
+
+-- Shares table
+CREATE TABLE shares (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    sharedWithUserId TEXT NOT NULL,
+    permission TEXT NOT NULL,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (documentId) REFERENCES documents(id),
+    FOREIGN KEY (sharedWithUserId) REFERENCES users(id)
+);
+
+-- AI Sessions table
+CREATE TABLE aiSessions (
+    id TEXT PRIMARY KEY,
+    userId TEXT,
+    mode TEXT NOT NULL,
+    turnsJson TEXT NOT NULL,
+    metadata TEXT,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+-- Sync metadata table
+CREATE TABLE syncMetadata (
+    documentId TEXT PRIMARY KEY,
+    lastSyncedAt INTEGER,
+    localVersion INTEGER NOT NULL DEFAULT 1,
+    remoteVersion INTEGER NOT NULL DEFAULT 1,
+    pendingChanges INTEGER DEFAULT 0,
+    conflictStatus TEXT DEFAULT 'none',
+    updatedAt INTEGER NOT NULL,
+    FOREIGN KEY (documentId) REFERENCES documents(id)
+);
+
+-- Pending sync queue table
+CREATE TABLE pendingSyncQueue (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    userId TEXT,
+    deviceId TEXT NOT NULL DEFAULT 'kotlin',
+    changeDataJson TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    retryCount INTEGER DEFAULT 0,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    FOREIGN KEY (documentId) REFERENCES documents(id),
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+-- Document conflicts table
+CREATE TABLE documentConflicts (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    baseVersionJson TEXT NOT NULL,
+    androidVersionJson TEXT NOT NULL,
+    webVersionJson TEXT NOT NULL,
+    resolvedVersionJson TEXT,
+    status TEXT DEFAULT 'unresolved',
+    createdAt INTEGER NOT NULL,
+    resolvedAt INTEGER,
+    FOREIGN KEY (documentId) REFERENCES documents(id)
+);
+
+-- ============= QUERIES FOR USERS =============
+
+getUserById:
+SELECT * FROM users WHERE id = ?;
+
+getUserByEmail:
+SELECT * FROM users WHERE email = ?;
+
+insertUser:
+INSERT INTO users (id, email, name, createdAt) VALUES (?, ?, ?, ?);
+
+updateUser:
+UPDATE users SET email = ?, name = ? WHERE id = ?;
+
+deleteUserById:
+DELETE FROM users WHERE id = ?;
+
+-- ============= QUERIES FOR FOLDERS =============
+
+getFolderById:
+SELECT * FROM folders WHERE id = ?;
+
+getFoldersByUserId:
+SELECT * FROM folders WHERE userId = ? ORDER BY createdAt DESC;
+
+getRootFolders:
+SELECT * FROM folders WHERE parentId IS NULL ORDER BY createdAt DESC;
+
+getFoldersByParentId:
+SELECT * FROM folders WHERE parentId = ? ORDER BY createdAt DESC;
+
+insertFolder:
+INSERT INTO folders (id, name, userId, parentId, createdAt) VALUES (?, ?, ?, ?, ?);
+
+updateFolder:
+UPDATE folders SET name = ?, parentId = ? WHERE id = ?;
+
+deleteFolderById:
+DELETE FROM folders WHERE id = ?;
+
+deleteFoldersByUserId:
+DELETE FROM folders WHERE userId = ?;
+
+-- ============= QUERIES FOR DOCUMENTS =============
+
+getDocumentById:
+SELECT * FROM documents WHERE id = ?;
+
+getDocumentsByUserId:
+SELECT * FROM documents WHERE userId = ? ORDER BY updatedAt DESC;
+
+getDocumentsByFolderId:
+SELECT * FROM documents WHERE folderId = ? ORDER BY updatedAt DESC;
+
+insertDocument:
+INSERT INTO documents (id, title, folderId, userId, createdAt, updatedAt, lastModifiedDevice, deviceVersion)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+updateDocument:
+UPDATE documents 
+SET title = ?, folderId = ?, userId = ?, updatedAt = ?, lastModifiedDevice = ?, deviceVersion = ? 
+WHERE id = ?;
+
+deleteDocumentById:
+DELETE FROM documents WHERE id = ?;
+
+deleteDocumentsByUserId:
+DELETE FROM documents WHERE userId = ?;
+
+-- ============= QUERIES FOR DOCUMENT VERSIONS =============
+
+getVersionById:
+SELECT * FROM documentVersions WHERE id = ?;
+
+getVersionsByDocumentId:
+SELECT * FROM documentVersions WHERE documentId = ? ORDER BY createdAt DESC;
+
+getVersionsSince:
+SELECT * FROM documentVersions WHERE documentId = ? AND createdAt >= ? ORDER BY createdAt DESC;
+
+insertVersion:
+INSERT INTO documentVersions (id, documentId, content, version, createdBy, createdAt, deviceSource, deviceVersion)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteVersionsByDocumentId:
+DELETE FROM documentVersions WHERE documentId = ?;
+
+-- ============= QUERIES FOR SHARES =============
+
+getShareById:
+SELECT * FROM shares WHERE id = ?;
+
+getSharesByDocumentId:
+SELECT * FROM shares WHERE documentId = ? ORDER BY createdAt DESC;
+
+getSharesByUserId:
+SELECT * FROM shares WHERE sharedWithUserId = ? ORDER BY createdAt DESC;
+
+insertShare:
+INSERT INTO shares (id, documentId, sharedWithUserId, permission, createdAt) VALUES (?, ?, ?, ?, ?);
+
+updateShare:
+UPDATE shares SET permission = ? WHERE id = ?;
+
+deleteShareById:
+DELETE FROM shares WHERE id = ?;
+
+deleteSharesByDocumentId:
+DELETE FROM shares WHERE documentId = ?;
+
+-- ============= QUERIES FOR AI SESSIONS =============
+
+getSessionById:
+SELECT * FROM aiSessions WHERE id = ?;
+
+getSessionsByUserId:
+SELECT * FROM aiSessions WHERE userId = ? ORDER BY createdAt DESC;
+
+insertSession:
+INSERT INTO aiSessions (id, userId, mode, turnsJson, metadata, createdAt) VALUES (?, ?, ?, ?, ?, ?);
+
+updateSession:
+UPDATE aiSessions SET mode = ?, turnsJson = ?, metadata = ? WHERE id = ?;
+
+deleteSessionById:
+DELETE FROM aiSessions WHERE id = ?;
+
+deleteSessionsByUserId:
+DELETE FROM aiSessions WHERE userId = ?;
+
+-- ============= QUERIES FOR SYNC METADATA =============
+
+getSyncMetadata:
+SELECT * FROM syncMetadata WHERE documentId = ?;
+
+getAllSyncMetadata:
+SELECT sm.* FROM syncMetadata sm
+JOIN documents d ON sm.documentId = d.id
+WHERE d.userId = ?;
+
+upsertSyncMetadata:
+INSERT OR REPLACE INTO syncMetadata (documentId, lastSyncedAt, localVersion, remoteVersion, pendingChanges, conflictStatus, updatedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+deleteSyncMetadata:
+DELETE FROM syncMetadata WHERE documentId = ?;
+
+-- ============= QUERIES FOR PENDING SYNC QUEUE =============
+
+getPendingItemById:
+SELECT * FROM pendingSyncQueue WHERE id = ?;
+
+getPendingItemsByDocumentId:
+SELECT * FROM pendingSyncQueue WHERE documentId = ? ORDER BY createdAt ASC;
+
+getPendingItemsByUserId:
+SELECT * FROM pendingSyncQueue WHERE userId = ? ORDER BY createdAt ASC;
+
+getPendingItems:
+SELECT * FROM pendingSyncQueue WHERE status = ? ORDER BY createdAt ASC;
+
+insertPendingItem:
+INSERT INTO pendingSyncQueue (id, documentId, userId, deviceId, changeDataJson, status, retryCount, createdAt, updatedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updatePendingItem:
+UPDATE pendingSyncQueue SET status = ?, retryCount = ?, updatedAt = ? WHERE id = ?;
+
+deletePendingItem:
+DELETE FROM pendingSyncQueue WHERE id = ?;
+
+deletePendingItemsByDocumentId:
+DELETE FROM pendingSyncQueue WHERE documentId = ?;
+
+-- ============= QUERIES FOR DOCUMENT CONFLICTS =============
+
+getConflictById:
+SELECT * FROM documentConflicts WHERE id = ?;
+
+getConflictsByDocumentId:
+SELECT * FROM documentConflicts WHERE documentId = ? ORDER BY createdAt DESC;
+
+getUnresolvedConflicts:
+SELECT * FROM documentConflicts WHERE documentId = ? AND status = 'unresolved' ORDER BY createdAt DESC;
+
+insertConflict:
+INSERT INTO documentConflicts (id, documentId, baseVersionJson, androidVersionJson, webVersionJson, resolvedVersionJson, status, createdAt, resolvedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateConflict:
+UPDATE documentConflicts SET status = ?, resolvedVersionJson = ?, resolvedAt = ? WHERE id = ?;
+
+resolveConflict:
+UPDATE documentConflicts SET status = ?, resolvedVersionJson = ?, resolvedAt = ? WHERE id = ?;
+
+deleteConflict:
+DELETE FROM documentConflicts WHERE id = ?;
+
+deleteConflictsByDocumentId:
+DELETE FROM documentConflicts WHERE documentId = ?;

@@ -4,16 +4,24 @@ import type { Editor } from '@tiptap/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { clearAiHighlight, setAiHighlight } from '@/components/editor/AiHighlight';
+import { SelectionPermissionDialog } from '@/components/editor/SelectionPermissionDialog';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useCursorState } from '@/components/providers/CursorProvider';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { type AiResponse } from '@/lib/ai/prompts';
 import { type AiSession,markAccepted, markDiscarded, recordTurn } from '@/lib/ai/session';
 import { genId, speakText } from '@/lib/utils/tts-id';
 import { executeCommand, parseTriggers } from '@/lib/voice/commands';
+import { tryMatchCustomCommand } from '@/lib/voice/custom-commands';
+import { getActivationCommandForLanguage } from '@/lib/data/default-settings';
 import { helpCategories, type HelpCategory } from '@/lib/voice/help';
 import { normalizeSpokenPunctuation } from '@/lib/voice/punctuation';
+import { containsCursorKeywords } from '@/lib/voice/cursor-parser';
+import { handleCursorCommand } from '@/lib/voice/cursor-commands';
+import { scanForSensitiveData } from '@/lib/privacy/SensitiveDataDetector';
 
 import { TriggerChip } from './TriggerChip';
+import { NotificationLight, type LightState } from './NotificationLight';
 
 type PendingAiChange =
   | {
@@ -84,6 +92,7 @@ export function VoiceDock({
   onAiPanelMessage: (content: string) => void;
 }) {
   const { settings, patchSettings } = useSettings();
+  const cursor = useCursorState();
   const [status, setStatus] = useState('Idle');
   const [temporaryTrigger, setTemporaryTrigger] = useState<string | null>(null);
   const [clearDocumentConfirmUntil, setClearDocumentConfirmUntil] = useState<number | null>(null);
@@ -91,10 +100,19 @@ export function VoiceDock({
   const [commandDetected, setCommandDetected] = useState(false);
   const [runningCommand, setRunningCommand] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
+  const [lightState, setLightState] = useState<LightState>('idle');
+  const [selectionPermissionOpen, setSelectionPermissionOpen] = useState(false);
+  const [detectedPiiTypes, setDetectedPiiTypes] = useState<any[]>([]);
+  const [pendingAiRequest, setPendingAiRequest] = useState<{ content: string; riskLevel: 'low' | 'medium' | 'high'; selectedText: string } | null>(null);
   const clearHighlightTimeoutRef = useRef<number | null>(null);
   const pendingAiChangeRef = useRef<PendingAiChange | null>(null);
 
   const activeCommandTrigger = temporaryTrigger ?? settings.commandTrigger;
+  
+  const languageSpecificAiTrigger = useMemo(
+    () => getActivationCommandForLanguage(settings.language, 'ai', settings.activationCommands),
+    [settings.language, settings.activationCommands]
+  );
 
   useEffect(() => {
     onActiveTriggerInfo(activeCommandTrigger, temporaryTrigger !== null);
@@ -120,6 +138,19 @@ export function VoiceDock({
     pendingAiChangeRef.current = pendingAiChange;
   }, [pendingAiChange]);
 
+  useEffect(() => {
+    // Update light state based on voice recognition and processing state
+    if (aiThinking) {
+      setLightState('ai');
+    } else if (runningCommand) {
+      setLightState('command');
+    } else if (speech.listening) {
+      setLightState('listening');
+    } else {
+      setLightState('idle');
+    }
+  }, [speech.listening, runningCommand, aiThinking]);
+
   const stageHighlight = (from: number, to: number) => {
     if (!editor) {
       return;
@@ -139,6 +170,33 @@ export function VoiceDock({
   };
 
   const executeAiInline = async (content: string) => {
+    if (!editor) {
+      return;
+    }
+
+    // Check for PII in selection
+    const selectedText = getSelectionText(editor);
+    if (selectedText) {
+      const scanResult = scanForSensitiveData(selectedText);
+      if (scanResult.hasSensitiveData && scanResult.detected.length > 0) {
+        // Show permission dialog
+        const piiTypes = [...new Set(scanResult.detected.map(d => d.type))];
+        const riskLevel = scanResult.detected.some(d => d.confidence > 0.9) ? 'high' : 
+                         scanResult.detected.some(d => d.confidence > 0.75) ? 'medium' : 'low';
+        
+        setDetectedPiiTypes(piiTypes);
+        setPendingAiRequest({ content, riskLevel, selectedText });
+        setSelectionPermissionOpen(true);
+        setStatus('PII detected - requesting permission...');
+        return;
+      }
+    }
+
+    // No PII detected or no selection, proceed with AI request
+    proceedWithAiRequest(content);
+  };
+
+  const proceedWithAiRequest = async (content: string) => {
     if (!editor) {
       return;
     }
@@ -271,7 +329,7 @@ export function VoiceDock({
   const speech = useSpeechRecognition({
     language: settings.language,
     commandTrigger: activeCommandTrigger,
-    aiTrigger: settings.aiTrigger,
+    aiTrigger: languageSpecificAiTrigger,
     onInterim: () => setStatus('Listening…'),
     onFinal: (rawText) => {
       if (!editor) {
@@ -279,7 +337,7 @@ export function VoiceDock({
       }
 
       const normalized = normalizeSpokenPunctuation(rawText);
-      const segments = parseTriggers(normalized, activeCommandTrigger, settings.aiTrigger);
+      const segments = parseTriggers(normalized, activeCommandTrigger, languageSpecificAiTrigger);
       let handledText = false;
 
       if (segments.some((segment) => segment.type === 'command')) {
@@ -298,18 +356,40 @@ export function VoiceDock({
 
           const lower = segment.content.toLowerCase().trim();
 
-          if (lower.includes('new paragraph')) {
-            editor.chain().focus().splitBlock().run();
+          // Try custom dictation commands first
+          const customMatched = tryMatchCustomCommand(
+            lower,
+            settings.dictationCommands,
+            editor,
+            inlineAiSession,
+            {
+              lastDictatedRange,
+              setStatus,
+              onSave: onSaveNow,
+              onCreateDocument,
+              onSetTitle,
+              onPrint: () => window.print(),
+              onMicStop: () => speech.stop(),
+              onMicPause: () => speech.pause(),
+              onMicResume: () => speech.resume(),
+              onOpenHelp,
+              onTemporaryTriggerChange: setTemporaryTrigger,
+              onSpeak: (spoken) => {
+                if (settings.ttsEnabled) {
+                  speakText(spoken, settings.ttsVoice);
+                }
+              },
+              clearDocumentConfirmUntil,
+              setClearDocumentConfirmUntil,
+            },
+          );
+
+          if (customMatched) {
             handledText = true;
             continue;
           }
 
-          if (lower.includes('new line')) {
-            editor.chain().focus().insertContent('\n').run();
-            handledText = true;
-            continue;
-          }
-
+          // Fallback to standard text insertion
           const from = editor.state.selection.from;
           editor.chain().focus().insertContent(segment.content).run();
           const to = editor.state.selection.from;
@@ -320,42 +400,88 @@ export function VoiceDock({
 
         if (segment.type === 'command') {
           setRunningCommand(true);
-          const matched = executeCommand(segment.content, editor, inlineAiSession, {
-            lastDictatedRange,
-            setStatus,
-            onSave: onSaveNow,
-            onCreateDocument,
-            onSetTitle,
-            onPrint: () => window.print(),
-            onMicStop: () => speech.stop(),
-            onMicPause: () => speech.pause(),
-            onMicResume: () => speech.resume(),
-            onOpenHelp: (category) => {
-              if (!category) {
-                if (settings.ttsEnabled) {
-                  speakText(`Help categories: ${helpCategories.join(', ')}`, settings.ttsVoice);
+          
+          // Check if this might be a cursor command
+          const docText = editor?.state.doc.textBetween(0, editor.state.doc.content.size, '\n', '\n') || '';
+          const isCursorCommand = containsCursorKeywords(segment.content, settings.language);
+          
+          let matched = false;
+          
+          // Try cursor command first if it looks like a cursor command
+          if (isCursorCommand && editor) {
+            // Handle cursor command asynchronously
+            handleCursorCommand(
+              segment.content,
+              cursor.cursorState,
+              docText,
+              settings.language,
+              {
+                onSetCursorSize: cursor.setCursorSize,
+                onMoveCursor: (direction) => cursor.moveCursor(direction, docText),
+                onExpandSelection: (direction) => cursor.expandSelection(direction, docText),
+                onStartSelection: () => cursor.startSelectMode(docText),
+                onEndSelection: () => cursor.endSelection(),
+                onSelectAll: () => cursor.selectAll(docText),
+                customAliases: (settings as any).customCommandAliases || {},
+              }
+            )
+              .then((result) => {
+                if (result.success) {
+                  setStatus(result.feedback.join('. '));
+                  if (settings.ttsEnabled && result.feedback.length > 0) {
+                    speakText(result.feedback[0], settings.ttsVoice);
+                  }
                 }
-                onOpenHelp();
-                return;
-              }
+              })
+              .catch((error) => {
+                console.error('Cursor command error:', error);
+                setStatus(`Command error: ${segment.content}`);
+              })
+              .finally(() => {
+                setRunningCommand(false);
+              });
+            
+            matched = true;
+          } else {
+            // Standard command handling
+            matched = executeCommand(segment.content, editor, inlineAiSession, {
+              lastDictatedRange,
+              setStatus,
+              onSave: onSaveNow,
+              onCreateDocument,
+              onSetTitle,
+              onPrint: () => window.print(),
+              onMicStop: () => speech.stop(),
+              onMicPause: () => speech.pause(),
+              onMicResume: () => speech.resume(),
+              onOpenHelp: (category) => {
+                if (!category) {
+                  if (settings.ttsEnabled) {
+                    speakText(`Help categories: ${helpCategories.join(', ')}`, settings.ttsVoice);
+                  }
+                  onOpenHelp();
+                  return;
+                }
 
-              onOpenHelp(category as HelpCategory);
-            },
-            onTemporaryTriggerChange: setTemporaryTrigger,
-            onSpeak: (spoken) => {
-              if (settings.ttsEnabled) {
-                speakText(spoken, settings.ttsVoice);
-              }
-            },
-            clearDocumentConfirmUntil,
-            setClearDocumentConfirmUntil,
-          });
+                onOpenHelp(category as HelpCategory);
+              },
+              onTemporaryTriggerChange: setTemporaryTrigger,
+              onSpeak: (spoken) => {
+                if (settings.ttsEnabled) {
+                  speakText(spoken, settings.ttsVoice);
+                }
+              },
+              clearDocumentConfirmUntil,
+              setClearDocumentConfirmUntil,
+            });
 
-          if (!matched) {
-            setStatus(`Unknown command: ${segment.content}`);
+            if (!matched) {
+              setStatus(`Unknown command: ${segment.content}`);
+            }
+
+            setRunningCommand(false);
           }
-
-          setRunningCommand(false);
+          
           continue;
         }
 
@@ -427,7 +553,13 @@ export function VoiceDock({
   return (
     <div className="panel" style={{ marginTop: 8 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <NotificationLight 
+            state={lightState}
+            settings={settings.voiceNotificationLight}
+            size="small"
+          />
+          <button
           type="button"
           style={micStyle}
           onClick={handleMicClick}
@@ -449,6 +581,7 @@ export function VoiceDock({
         >
           🎙️ Mic
         </button>
+        </div>
         <button
           type="button"
           style={{
@@ -465,7 +598,7 @@ export function VoiceDock({
         <TriggerChip
           baseTrigger={settings.commandTrigger}
           activeTrigger={activeCommandTrigger}
-          aiTrigger={settings.aiTrigger}
+          aiTrigger={languageSpecificAiTrigger}
           onChange={setTemporaryTrigger}
         />
         <label>
@@ -476,6 +609,30 @@ export function VoiceDock({
             <option value="sv-SE">sv-SE</option>
           </select>
         </label>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>Cursor:</span>
+          {(['paragraph', 'word', 'character'] as const).map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() => cursor.setCursorSize(size)}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.875rem',
+                background: cursor.cursorState.current.size === size ? 'var(--teal)' : 'transparent',
+                color: cursor.cursorState.current.size === size ? 'white' : 'inherit',
+                border: `1px solid ${cursor.cursorState.current.size === size ? 'var(--teal)' : 'var(--muted)'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              title={`Cursor size: ${size}`}
+              aria-label={`Set cursor size to ${size}`}
+            >
+              {size === 'paragraph' ? '¶' : size === 'word' ? 'W' : 'C'}
+            </button>
+          ))}
+        </div>
         {commandDetected ? <span className="badge command-detected-badge">Command mode</span> : null}
       </div>
       <p style={{ marginTop: 8, color: 'var(--muted)', fontStyle: speech.interimText ? 'italic' : 'normal' }}>
@@ -535,6 +692,31 @@ export function VoiceDock({
           </button>
         </div>
       ) : null}
+      <SelectionPermissionDialog
+        isOpen={selectionPermissionOpen}
+        selectedText={pendingAiRequest?.selectedText || ''}
+        detectedPiiTypes={detectedPiiTypes}
+        confidence={0.85}
+        riskLevel={pendingAiRequest?.riskLevel || 'medium'}
+        onAllow={(scope) => {
+          if (pendingAiRequest) {
+            proceedWithAiRequest(pendingAiRequest.content);
+          }
+          setSelectionPermissionOpen(false);
+          setPendingAiRequest(null);
+        }}
+        onCancel={() => {
+          setSelectionPermissionOpen(false);
+          setPendingAiRequest(null);
+          setStatus('AI request cancelled.');
+        }}
+        onEdit={() => {
+          setSelectionPermissionOpen(false);
+          setStatus('Please edit your selection and try again.');
+        }}
+        ttsEnabled={settings.ttsEnabled}
+        onSpeak={(text) => speakText(text, settings.ttsVoice)}
+      />
     </div>
   );
 }

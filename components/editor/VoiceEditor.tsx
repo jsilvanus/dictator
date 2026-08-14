@@ -10,13 +10,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { type AiSession } from '@/lib/ai/session';
-import { fontSizePx } from '@/lib/data/default-settings';
+import { fontSizePx, getActivationCommandForLanguage } from '@/lib/data/default-settings';
 import { type HelpCategory } from '@/lib/voice/help';
 
 import { AiHighlight } from './AiHighlight';
 import { AiPanel } from './AiPanel';
+import { CursorIndicator } from './CursorIndicator';
+import { DocumentAiSettings } from './DocumentAiSettings';
 import { FontSizeControls } from './FontSizeControls';
 import { HelpOverlay } from './HelpOverlay';
+import { LanguageIndicator } from './LanguageIndicator';
 import { Toolbar } from './Toolbar';
 import { VoiceDock } from './VoiceDock';
 
@@ -41,7 +44,13 @@ export function VoiceEditor({
   const [hasTriggerOverride, setHasTriggerOverride] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [voiceToPanel, setVoiceToPanel] = useState<string | null>(null);
+  const [docSettingsOpen, setDocSettingsOpen] = useState(false);
   const inlineAiSessionRef = useRef<AiSession>({ turns: [], currentDocVersion: 0 });
+
+  const languageSpecificAiTrigger = useMemo(
+    () => getActivationCommandForLanguage(settings.language, 'ai', settings.activationCommands),
+    [settings.language, settings.activationCommands]
+  );
 
   const editor = useEditor({
     extensions: [StarterKit, Placeholder.configure({ placeholder: 'Start dictating...' }), CharacterCount, Underline, AiHighlight],
@@ -60,19 +69,32 @@ export function VoiceEditor({
     setStatus('Saving…');
     const nextCount = saveCount + 1;
 
-    await fetch(`/api/documents/${documentId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        content: editor.getJSON(),
-        wordCount: editor.storage.characterCount.words(),
-        saveCount: nextCount,
-      }),
-    });
+    try {
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          content: editor.getJSON(),
+          wordCount: editor.storage.characterCount.words(),
+          saveCount: nextCount,
+        }),
+      });
 
-    setSaveCount(nextCount);
-    setStatus('Saved');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `Save failed: ${response.statusText}`
+        );
+      }
+
+      setSaveCount(nextCount);
+      setStatus('Saved');
+    } catch (error) {
+      console.error('Document save error:', error);
+      setStatus('Error saving');
+      // Optionally show error to user or retry
+    }
   }, [documentId, editor, saveCount, title]);
 
   useEffect(() => {
@@ -135,11 +157,23 @@ export function VoiceEditor({
         >
           ?
         </button>
+        <button
+          type="button"
+          aria-label="Document AI settings"
+          onClick={() => setDocSettingsOpen(true)}
+          title="Document AI settings"
+        >
+          ⚙
+        </button>
+        <LanguageIndicator />
         <FontSizeControls />
         <span className="badge">{status}</span>
       </div>
       <Toolbar editor={editor} />
       <EditorContent editor={editor} className="panel" />
+      {editor && (
+       <CursorIndicator docText={editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', '\n')} />
+      )}
       <div style={{ marginTop: 8, color: 'var(--muted)' }}>Words: {wordCount}</div>
       <VoiceDock
         editor={editor}
@@ -199,7 +233,7 @@ export function VoiceEditor({
         open={helpOpen}
         category={helpCategory}
         commandTrigger={activeCommandTrigger}
-        aiTrigger={settings.aiTrigger}
+        aiTrigger={languageSpecificAiTrigger}
         hasOverride={hasTriggerOverride}
         onClose={() => setHelpOpen(false)}
       />
@@ -208,6 +242,38 @@ export function VoiceEditor({
           Last dictated range: {lastDictatedRange.from}-{lastDictatedRange.to}
         </div>
       ) : null}
+      {docSettingsOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setDocSettingsOpen(false)}
+        >
+          <div
+            style={{
+              background: 'var(--surface)',
+              borderRadius: 8,
+              padding: 20,
+              maxWidth: 600,
+              width: '90%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DocumentAiSettings
+              documentId={documentId}
+              onClose={() => setDocSettingsOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
