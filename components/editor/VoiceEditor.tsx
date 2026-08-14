@@ -15,6 +15,7 @@ import { type HelpCategory } from '@/lib/voice/help';
 
 import { AiHighlight } from './AiHighlight';
 import { AiPanel } from './AiPanel';
+import { CursorIndicator } from './CursorIndicator';
 import { DocumentAiSettings } from './DocumentAiSettings';
 import { FontSizeControls } from './FontSizeControls';
 import { HelpOverlay } from './HelpOverlay';
@@ -170,6 +171,9 @@ export function VoiceEditor({
       </div>
       <Toolbar editor={editor} />
       <EditorContent editor={editor} className="panel" />
+      {editor && (
+       <CursorIndicator docText={editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', '\n')} />
+      )}
       <div style={{ marginTop: 8, color: 'var(--muted)' }}>Words: {wordCount}</div>
       <VoiceDock
         editor={editor}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { AiSettings } from './ai-settings';
+import { CursorSettingsPage } from './cursor-settings';
 import { DictionarySettings } from './dictionary-settings';
 import { VoiceSettings } from './voice-settings';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -166,6 +167,20 @@ export function SettingsForm({
       <AiSettings />
 
       <VoiceSettings />
+
+      <CursorSettingsPage 
+        settings={settings} 
+        onUpdateSettings={async (newSettings) => {
+          // This will be handled by the parent component
+          const response = await fetch(`/api/users/${userId}/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newSettings),
+          });
+
+          setStatus(response.ok ? 'Cursor settings saved' : 'Failed to save');
+        }}
+      />
 
       <DictionarySettings />
     </div>
