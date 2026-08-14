@@ -1,5 +1,9 @@
 package com.dictator.core.data.ai
 
+import com.dictator.core.data.privacy.AiContentSource
+import com.dictator.core.data.privacy.AiRequestScope
+import kotlinx.serialization.Serializable
+
 /**
  * AI Model Provider Types
  */
@@ -96,4 +100,44 @@ data class ProviderConfig(
     val model: String? = null,
     val temperature: Double? = null,
     val maxTokens: Int? = null
+)
+
+/**
+ * AI Turn Provenance - tracks metadata about an AI interaction
+ * Includes source, confidence, scope, device, and thinking content
+ */
+@Serializable
+data class AiTurnProvenance(
+    val id: String,
+    val aiSessionId: String,
+    val turnId: String,
+    val source: AiContentSource,
+    val confidence: Double? = null, // 0-1 for AI content
+    val contentScope: AiRequestScope? = null,
+    val policyId: String? = null,
+    val reviewedAt: Long? = null,
+    val device: String,
+    val userId: String,
+    val thinkingContent: String? = null,
+    val thinkingBudgetTokens: Int? = null,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * AI Turn with provenance metadata
+ * Represents a single turn in an AI conversation with full tracking data
+ */
+@Serializable
+data class AiTurnWithProvenance(
+    val turnId: String,
+    val userMessage: String,
+    val assistantResponse: String,
+    val model: String? = null,
+    val provider: ModelProvider? = null,
+    val tokenUsage: AiUsage? = null,
+    val thinking: String? = null,
+    val thinkingBudgetTokens: Int? = null,
+    val provenance: AiTurnProvenance,
+    val createdAt: Long = System.currentTimeMillis(),
+    val acceptedAt: Long? = null
 )
