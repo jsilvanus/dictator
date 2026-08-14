@@ -118,6 +118,7 @@ export type UserAiPreferences = {
   customTemperature?: number;
   customMaxTokens?: number;
   ollamaUrl?: string;
+  thinkingBudgetTokens?: number;
   createdAt: Date;
   updatedAt: Date;
 };

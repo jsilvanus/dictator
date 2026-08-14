@@ -11,6 +11,7 @@ type PreferencesUpdateRequest = {
   customTemperature?: number;
   customMaxTokens?: number;
   ollamaUrl?: string;
+  thinkingBudgetTokens?: number;
 };
 
 export async function GET() {
@@ -29,6 +30,7 @@ export async function GET() {
         customTemperature: prefs.customTemperature ? Number(prefs.customTemperature) : null,
         customMaxTokens: prefs.customMaxTokens,
         ollamaUrl: prefs.ollamaUrl,
+        thinkingBudgetTokens: prefs.thinkingBudgetTokens,
       });
     }
 
@@ -39,6 +41,7 @@ export async function GET() {
       customTemperature: null,
       customMaxTokens: null,
       ollamaUrl: null,
+      thinkingBudgetTokens: null,
     });
   } catch (error) {
     return NextResponse.json(
@@ -68,6 +71,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate thinking budget tokens if provided
+    if (body.thinkingBudgetTokens !== undefined && (body.thinkingBudgetTokens < 1024 || body.thinkingBudgetTokens > 10000)) {
+      return NextResponse.json(
+        { error: 'Thinking budget tokens must be between 1024 and 10000' },
+        { status: 400 }
+      );
+    }
+
     // Upsert user preferences
     await db
       .insert(userAiPreferences)
@@ -78,6 +89,7 @@ export async function POST(request: Request) {
         customTemperature: body.customTemperature ? String(body.customTemperature) : null,
         customMaxTokens: body.customMaxTokens,
         ollamaUrl: body.ollamaUrl,
+        thinkingBudgetTokens: body.thinkingBudgetTokens,
       })
       .onConflictDoUpdate({
         target: [userAiPreferences.userId],
@@ -87,6 +99,7 @@ export async function POST(request: Request) {
           customTemperature: body.customTemperature ? String(body.customTemperature) : null,
           customMaxTokens: body.customMaxTokens,
           ollamaUrl: body.ollamaUrl,
+          thinkingBudgetTokens: body.thinkingBudgetTokens,
           updatedAt: new Date(),
         },
       });
@@ -100,6 +113,7 @@ export async function POST(request: Request) {
         customTemperature: body.customTemperature,
         customMaxTokens: body.customMaxTokens,
         ollamaUrl: body.ollamaUrl,
+        thinkingBudgetTokens: body.thinkingBudgetTokens,
       },
     });
   } catch (error) {

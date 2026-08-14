@@ -35,8 +35,9 @@ export async function POST(request: Request) {
 
     // Get user's AI preferences
     let provider = AiProviderFactory.createFromEnv();
+    let userPrefs: { preferredProvider: string; preferredModel?: string; customTemperature?: { toString(): string } | number | null; customMaxTokens?: number | null; ollamaUrl?: string | null; thinkingBudgetTokens?: number | null } | undefined;
     try {
-      const userPrefs = await db.query.userAiPreferences.findFirst({
+      userPrefs = await db.query.userAiPreferences.findFirst({
         where: eq(userAiPreferences.userId, session.userId),
       });
 
@@ -155,6 +156,7 @@ export async function POST(request: Request) {
         messages,
         systemPrompt: buildPanelSystemPrompt(),
         maxTokens: 2048,
+        thinkingBudgetTokens: userPrefs?.thinkingBudgetTokens ?? undefined,
       });
 
       // Process stream and store in database

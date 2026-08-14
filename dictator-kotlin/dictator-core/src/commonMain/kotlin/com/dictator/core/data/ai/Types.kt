@@ -81,6 +81,7 @@ data class UserAiPreferences(
     val customTemperature: Double? = null,
     val customMaxTokens: Int? = null,
     val ollamaUrl: String? = null,
+    val thinkingBudgetTokens: Int? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

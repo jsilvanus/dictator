@@ -254,6 +254,7 @@ export const userAiPreferences = pgTable('user_ai_preferences', {
   customTemperature: numeric('custom_temperature', { precision: 3, scale: 2 }),
   customMaxTokens: integer('custom_max_tokens'),
   ollamaUrl: text('ollama_url'),
+  thinkingBudgetTokens: integer('thinking_budget_tokens'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
