@@ -8,7 +8,11 @@ export type AiResponse = {
   speech?: string;
 };
 
-export function buildInlineSystemPrompt() {
+export function buildInlineSystemPrompt(customPrompt?: string) {
+  if (customPrompt) {
+    return customPrompt;
+  }
+
   return [
     'You are an inline writing assistant for a dictation editor.',
     'Return JSON only with this schema:',
