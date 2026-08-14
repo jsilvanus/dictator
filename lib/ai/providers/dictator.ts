@@ -1,4 +1,4 @@
-import { AiProvider, AiResponse, AiStreamChunk, AiChatRequest, AiInlineRequest, ToolCall } from './types';
+import { AiChatRequest, AiInlineRequest, AiProvider, AiResponse, AiStreamChunk, ToolCall } from './types';
 
 /**
  * Dictator Service AI Provider

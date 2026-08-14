@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+
 import type { VoiceNotificationLight } from '@/lib/data/default-settings';
 
 export type LightState = 'idle' | 'listening' | 'command' | 'ai' | 'error';

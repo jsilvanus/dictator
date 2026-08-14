@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 
+import { useSettings } from '@/components/providers/SettingsProvider';
+
 import { AiSettings } from './ai-settings';
 import { CursorSettingsPage } from './cursor-settings';
 import { DictionarySettings } from './dictionary-settings';
 import { VoiceSettings } from './voice-settings';
-import { useSettings } from '@/components/providers/SettingsProvider';
 
 export function SettingsForm({
   userId,

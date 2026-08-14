@@ -9,12 +9,13 @@
  * - offset: pagination offset (default: 0)
  */
 
+import { and, desc,eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { db } from '@/lib/db';
-import { documents, aiSessions, aiTurnProvenance } from '@/lib/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+
 import { authOptions } from '@/lib/auth/auth.config';
+import { db } from '@/lib/db';
+import { aiSessions, aiTurnProvenance,documents } from '@/lib/db/schema';
 
 export async function GET(
   request: NextRequest,

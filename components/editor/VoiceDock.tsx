@@ -5,23 +5,23 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { clearAiHighlight, setAiHighlight } from '@/components/editor/AiHighlight';
 import { SelectionPermissionDialog } from '@/components/editor/SelectionPermissionDialog';
-import { useSettings } from '@/components/providers/SettingsProvider';
 import { useCursorState } from '@/components/providers/CursorProvider';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { type AiResponse } from '@/lib/ai/prompts';
 import { type AiSession,markAccepted, markDiscarded, recordTurn } from '@/lib/ai/session';
+import { getActivationCommandForLanguage } from '@/lib/data/default-settings';
+import { scanForSensitiveData } from '@/lib/privacy/SensitiveDataDetector';
 import { genId, speakText } from '@/lib/utils/tts-id';
 import { executeCommand, parseTriggers } from '@/lib/voice/commands';
+import { handleCursorCommand } from '@/lib/voice/cursor-commands';
+import { containsCursorKeywords } from '@/lib/voice/cursor-parser';
 import { tryMatchCustomCommand } from '@/lib/voice/custom-commands';
-import { getActivationCommandForLanguage } from '@/lib/data/default-settings';
 import { helpCategories, type HelpCategory } from '@/lib/voice/help';
 import { normalizeSpokenPunctuation } from '@/lib/voice/punctuation';
-import { containsCursorKeywords } from '@/lib/voice/cursor-parser';
-import { handleCursorCommand } from '@/lib/voice/cursor-commands';
-import { scanForSensitiveData } from '@/lib/privacy/SensitiveDataDetector';
 
+import { type LightState,NotificationLight } from './NotificationLight';
 import { TriggerChip } from './TriggerChip';
-import { NotificationLight, type LightState } from './NotificationLight';
 
 type PendingAiChange =
   | {

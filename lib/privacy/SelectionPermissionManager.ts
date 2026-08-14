@@ -4,7 +4,7 @@
  * Supports voice and UI-based permission granting
  */
 
-import type { SelectionPermission, PiiDetectionResult, PermissionScope, SensitiveDataType } from './types';
+import type { PermissionScope, PiiDetectionResult, SelectionPermission, SensitiveDataType } from './types';
 
 interface PermissionCheckOptions {
   userId: string;

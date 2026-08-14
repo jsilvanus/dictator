@@ -1,9 +1,10 @@
+import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+
+import { AiProviderFactory } from '@/lib/ai/providers/factory';
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
 import { userAiPreferences } from '@/lib/db/schema';
-import { AiProviderFactory } from '@/lib/ai/providers/factory';
-import { eq } from 'drizzle-orm';
 
 type PreferencesUpdateRequest = {
   preferredProvider: 'claude' | 'openai' | 'ollama' | 'openai-compatible' | 'dictator';

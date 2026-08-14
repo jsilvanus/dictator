@@ -14,8 +14,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { cleanupEphemeralRequestsImproved } from '@/lib/jobs/cleanupEphemeralRequests';
+
 import { authOptions } from '@/lib/auth/auth.config';
+import { cleanupEphemeralRequestsImproved } from '@/lib/jobs/cleanupEphemeralRequests';
 
 /**
  * Verify cron secret header

@@ -3,8 +3,8 @@
  * Converts MCP tools into RegisteredTool format and registers them with the tool system
  */
 
-import { RegisteredTool } from '../tools/types';
 import { getGlobalRegistry } from '../tools/registry';
+import { RegisteredTool } from '../tools/types';
 import { getAllMcpTools, getGlobalMcpManager } from './registry';
 import { McpToolDefinition } from './types';
 

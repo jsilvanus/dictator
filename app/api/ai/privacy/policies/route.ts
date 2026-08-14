@@ -12,9 +12,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+
 import {
-  createDefaultPolicyManager,
   type AiProviderPolicy,
+  createDefaultPolicyManager,
 } from '@/lib/privacy';
 
 export const runtime = 'nodejs';

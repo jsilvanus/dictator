@@ -4,6 +4,7 @@
  */
 
 import { NextResponse } from 'next/server';
+
 import { getGlobalRegistry } from '@/lib/ai/tools/registry';
 import { getRequiredSession } from '@/lib/auth/session';
 

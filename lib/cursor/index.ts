@@ -5,52 +5,52 @@
 
 // Types
 export type {
-  CursorSize,
-  CursorPosition,
-  SelectionState,
-  CursorState,
   CursorOperationResult,
+  CursorPosition,
+  CursorSize,
+  CursorState,
+  SelectionState,
   TextBoundary,
 } from '@/lib/types/cursor';
 
 // Navigation utilities
 export {
+  findCharacterBoundary,
   findParagraphBoundary,
   findWordBoundary,
-  findCharacterBoundary,
+  getCursorAtDocEnd,
+  getCursorAtDocStart,
   getTextAtCursor,
   moveCursorInDirection,
   validateCursorRange,
-  getCursorAtDocStart,
-  getCursorAtDocEnd,
 } from '@/lib/cursor/navigation';
 
 // Selection utilities
 export {
-  expandSelectionTo,
-  collapseSelection,
-  getSelectionText,
-  getSelectionBounds,
-  invertSelection,
-  startSelection,
-  selectAllText,
-  hasSelection,
-  getSelectedText,
   clearSelection,
+  collapseSelection,
+  expandSelectionTo,
+  getSelectedText,
+  getSelectionBounds,
+  getSelectionText,
+  hasSelection,
+  invertSelection,
+  selectAllText,
+  startSelection,
   validateSelection,
 } from '@/lib/cursor/selection';
 
 // Hook
-export { CursorProvider, useCursorState } from '@/lib/hooks/useCursorState';
 export type { } from '@/lib/hooks/useCursorState';
+export { CursorProvider, useCursorState } from '@/lib/hooks/useCursorState';
 
 // Voice command integration
-export { handleCursorCommand, parseCursorCommand, executeCursorCommands } from '@/lib/voice/cursor-commands';
+export { executeCursorCommands,handleCursorCommand, parseCursorCommand } from '@/lib/voice/cursor-commands';
+export type { CursorTriggerSegment, ExtendedTriggerSegment } from '@/lib/voice/cursor-parser';
 export {
   containsCursorKeywords,
-  parseCursorCommandsFromText,
   detectCursorSize,
-  isCursorCommand,
   extractCursorIntent,
+  isCursorCommand,
+  parseCursorCommandsFromText,
 } from '@/lib/voice/cursor-parser';
-export type { CursorTriggerSegment, ExtendedTriggerSegment } from '@/lib/voice/cursor-parser';

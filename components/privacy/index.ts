@@ -5,11 +5,11 @@
  * and user control over personal information
  */
 
-export { SensitiveDataWarningDialog } from './SensitiveDataWarningDialog';
-export { ProviderPolicyCard } from './ProviderPolicyCard';
-export { PrivacySettingsPanel } from './PrivacySettingsPanel';
-export { DocumentExportButton } from './DocumentExportButton';
 export { AccountDeletionPanel } from './AccountDeletionPanel';
+export { DocumentExportButton } from './DocumentExportButton';
+export { PrivacySettingsPanel } from './PrivacySettingsPanel';
+export { ProviderPolicyCard } from './ProviderPolicyCard';
+export { SensitiveDataWarningDialog } from './SensitiveDataWarningDialog';
 
 export default {
   SensitiveDataWarningDialog: () => null,

@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/react';
-import type { AiTurnProvenance, AiContentSource, AiRequestScope } from '@/lib/privacy/types';
+
+import type { AiContentSource, AiRequestScope,AiTurnProvenance } from '@/lib/privacy/types';
 
 export type AiTurn = {
   id: string;

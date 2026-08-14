@@ -1,7 +1,9 @@
 import type { Editor } from '@tiptap/react';
-import type { DictationCommand } from '@/lib/data/default-settings';
-import { executeCommand } from './commands';
+
 import type { AiSession } from '@/lib/ai/session';
+import type { DictationCommand } from '@/lib/data/default-settings';
+
+import { executeCommand } from './commands';
 
 export type CommandOptions = {
   lastDictatedRange: { from: number; to: number } | null;

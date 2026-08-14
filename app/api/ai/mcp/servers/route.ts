@@ -6,13 +6,14 @@
  * DELETE /api/ai/mcp/servers/:id - Remove MCP server
  */
 
+import { and,eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+
 import { auth } from '@/auth';
-import { db } from '@/lib/db';
-import { mcpServers } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
 import { registerMcpServer, unregisterMcpServer } from '@/lib/ai/mcp/registry';
 import { McpServerConfig } from '@/lib/ai/mcp/types';
+import { db } from '@/lib/db';
+import { mcpServers } from '@/lib/db/schema';
 
 /**
  * GET /api/ai/mcp/servers - List all MCP servers for the user

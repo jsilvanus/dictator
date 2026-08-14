@@ -7,8 +7,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { SensitiveDataDetector } from '@/lib/privacy/SensitiveDataDetector';
+
 import { authOptions } from '@/lib/auth/auth.config';
+import { SensitiveDataDetector } from '@/lib/privacy/SensitiveDataDetector';
 
 const MAX_CONTENT_SIZE = 1024 * 1024; // 1MB
 

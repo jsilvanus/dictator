@@ -4,9 +4,10 @@
  * Works alongside existing command/ai triggers
  */
 
-import type { TriggerSegment } from './commands';
-import { getCursorCommandsForLanguage, flattenCursorCommands } from '@/lib/data/cursor-command-defaults';
+import { flattenCursorCommands,getCursorCommandsForLanguage } from '@/lib/data/cursor-command-defaults';
 import type { CursorSize } from '@/lib/types/cursor';
+
+import type { TriggerSegment } from './commands';
 
 export type CursorTriggerSegment = TriggerSegment & {
   type: 'cursor-command';

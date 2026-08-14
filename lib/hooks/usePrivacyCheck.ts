@@ -10,7 +10,8 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback,useState } from 'react';
+
 import type { DetectedSensitiveData, SensitiveDataType } from '@/lib/privacy/types';
 
 interface CheckSensitiveResponse {
