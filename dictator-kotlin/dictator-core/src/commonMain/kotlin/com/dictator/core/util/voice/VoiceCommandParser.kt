@@ -3,7 +3,14 @@ package com.dictator.core.util.voice
 import com.dictator.core.data.voice.ActivationCommand
 
 /**
- * Parses voice commands and triggers from spoken text.
+ * Parses voice commands and triggers from spoken text using regex-based pattern matching.
+ * This implementation maintains parity with web platform voice parsing.
+ * 
+ * REGEX APPROACH (Parity with web):
+ * - Matches patterns with word boundaries: \b(pattern)\b
+ * - Supports punctuation and spacing variations: [,:-]?\s*
+ * - Case-insensitive matching
+ * 
  * Maps common voice patterns to editor commands.
  * Supports language-specific activation commands.
  */
@@ -50,7 +57,36 @@ object VoiceCommandParser {
     )
     
     /**
+     * Escapes special regex characters in a string.
+     * Used to safely embed literal strings in regex patterns.
+     */
+    private fun escapeRegex(value: String): String {
+        return value.replace(Regex("""[.*+?^${}()|[\]\\]"""), "\\$0")
+    }
+    
+    /**
+     * Builds a regex pattern for command matching with word boundaries.
+     * Pattern format: \b(cmd1|cmd2|cmd3)\b\s*[,:-]?\s*
+     * This matches commands with optional punctuation/spacing, maintaining parity with web.
+     */
+    private fun buildCommandPattern(triggers: List<String>): Regex {
+        if (triggers.isEmpty()) {
+            return Regex("^$")
+        }
+        
+        val escapedTriggers = triggers
+            .sortedByDescending { it.length }  // Longer patterns first for precedence
+            .map { escapeRegex(it.trim()) }
+            .joinToString("|")
+        
+        // Pattern: word boundary + (triggers) + word boundary + optional punctuation + whitespace
+        val pattern = "\\b($escapedTriggers)\\b\\s*[,:-]?\\s*"
+        return Regex(pattern, RegexOption.IGNORE_CASE)
+    }
+    
+    /**
      * Parses voice input and returns the matching command.
+     * Uses regex-based pattern matching for consistency with web platform.
      * Returns null if no matching command is found.
      * 
      * @param voiceInput The spoken text to parse
@@ -64,11 +100,25 @@ object VoiceCommandParser {
     ): ParsedCommand? {
         val normalized = voiceInput.lowercase().trim()
         
+        if (normalized.isEmpty()) {
+            return null
+        }
+        
         // Check activation commands first if provided
-        if (activationCommands != null) {
-            for (cmd in activationCommands) {
-                for (phrase in cmd.phrases) {
-                    if (normalized.contains(phrase.lowercase())) {
+        if (activationCommands != null && activationCommands.isNotEmpty()) {
+            // Extract activation phrases and build regex pattern
+            val phrases = activationCommands.flatMap { it.phrases }
+            if (phrases.isNotEmpty()) {
+                val pattern = buildCommandPattern(phrases)
+                val match = pattern.find(normalized)
+                
+                if (match != null) {
+                    val matchedPhrase = match.groupValues[1]
+                    val cmd = activationCommands.find { activationCmd ->
+                        activationCmd.phrases.any { it.lowercase() == matchedPhrase.lowercase() }
+                    }
+                    
+                    if (cmd != null) {
                         // Map activation command type to trigger
                         val commandType = when (cmd.type) {
                             "command" -> CommandType.ACTIVATE_DICTATION
@@ -80,10 +130,11 @@ object VoiceCommandParser {
                             return ParsedCommand(
                                 type = commandType,
                                 originalInput = voiceInput,
-                                matchedPattern = phrase,
+                                matchedPattern = matchedPhrase,
                                 parameters = mapOf(
                                     "commandType" to cmd.type,
-                                    "language" to (language ?: "unknown")
+                                    "language" to (language ?: "unknown"),
+                                    "parsingMethod" to "regex"
                                 )
                             )
                         }
@@ -92,14 +143,30 @@ object VoiceCommandParser {
             }
         }
         
-        // Then check standard command patterns
-        for ((pattern, commandType) in commandPatterns) {
-            if (normalized.contains(pattern)) {
-                return ParsedCommand(
-                    type = commandType,
-                    originalInput = voiceInput,
-                    matchedPattern = pattern
-                )
+        // Then check standard command patterns using regex
+        val patternKeys = commandPatterns.keys.toList()
+        if (patternKeys.isNotEmpty()) {
+            val pattern = buildCommandPattern(patternKeys)
+            val match = pattern.find(normalized)
+            
+            if (match != null) {
+                val matchedPattern = match.groupValues[1]
+                // Find the original command that was matched
+                val commandType = patternKeys
+                    .sortedByDescending { it.length }
+                    .firstOrNull { it.lowercase() == matchedPattern.lowercase() }
+                    ?.let { commandPatterns[it] }
+                
+                if (commandType != null) {
+                    return ParsedCommand(
+                        type = commandType,
+                        originalInput = voiceInput,
+                        matchedPattern = matchedPattern,
+                        parameters = mapOf(
+                            "parsingMethod" to "regex"
+                        )
+                    )
+                }
             }
         }
         

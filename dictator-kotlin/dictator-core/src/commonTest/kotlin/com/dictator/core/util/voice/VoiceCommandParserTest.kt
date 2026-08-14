@@ -8,6 +8,7 @@ import kotlin.test.assertNull
 
 /**
  * Unit tests for VoiceCommandParser.
+ * Tests regex-based voice parsing for parity with web platform.
  */
 class VoiceCommandParserTest {
     
@@ -54,7 +55,70 @@ class VoiceCommandParserTest {
         assertNull(invalid)
     }
     
-    // New tests for language-specific activation commands
+    // ===== NEW TESTS FOR REGEX PATTERN MATCHING =====
+    
+    @Test
+    fun testParseCommandWithPunctuation() {
+        // Test that punctuation doesn't break pattern matching
+        val result1 = VoiceCommandParser.parseCommand("bold,")
+        assertNotNull(result1)
+        assertEquals(CommandType.BOLD, result1.type)
+        
+        val result2 = VoiceCommandParser.parseCommand("bold:")
+        assertNotNull(result2)
+        assertEquals(CommandType.BOLD, result2.type)
+        
+        val result3 = VoiceCommandParser.parseCommand("bold-")
+        assertNotNull(result3)
+        assertEquals(CommandType.BOLD, result3.type)
+    }
+    
+    @Test
+    fun testParseCommandWithSpacingVariations() {
+        // Test that extra spacing doesn't break pattern matching
+        val result1 = VoiceCommandParser.parseCommand("  bold  ")
+        assertNotNull(result1)
+        assertEquals(CommandType.BOLD, result1.type)
+        
+        val result2 = VoiceCommandParser.parseCommand("bold     ")
+        assertNotNull(result2)
+        assertEquals(CommandType.BOLD, result2.type)
+        
+        val result3 = VoiceCommandParser.parseCommand("     bold")
+        assertNotNull(result3)
+        assertEquals(CommandType.BOLD, result3.type)
+    }
+    
+    @Test
+    fun testParseMultiWordCommandWithPunctuation() {
+        // Test multi-word commands with punctuation
+        val result1 = VoiceCommandParser.parseCommand("new document,")
+        assertNotNull(result1)
+        assertEquals(CommandType.NEW_DOCUMENT, result1.type)
+        
+        val result2 = VoiceCommandParser.parseCommand("new document:")
+        assertNotNull(result2)
+        assertEquals(CommandType.NEW_DOCUMENT, result2.type)
+    }
+    
+    @Test
+    fun testParseCommandWordBoundaryPrecision() {
+        // Test that word boundaries prevent false matches
+        // "boldface" should NOT match "bold"
+        val result = VoiceCommandParser.parseCommand("boldface")
+        assertNull(result)  // Should not match "bold" in "boldface"
+    }
+    
+    @Test
+    fun testParseCommandWithMixedPunctuationAndSpacing() {
+        // Test complex punctuation and spacing combinations
+        val result = VoiceCommandParser.parseCommand("bold , make it bold")
+        assertNotNull(result)
+        assertEquals(CommandType.BOLD, result.type)
+        assertEquals("regex", result.parameters["parsingMethod"])
+    }
+    
+    // ===== LANGUAGE-SPECIFIC ACTIVATION COMMAND TESTS =====
     
     @Test
     fun testParseActivationCommandEnglish() {
@@ -67,6 +131,7 @@ class VoiceCommandParserTest {
         assertNotNull(result)
         assertEquals(CommandType.ACTIVATE_DICTATION, result.type)
         assertEquals("command", result.parameters["commandType"])
+        assertEquals("regex", result.parameters["parsingMethod"])
     }
     
     @Test
@@ -122,6 +187,17 @@ class VoiceCommandParserTest {
     }
     
     @Test
+    fun testParseActivationCommandWithPunctuation() {
+        val commands = listOf(
+            ActivationCommand("command", listOf("Computer"), "Start dictation")
+        )
+        
+        val result = VoiceCommandParser.parseCommand("Computer,", commands, "en-US")
+        assertNotNull(result)
+        assertEquals(CommandType.ACTIVATE_DICTATION, result.type)
+    }
+    
+    @Test
     fun testParseActivationCommandFallsBackToStandardCommands() {
         val commands = listOf(
             ActivationCommand("command", listOf("Computer"), "Start dictation")
@@ -131,5 +207,39 @@ class VoiceCommandParserTest {
         val result = VoiceCommandParser.parseCommand("make bold", commands, "en-US")
         assertNotNull(result)
         assertEquals(CommandType.BOLD, result.type)
+    }
+    
+    @Test
+    fun testEmptyInput() {
+        val result = VoiceCommandParser.parseCommand("")
+        assertNull(result)
+    }
+    
+    @Test
+    fun testWhitespaceOnlyInput() {
+        val result = VoiceCommandParser.parseCommand("   ")
+        assertNull(result)
+    }
+    
+    @Test
+    fun testSaveCommand() {
+        val result = VoiceCommandParser.parseCommand("save")
+        assertNotNull(result)
+        assertEquals(CommandType.SAVE, result.type)
+    }
+    
+    @Test
+    fun testSyncCommand() {
+        val result = VoiceCommandParser.parseCommand("sync")
+        assertNotNull(result)
+        assertEquals(CommandType.SYNC, result.type)
+    }
+    
+    @Test
+    fun testParsingMethodTracking() {
+        // Verify that parsing method is tracked as "regex"
+        val result = VoiceCommandParser.parseCommand("bold")
+        assertNotNull(result)
+        assertEquals("regex", result.parameters["parsingMethod"])
     }
 }
