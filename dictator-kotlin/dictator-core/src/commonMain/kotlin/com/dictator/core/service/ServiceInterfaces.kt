@@ -93,3 +93,22 @@ interface McpService {
     suspend fun getConnectedServersCount(): Int
     suspend fun getServerTools(serverId: String): Map<String, com.dictator.core.data.mcp.McpToolDefinition>
 }
+
+/**
+ * Privacy service for sensitive data detection, telemetry, and privacy policies.
+ */
+interface PrivacyService {
+    suspend fun detectSensitiveData(text: String): List<com.dictator.core.data.privacy.DetectedSensitiveData>
+    suspend fun containsSensitiveData(text: String): Boolean
+    suspend fun calculatePrivacyRisk(text: String): Float
+    suspend fun isSafeForAiProcessing(text: String): Boolean
+    suspend fun recordEvent(userId: String, eventType: String, metadata: Map<String, String> = emptyMap())
+    suspend fun recordAiQueryEvent(userId: String, provider: String, model: String, hasSensitiveData: Boolean)
+    suspend fun getProviderPolicy(provider: String): com.dictator.core.data.privacy.AiProviderPolicy?
+    suspend fun getAllProviderPolicies(): List<com.dictator.core.data.privacy.AiProviderPolicy>
+    suspend fun getPrivacyScore(provider: String): Float
+    suspend fun isGdprCompliant(provider: String): Boolean
+    suspend fun getUserPrivacySettings(userId: String): com.dictator.core.data.privacy.UserPrivacySettings
+    suspend fun updatePrivacySettings(userId: String, settings: com.dictator.core.data.privacy.UserPrivacySettings)
+    suspend fun logPrivacyEvent(userId: String, eventType: String, details: String)
+}

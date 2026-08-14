@@ -124,3 +124,14 @@ interface ConflictRepository {
     suspend fun deleteConflict(id: String): Boolean
     suspend fun deleteByDocumentId(documentId: String): Boolean
 }
+
+/**
+ * Repository interface for privacy settings and audit logging.
+ */
+interface PrivacyRepository {
+    suspend fun getUserPrivacySettings(userId: String): com.dictator.core.data.privacy.UserPrivacySettings
+    suspend fun saveUserPrivacySettings(settings: com.dictator.core.data.privacy.UserPrivacySettings)
+    suspend fun logPrivacyEvent(event: com.dictator.core.data.privacy.PrivacyAuditLogEntry)
+    suspend fun getPrivacyEventsForUser(userId: String): List<com.dictator.core.data.privacy.PrivacyAuditLogEntry>
+    suspend fun getPrivacyEventsSince(userId: String, timestamp: Long): List<com.dictator.core.data.privacy.PrivacyAuditLogEntry>
+}

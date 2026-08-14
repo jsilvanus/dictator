@@ -7,6 +7,8 @@ import com.dictator.core.data.remote.RemoteApiService
 import com.dictator.core.domain.repository.*
 import com.dictator.core.service.McpService
 import com.dictator.core.service.McpServiceImpl
+import com.dictator.core.service.PrivacyService
+import com.dictator.core.service.PrivacyServiceImpl
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 import io.ktor.client.*
@@ -77,10 +79,22 @@ val coreModule = module {
         LocalConflictRepository(get())
     }
     
+    single<PrivacyRepository> {
+        LocalPrivacyRepository(get())
+    }
+    
     // Utilities (singletons)
     singleOf(::com.dictator.core.util.voice.VoiceCommandParser)
     singleOf(::com.dictator.core.util.voice.PunctuationNormalizer)
     singleOf(::com.dictator.core.util.validation.Validators)
+    singleOf(::com.dictator.core.data.privacy.SensitiveDataDetector)
+    singleOf(::com.dictator.core.data.privacy.ProviderPolicyManager)
+    
+    single {
+        com.dictator.core.data.privacy.TelemetryService(
+            secretKey = "dictator-telemetry-key"
+        )
+    }
     
     // Services (singletons)
     single<AuthService> {
@@ -145,6 +159,15 @@ val coreModule = module {
         McpServiceImpl(
             httpClient = get(),
             remoteApiService = get()
+        )
+    }
+    
+    single<PrivacyService> {
+        PrivacyServiceImpl(
+            sensitiveDataDetector = get(),
+            telemetryService = get(),
+            providerPolicyManager = get(),
+            privacyRepository = get()
         )
     }
 }
