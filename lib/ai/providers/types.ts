@@ -10,6 +10,7 @@ export type AiInlineRequest = {
   context?: string;
   temperature?: number;
   maxTokens?: number;
+  thinkingBudgetTokens?: number;
 };
 
 /**
@@ -53,6 +54,7 @@ export type AiChatRequest = {
   maxTokens?: number;
   stream?: boolean;
   tools?: AiTool[];
+  thinkingBudgetTokens?: number;
 };
 
 export type AiResponse = {
@@ -63,10 +65,11 @@ export type AiResponse = {
     inputTokens: number;
     outputTokens: number;
   };
+  thinking?: string;
 };
 
 export type AiStreamChunk = {
-  type: 'delta' | 'complete' | 'error' | 'tool-call';
+  type: 'delta' | 'complete' | 'error' | 'tool-call' | 'thinking-delta' | 'thinking-complete';
   content?: string;
   error?: string;
   toolCall?: ToolCall;

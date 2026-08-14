@@ -49,7 +49,10 @@ class ClaudeProvider(
                         system = request.context ?: "You are a helpful AI assistant.",
                         messages = listOf(
                             ClaudeMessage(role = "user", content = request.prompt)
-                        )
+                        ),
+                        thinking = request.thinkingBudgetTokens?.let {
+                            ClaudeThinking(budgetTokens = it)
+                        }
                     )
                 )
             }.body()
@@ -57,9 +60,14 @@ class ClaudeProvider(
             val textContent = response.content
                 .filter { it.type == "text" }
                 .firstOrNull()?.text ?: ""
+            
+            val thinkingContent = response.content
+                .filter { it.type == "thinking" }
+                .firstOrNull()?.thinking
 
             AiResponse(
                 content = textContent,
+                thinking = thinkingContent,
                 usage = response.usage?.let {
                     AiUsage(
                         inputTokens = it.inputTokens,
@@ -94,7 +102,10 @@ class ClaudeProvider(
                         temperature = temperature,
                         system = request.systemPrompt,
                         messages = request.messages.map { ClaudeMessage(it.role, it.content) },
-                        stream = true
+                        stream = true,
+                        thinking = request.thinkingBudgetTokens?.let {
+                            ClaudeThinking(budgetTokens = it)
+                        }
                     )
                 )
             }
@@ -117,6 +128,8 @@ class ClaudeProvider(
                         val event = Json.decodeFromString<ClaudeStreamEvent>(data)
                         if (event.type == "content_block_delta" && event.delta?.type == "text_delta") {
                             emit(AiStreamChunk.Delta(event.delta.text ?: ""))
+                        } else if (event.type == "content_block_delta" && event.delta?.type == "thinking_delta") {
+                            emit(AiStreamChunk.ThinkingDelta(event.delta.thinking ?: ""))
                         }
                     } catch (e: Exception) {
                         // Skip malformed SSE events
@@ -140,7 +153,8 @@ data class ClaudeRequest(
     val maxTokens: Int,
     val temperature: Double,
     val system: String,
-    val messages: List<ClaudeMessage>
+    val messages: List<ClaudeMessage>,
+    val thinking: ClaudeThinking? = null
 )
 
 @Serializable
@@ -151,7 +165,15 @@ data class ClaudeStreamRequest(
     val temperature: Double,
     val system: String? = null,
     val messages: List<ClaudeMessage>,
-    val stream: Boolean = true
+    val stream: Boolean = true,
+    val thinking: ClaudeThinking? = null
+)
+
+@Serializable
+data class ClaudeThinking(
+    val type: String = "enabled",
+    @SerialName("budget_tokens")
+    val budgetTokens: Int
 )
 
 @Serializable
@@ -169,7 +191,8 @@ data class ClaudeResponse(
 @Serializable
 data class ClaudeContent(
     val type: String,
-    val text: String? = null
+    val text: String? = null,
+    val thinking: String? = null
 )
 
 @Serializable
@@ -189,5 +212,6 @@ data class ClaudeStreamEvent(
 @Serializable
 data class ClaudeStreamDelta(
     val type: String,
-    val text: String? = null
+    val text: String? = null,
+    val thinking: String? = null
 )

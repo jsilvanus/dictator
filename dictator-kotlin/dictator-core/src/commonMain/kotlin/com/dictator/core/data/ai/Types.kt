@@ -18,7 +18,8 @@ data class AiInlineRequest(
     val prompt: String,
     val context: String? = null,
     val temperature: Double? = null,
-    val maxTokens: Int? = null
+    val maxTokens: Int? = null,
+    val thinkingBudgetTokens: Int? = null
 )
 
 /**
@@ -37,7 +38,8 @@ data class AiChatRequest(
     val systemPrompt: String? = null,
     val temperature: Double? = null,
     val maxTokens: Int? = null,
-    val stream: Boolean = false
+    val stream: Boolean = false,
+    val thinkingBudgetTokens: Int? = null
 )
 
 /**
@@ -46,7 +48,8 @@ data class AiChatRequest(
 data class AiResponse(
     val content: String,
     val stopReason: String? = null,
-    val usage: AiUsage? = null
+    val usage: AiUsage? = null,
+    val thinking: String? = null
 )
 
 /**
@@ -62,6 +65,8 @@ data class AiUsage(
  */
 sealed class AiStreamChunk {
     data class Delta(val content: String) : AiStreamChunk()
+    data class ThinkingDelta(val content: String) : AiStreamChunk()
+    object ThinkingComplete : AiStreamChunk()
     object Complete : AiStreamChunk()
     data class Error(val error: String) : AiStreamChunk()
 }

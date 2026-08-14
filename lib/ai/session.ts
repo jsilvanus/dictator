@@ -46,6 +46,17 @@ export type AiTurn = {
    * Tracks data handling and retention policy used
    */
   policyId?: string;
+
+  /**
+   * Model thinking content (if extended thinking was enabled)
+   * Shows the model's reasoning process
+   */
+  thinking?: string;
+
+  /**
+   * Budget tokens allocated for thinking in this turn
+   */
+  thinkingBudgetTokens?: number;
 };
 
 export type AiSession = {

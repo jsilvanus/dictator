@@ -347,6 +347,8 @@ export const aiTurnProvenance = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id),
+    thinkingContent: text('thinking_content'),
+    thinkingBudgetTokens: integer('thinking_budget_tokens'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [unique('ai_turn_provenance_unique').on(t.aiSessionId, t.turnId)],

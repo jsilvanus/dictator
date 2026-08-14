@@ -30,6 +30,27 @@ export class ClaudeProvider extends BaseAiProvider {
     const params = this.mergeRequestParams(request);
 
     try {
+      const body: Record<string, unknown> = {
+        model: this.model,
+        max_tokens: params.maxTokens,
+        temperature: params.temperature,
+        system: request.context || 'You are a helpful AI assistant.',
+        messages: [
+          {
+            role: 'user',
+            content: request.prompt,
+          },
+        ],
+      };
+
+      // Add budget_tokens if thinking is enabled
+      if (request.thinkingBudgetTokens) {
+        body.thinking = {
+          type: 'enabled',
+          budget_tokens: request.thinkingBudgetTokens,
+        };
+      }
+
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -37,18 +58,7 @@ export class ClaudeProvider extends BaseAiProvider {
           'x-api-key': this.apiKey,
           'anthropic-version': '2023-06-01',
         },
-        body: JSON.stringify({
-          model: this.model,
-          max_tokens: params.maxTokens,
-          temperature: params.temperature,
-          system: request.context || 'You are a helpful AI assistant.',
-          messages: [
-            {
-              role: 'user',
-              content: request.prompt,
-            },
-          ],
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -57,15 +67,17 @@ export class ClaudeProvider extends BaseAiProvider {
       }
 
       const data = (await response.json()) as {
-        content?: Array<{ type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }>;
+        content?: Array<{ type: string; text?: string; thinking?: string; id?: string; name?: string; input?: Record<string, unknown> }>;
         usage?: { input_tokens?: number; output_tokens?: number };
       };
 
       const textContent = data.content?.find((c) => c.type === 'text')?.text ?? '';
+      const thinkingContent = data.content?.find((c) => c.type === 'thinking')?.thinking;
       const toolCalls = this.parseToolCalls(data.content ?? []);
 
       return {
         content: textContent,
+        thinking: thinkingContent,
         toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
         usage: {
           inputTokens: data.usage?.input_tokens ?? 0,
@@ -94,6 +106,24 @@ export class ClaudeProvider extends BaseAiProvider {
           }))
         : undefined;
 
+      const body: Record<string, unknown> = {
+        model: this.model,
+        max_tokens: params.maxTokens,
+        temperature: params.temperature,
+        system: request.systemPrompt,
+        messages: request.messages,
+        tools,
+        stream: true,
+      };
+
+      // Add budget_tokens if thinking is enabled
+      if (request.thinkingBudgetTokens) {
+        body.thinking = {
+          type: 'enabled',
+          budget_tokens: request.thinkingBudgetTokens,
+        };
+      }
+
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -101,15 +131,7 @@ export class ClaudeProvider extends BaseAiProvider {
           'x-api-key': this.apiKey,
           'anthropic-version': '2023-06-01',
         },
-        body: JSON.stringify({
-          model: this.model,
-          max_tokens: params.maxTokens,
-          temperature: params.temperature,
-          system: request.systemPrompt,
-          messages: request.messages,
-          tools,
-          stream: true,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -148,7 +170,7 @@ export class ClaudeProvider extends BaseAiProvider {
       async start(controller) {
         const reader = body.getReader();
         const decoder = new TextDecoder();
-        const contentBlocks: Array<{ type: string; id?: string; name?: string; input?: Record<string, unknown>; text?: string }> = [];
+        const contentBlocks: Array<{ type: string; id?: string; name?: string; input?: Record<string, unknown>; text?: string; thinking?: string }> = [];
         let currentToolInput: Record<string, unknown> = {};
 
         try {
@@ -169,7 +191,7 @@ export class ClaudeProvider extends BaseAiProvider {
                 const event = JSON.parse(data) as {
                   type?: string;
                   index?: number;
-                  delta?: { type?: string; text?: string; input?: Record<string, unknown> };
+                  delta?: { type?: string; text?: string; thinking?: string; input?: Record<string, unknown> };
                   content_block?: { type?: string; id?: string; name?: string };
                 };
 
@@ -178,6 +200,8 @@ export class ClaudeProvider extends BaseAiProvider {
                   const blockType = event.content_block.type;
                   if (blockType === 'text') {
                     contentBlocks.push({ type: 'text', text: '' });
+                  } else if (blockType === 'thinking') {
+                    contentBlocks.push({ type: 'thinking', thinking: '' });
                   } else if (blockType === 'tool_use') {
                     currentToolInput = {};
                     contentBlocks.push({
@@ -187,6 +211,18 @@ export class ClaudeProvider extends BaseAiProvider {
                       input: currentToolInput,
                     });
                   }
+                }
+
+                // Handle thinking delta
+                if (event.type === 'content_block_delta' && event.delta?.type === 'thinking_delta') {
+                  const lastBlock = contentBlocks[contentBlocks.length - 1];
+                  if (lastBlock && lastBlock.type === 'thinking') {
+                    lastBlock.thinking = (lastBlock.thinking ?? '') + (event.delta.thinking ?? '');
+                  }
+                  controller.enqueue({
+                    type: 'thinking-delta',
+                    content: event.delta.thinking,
+                  });
                 }
 
                 // Handle text delta
