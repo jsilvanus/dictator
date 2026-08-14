@@ -591,7 +591,25 @@ class RemoteApiService(
             throw DataException.NetworkError("AI turn error", e)
         }
     }
-    
+     
+    suspend fun fetchAiHistory(documentId: String, limit: Int = 50, offset: Int = 0): AiHistoryResponse {
+        return try {
+            val response = httpClient.get("$baseUrl/api/documents/$documentId/ai-history") {
+                authToken?.let { header("Authorization", "******") }
+                parameter("limit", limit)
+                parameter("offset", offset)
+            }
+             
+            if (response.status.isSuccess()) {
+                response.body<AiHistoryResponse>()
+            } else {
+                throw DataException.ServerError("Failed to fetch AI history", response.status.value)
+            }
+        } catch (e: Exception) {
+            throw DataException.NetworkError("AI history fetch error", e)
+        }
+    }
+     
     // ============= MCP (Model Context Protocol) =============
     
     suspend fun registerMcpServer(config: com.dictator.core.data.mcp.McpServerConfig): Result<com.dictator.core.data.mcp.McpServerConfig> {

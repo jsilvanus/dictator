@@ -153,3 +153,36 @@ data class DocumentConflict(
     val createdAt: Long,
     val resolvedAt: Long? = null
 )
+
+/**
+ * API Response for fetching AI history with provenance metadata
+ */
+@Serializable
+data class AiHistoryTurnResponse(
+    val sessionId: String,
+    val turnIndex: Int,
+    val userMessage: String,
+    val assistantResponse: String,
+    val provenance: AiTurnProvenanceResponse? = null
+)
+
+@Serializable
+data class AiTurnProvenanceResponse(
+    val source: String,  // AiContentSource enum name
+    val confidence: Double? = null,
+    val contentScope: String? = null,  // AiRequestScope enum name
+    val device: String,
+    val reviewedAt: Long? = null,
+    val thinkingContent: String? = null,
+    val thinkingBudgetTokens: Int? = null,
+    val createdAt: Long
+)
+
+@Serializable
+data class AiHistoryResponse(
+    val turns: List<AiHistoryTurnResponse> = emptyList(),
+    val total: Int = 0,
+    val limit: Int = 50,
+    val offset: Int = 0,
+    val documentId: String? = null
+)
