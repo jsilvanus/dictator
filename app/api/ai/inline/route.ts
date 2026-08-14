@@ -38,8 +38,9 @@ export async function POST(request: Request) {
 
     // Get user's AI preferences
     let provider = AiProviderFactory.createFromEnv();
+    let userPrefs: any;
     try {
-      const userPrefs = await db.query.userAiPreferences.findFirst({
+      userPrefs = await db.query.userAiPreferences.findFirst({
         where: eq(userAiPreferences.userId, session.userId),
       });
 
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
       context: buildInlineSystemPrompt(),
       temperature: 0.2,
       maxTokens: 800,
+      thinkingBudgetTokens: userPrefs?.thinkingBudgetTokens ?? undefined,
     });
 
     // Parse and validate the response
