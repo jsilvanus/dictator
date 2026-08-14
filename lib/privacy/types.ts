@@ -340,3 +340,59 @@ export interface ContentScope {
   /** Context lines around selection (if applicable) */
   contextLines?: number;
 }
+
+// ============================================================================
+// Selection & Cursor Permission Types
+// ============================================================================
+
+export type PermissionScope = 'model' | 'user' | 'document';
+export type PermissionGrantedBy = 'voice' | 'ui';
+
+export interface SelectionPermission {
+  /** Unique permission ID */
+  id: string;
+  
+  /** User who granted the permission */
+  userId: string;
+  
+  /** Document ID (nullable for user-scoped permissions) */
+  documentId?: string;
+  
+  /** Type of PII or sensitive data */
+  piiType: SensitiveDataType;
+  
+  /** Scope of permission */
+  scope: PermissionScope;
+  
+  /** Whether permission was granted via voice or UI */
+  grantedBy: PermissionGrantedBy;
+  
+  /** When permission was granted */
+  grantedAt: number;
+  
+  /** When permission expires (null = no expiry) */
+  expiresAt?: number;
+  
+  /** Model this permission was granted for (if model-scoped) */
+  modelId?: string;
+}
+
+export interface PiiDetectionResult {
+  /** Whether PII was detected */
+  hasPII: boolean;
+  
+  /** Types of PII found */
+  types: SensitiveDataType[];
+  
+  /** Overall confidence (0-1) */
+  confidence: number;
+  
+  /** Individual detections with positions and confidence */
+  chunks: Array<{
+    type: SensitiveDataType;
+    text: string;
+    confidence: number;
+    startIndex: number;
+    endIndex: number;
+  }>;
+}
