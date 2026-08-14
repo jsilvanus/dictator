@@ -15,6 +15,7 @@ export function AiSettings() {
   const [customTemperature, setCustomTemperature] = useState<number | null>(null);
   const [customMaxTokens, setCustomMaxTokens] = useState<number | null>(null);
   const [ollamaUrl, setOllamaUrl] = useState<string>('');
+  const [systemPrompt, setSystemPrompt] = useState<string>('');
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -48,12 +49,14 @@ export function AiSettings() {
             customTemperature?: number;
             customMaxTokens?: number;
             ollamaUrl?: string;
+            systemPrompt?: string;
           };
           setPreferredProvider(prefs.preferredProvider);
           setPreferredModel(prefs.preferredModel || '');
           setCustomTemperature(prefs.customTemperature ?? null);
           setCustomMaxTokens(prefs.customMaxTokens ?? null);
           setOllamaUrl(prefs.ollamaUrl || '');
+          setSystemPrompt(prefs.systemPrompt || '');
         }
       } catch (error) {
         console.error('Failed to load preferences:', error);
@@ -77,6 +80,7 @@ export function AiSettings() {
           customTemperature: customTemperature ?? undefined,
           customMaxTokens: customMaxTokens ?? undefined,
           ollamaUrl: ollamaUrl || undefined,
+          systemPrompt: systemPrompt || undefined,
         }),
       });
 
@@ -175,6 +179,19 @@ export function AiSettings() {
           Using Dictator Service - no additional configuration needed. This is the Dictator-hosted AI service.
         </p>
       )}
+
+      <label>
+        Custom System Prompt (optional)
+        <textarea
+          value={systemPrompt}
+          placeholder="Leave empty to use the default system prompt. This prompt will be used for all AI interactions."
+          onChange={(e) => setSystemPrompt(e.target.value)}
+          style={{ minHeight: '100px', fontFamily: 'monospace', fontSize: '0.875rem' }}
+        />
+        <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: '4px 0 0 0' }}>
+          {systemPrompt.length}/2000 characters
+        </p>
+      </label>
 
       <button type="button" onClick={handleSave}>
         Save AI Settings

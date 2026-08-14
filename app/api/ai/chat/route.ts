@@ -5,9 +5,9 @@ import { buildPanelContext, type InlineEditorSnapshot, type PanelTurn } from '@/
 import { AiProviderFactory } from '@/lib/ai/providers/factory';
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
-import { aiSessions, userAiPreferences } from '@/lib/db/schema';
+import { aiSessions, userAiPreferences, documents } from '@/lib/db/schema';
 import { aiRateLimiter } from '@/lib/rate-limiter';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { streamChatWithTools } from '@/lib/ai/tools/chat-integration';
 
 type ChatRequest = {
@@ -17,6 +17,12 @@ type ChatRequest = {
   history: PanelTurn[];
   enableTools?: boolean;
 };
+
+// Helper function to calculate approximate token count
+function estimateTokenCount(text: string): number {
+  // Rough approximation: ~4 characters per token (based on common tokenizers)
+  return Math.ceil(text.length / 4);
+}
 
 export async function POST(request: Request) {
   try {
@@ -33,9 +39,11 @@ export async function POST(request: Request) {
     const body = (await request.json()) as ChatRequest;
     const context = buildPanelContext(body.snapshot);
 
-    // Get user's AI preferences
+    // Get user's AI preferences and document settings
     let provider = AiProviderFactory.createFromEnv();
-    let userPrefs: { preferredProvider: string; preferredModel?: string; customTemperature?: { toString(): string } | number | null; customMaxTokens?: number | null; ollamaUrl?: string | null; thinkingBudgetTokens?: number | null } | undefined;
+    let userPrefs: { preferredProvider: string; preferredModel?: string; customTemperature?: { toString(): string } | number | null; customMaxTokens?: number | null; ollamaUrl?: string | null; thinkingBudgetTokens?: number | null; systemPrompt?: string | null } | undefined;
+    let docSystemPromptOverride: string | null = null;
+
     try {
       userPrefs = await db.query.userAiPreferences.findFirst({
         where: eq(userAiPreferences.userId, session.userId),
@@ -50,10 +58,21 @@ export async function POST(request: Request) {
           maxTokens: userPrefs.customMaxTokens ?? undefined,
         });
       }
+
+      // Get document-level system prompt override if it exists
+      const doc = await db.query.documents.findFirst({
+        where: and(eq(documents.id, body.documentId), eq(documents.ownerId, session.userId)),
+      });
+      if (doc?.systemPromptOverride) {
+        docSystemPromptOverride = doc.systemPromptOverride;
+      }
     } catch (e) {
       // Fall back to default provider if preference lookup fails
       console.error('Failed to load user AI preferences:', e);
     }
+
+    // Determine which system prompt to use
+    const effectiveSystemPrompt = docSystemPromptOverride || userPrefs?.systemPrompt || undefined;
 
     const contextMessage = `[Document Context]\n${JSON.stringify({
       title: context.title,
@@ -74,6 +93,9 @@ export async function POST(request: Request) {
       { role: 'user', content: body.message },
     ];
 
+    // Calculate context size for response header
+    const contextSize = estimateTokenCount(contextMessage) + body.history.reduce((sum, turn) => sum + estimateTokenCount(turn.content), 0);
+
     const { userId } = session;
     const { documentId, history, message } = body;
     const enableTools = body.enableTools ?? false;
@@ -92,7 +114,7 @@ export async function POST(request: Request) {
 
             for await (const chunk of streamChatWithTools(provider, {
               messages,
-              systemPrompt: buildPanelSystemPrompt(),
+              systemPrompt: buildPanelSystemPrompt(effectiveSystemPrompt),
               maxTokens: 2048,
             }, {
               context: {
@@ -154,7 +176,7 @@ export async function POST(request: Request) {
       // Use standard chat without tools
       const stream = await provider.chat({
         messages,
-        systemPrompt: buildPanelSystemPrompt(),
+        systemPrompt: buildPanelSystemPrompt(effectiveSystemPrompt),
         maxTokens: 2048,
         thinkingBudgetTokens: userPrefs?.thinkingBudgetTokens ?? undefined,
       });
@@ -224,6 +246,7 @@ export async function POST(request: Request) {
         'Content-Type': 'text/plain; charset=utf-8',
         'Cache-Control': 'no-cache',
         'X-Accel-Buffering': 'no',
+        'X-Context-Size': String(contextSize),
       },
     });
   } catch (error) {
@@ -238,86 +261,6 @@ export async function POST(request: Request) {
         details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 },
-    );
-  }
-}
-
-    const { userId } = session;
-    const { documentId, history, message } = body;
-
-    // Process stream and store in database
-    const newStream = new ReadableStream({
-      async start(controller) {
-        const reader = stream.getReader();
-        let fullText = '';
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            // Value from ReadableStream<AiStreamChunk> is already an object, not bytes
-            const chunk = value as {
-              type: string;
-              content?: string;
-              error?: string;
-            };
-
-            if (chunk.type === 'delta' && chunk.content) {
-              fullText += chunk.content;
-              controller.enqueue(new TextEncoder().encode(chunk.content));
-            } else if (chunk.type === 'error') {
-              throw new Error(chunk.error || 'Unknown streaming error');
-            }
-          }
-
-          const assistantContent = fullText.trim();
-          const updatedTurns: Array<{ role: string; content: string }> = [
-            ...history.slice(-20),
-            { role: 'user', content: message },
-            { role: 'assistant', content: assistantContent },
-          ];
-
-          // Save to database (non-blocking)
-          void db
-            .insert(aiSessions)
-            .values({
-              documentId,
-              userId,
-              mode: 'panel',
-              turns: updatedTurns,
-            })
-            .onConflictDoUpdate({
-              target: [aiSessions.documentId, aiSessions.userId, aiSessions.mode],
-              set: {
-                turns: updatedTurns,
-                updatedAt: new Date(),
-              },
-            })
-            .catch((e) => {
-              console.error('Failed to persist AI session:', e);
-            });
-        } finally {
-          reader.releaseLock();
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(newStream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'X-Accel-Buffering': 'no',
-      },
-    });
-  } catch (error) {
-    if (error instanceof Response) {
-      return NextResponse.json({ error: await error.text() }, { status: error.status });
-    }
-    return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
     );
   }
 }

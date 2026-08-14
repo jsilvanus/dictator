@@ -7,7 +7,11 @@ export type AiChatAction =
   | { type: 'speak'; speech: string }
   | { type: 'none' };
 
-export function buildPanelSystemPrompt() {
+export function buildPanelSystemPrompt(customPrompt?: string) {
+  if (customPrompt) {
+    return customPrompt;
+  }
+
   return [
     'You are a full-context conversational writing assistant embedded in a voice-first document editor.',
     'You receive the full document text and conversation history.',

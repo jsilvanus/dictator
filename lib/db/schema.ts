@@ -60,6 +60,7 @@ export const documents = pgTable('documents', {
   wordCount: integer('word_count').notNull().default(0),
   lastModifiedDevice: text('last_modified_device').notNull().default('web'),
   deviceVersion: bigint('device_version', { mode: 'number' }).notNull().default(1),
+  systemPromptOverride: text('system_prompt_override'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -255,6 +256,7 @@ export const userAiPreferences = pgTable('user_ai_preferences', {
   customMaxTokens: integer('custom_max_tokens'),
   ollamaUrl: text('ollama_url'),
   thinkingBudgetTokens: integer('thinking_budget_tokens'),
+  systemPrompt: text('system_prompt'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

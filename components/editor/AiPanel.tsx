@@ -57,6 +57,8 @@ export function AiPanel({
   const [messages, setMessages] = useState<PanelMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [contextSize, setContextSize] = useState<number>(0);
+  const [showContextInfo, setShowContextInfo] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load persisted panel session on mount
@@ -182,6 +184,12 @@ export function AiPanel({
         return;
       }
 
+      // Extract context size from response header
+      const ctxSizeHeader = response.headers.get('X-Context-Size');
+      if (ctxSizeHeader) {
+        setContextSize(parseInt(ctxSizeHeader, 10));
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullText = '';
@@ -220,28 +228,73 @@ export function AiPanel({
   }
 
   async function clearConversation() {
-    setMessages([]);
-    await fetch(`/api/ai/sessions?documentId=${documentId}`, { method: 'DELETE' }).catch(() => {});
+    if (confirm('Are you sure you want to clear all messages? This cannot be undone.')) {
+      setMessages([]);
+      setContextSize(0);
+      await fetch(`/api/ai/sessions?documentId=${documentId}`, { method: 'DELETE' }).catch(() => {});
+    }
+  }
+
+  function compactContext() {
+    // Keep only the last 3 turns to reduce context size
+    const nonStreamingMessages = messages.filter((m) => !m.streaming);
+    if (nonStreamingMessages.length > 6) {
+      const keptMessages = nonStreamingMessages.slice(-6);
+      setMessages(keptMessages);
+    }
+  }
+
+  function startNewChat() {
+    void clearConversation();
   }
 
   if (!open) return null;
 
   return (
     <div className="panel ai-panel" style={{ marginTop: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <strong style={{ fontSize: '0.875rem' }}>AI Assistant</strong>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 8 }}>
+        <div>
+          <strong style={{ fontSize: '0.875rem' }}>AI Assistant</strong>
+          {contextSize > 0 && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 2 }}>
+              Context: ~{contextSize.toLocaleString()} tokens
+              <button
+                type="button"
+                onClick={() => setShowContextInfo(!showContextInfo)}
+                style={{ fontSize: '0.75rem', color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 6, textDecoration: 'underline' }}
+              >
+                {showContextInfo ? 'hide' : 'show'}
+              </button>
+            </div>
+          )}
+          {showContextInfo && contextSize > 0 && (
+            <p style={{ fontSize: '0.7rem', color: 'var(--muted)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+              Context includes document content and conversation history. Use "Compact" to reduce context size.
+            </p>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {messages.length > 0 && contextSize > 5000 && (
+            <button
+              type="button"
+              onClick={() => void compactContext()}
+              style={{ fontSize: '0.75rem', color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+              title="Keep only last 3 turns"
+            >
+              Compact
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void clearConversation()}
             style={{ fontSize: '0.75rem', color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            Clear
+            New Chat
           </button>
           <button
             type="button"
             onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: 0 }}
             aria-label="Close AI panel"
           >
             ×

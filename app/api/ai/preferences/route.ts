@@ -12,6 +12,7 @@ type PreferencesUpdateRequest = {
   customMaxTokens?: number;
   ollamaUrl?: string;
   thinkingBudgetTokens?: number;
+  systemPrompt?: string;
 };
 
 export async function GET() {
@@ -31,6 +32,7 @@ export async function GET() {
         customMaxTokens: prefs.customMaxTokens,
         ollamaUrl: prefs.ollamaUrl,
         thinkingBudgetTokens: prefs.thinkingBudgetTokens,
+        systemPrompt: prefs.systemPrompt,
       });
     }
 
@@ -42,6 +44,7 @@ export async function GET() {
       customMaxTokens: null,
       ollamaUrl: null,
       thinkingBudgetTokens: null,
+      systemPrompt: null,
     });
   } catch (error) {
     return NextResponse.json(
@@ -79,6 +82,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate system prompt length if provided
+    if (body.systemPrompt && body.systemPrompt.length > 2000) {
+      return NextResponse.json(
+        { error: 'System prompt must be 2000 characters or less' },
+        { status: 400 }
+      );
+    }
+
     // Upsert user preferences
     await db
       .insert(userAiPreferences)
@@ -90,6 +101,7 @@ export async function POST(request: Request) {
         customMaxTokens: body.customMaxTokens,
         ollamaUrl: body.ollamaUrl,
         thinkingBudgetTokens: body.thinkingBudgetTokens,
+        systemPrompt: body.systemPrompt || null,
       })
       .onConflictDoUpdate({
         target: [userAiPreferences.userId],
@@ -100,6 +112,7 @@ export async function POST(request: Request) {
           customMaxTokens: body.customMaxTokens,
           ollamaUrl: body.ollamaUrl,
           thinkingBudgetTokens: body.thinkingBudgetTokens,
+          systemPrompt: body.systemPrompt || null,
           updatedAt: new Date(),
         },
       });
@@ -114,6 +127,7 @@ export async function POST(request: Request) {
         customMaxTokens: body.customMaxTokens,
         ollamaUrl: body.ollamaUrl,
         thinkingBudgetTokens: body.thinkingBudgetTokens,
+        systemPrompt: body.systemPrompt,
       },
     });
   } catch (error) {
