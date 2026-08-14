@@ -19,6 +19,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.cancel
 import javax.inject.Inject
+import com.dictator.core.domain.entity.CursorSize
+import com.dictator.core.domain.entity.CursorState
+import com.dictator.core.domain.entity.CursorPosition
+import com.dictator.core.util.cursor.CursorCommandParser
+import com.dictator.core.util.cursor.CursorCommandExecutor
+import com.dictator.core.util.privacy.SensitiveDataDetector
 
 enum class VoiceState {
     IDLE, LISTENING, PROCESSING, ERROR, SUCCESS
@@ -36,7 +42,14 @@ data class VoiceUiState(
     val recordingDuration: Long = 0L,
     // Language-specific activation commands
     val currentLanguage: String = "en-US",
-    val activationCommands: List<ActivationCommand> = emptyList()
+    val activationCommands: List<ActivationCommand> = emptyList(),
+    // Cursor state tracking
+    val cursorSize: CursorSize = CursorSize.WORD,
+    val cursorState: CursorState? = null,
+    // PII detection state
+    val detectedPiiCount: Int = 0,
+    val piiRiskLevel: String = "low",
+    val showPiiDialog: Boolean = false
 )
 
 @HiltViewModel
@@ -263,9 +276,109 @@ class VoiceViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Handle cursor command from voice input
+     * Parses and executes cursor commands, handles PII detection if needed
+     */
+    fun handleCursorCommand(text: String, documentContent: String) {
+        viewModelScope.launch {
+            try {
+                // Check if text contains cursor commands
+                if (!CursorCommandParser.containsCursorKeywords(text)) {
+                    return@launch
+                }
+
+                // Get or initialize cursor state
+                var currentCursorState = _state.value.cursorState ?: CursorState(
+                    current = CursorPosition(0, 0, _state.value.cursorSize),
+                    selection = null,
+                    lastAction = "init"
+                )
+
+                // Update cursor size if detected in input
+                val detectedSize = CursorCommandParser.detectCursorSize(text)
+                if (detectedSize != null) {
+                    _state.value = _state.value.copy(cursorSize = detectedSize)
+                    currentCursorState = currentCursorState.copy(
+                        current = currentCursorState.current.copy(size = detectedSize)
+                    )
+                }
+
+                // Execute cursor commands
+                val result = CursorCommandExecutor.handleCursorCommand(
+                    text = documentContent,
+                    voiceInput = text,
+                    currentState = currentCursorState,
+                    userLanguage = _state.value.currentLanguage
+                )
+
+                // Update cursor state
+                _state.value = _state.value.copy(
+                    cursorState = result.newState
+                )
+
+                // Check for PII if selection is active
+                if (result.newState.selection?.isActive == true && result.selectedText != null) {
+                    checkSelectionForPii(result.selectedText)
+                }
+
+                Napier.d("Cursor command executed: ${result.feedback}")
+            } catch (e: Exception) {
+                Napier.e("Error handling cursor command", e)
+            }
+        }
+    }
+
+    /**
+     * Set cursor size from UI
+     */
+    fun setCursorSize(size: CursorSize) {
+        val currentState = _state.value.cursorState ?: CursorState(
+            current = CursorPosition(0, 0, size),
+            selection = null,
+            lastAction = "init"
+        )
+        
+        _state.value = _state.value.copy(
+            cursorSize = size,
+            cursorState = currentState.copy(
+                current = currentState.current.copy(size = size)
+            )
+        )
+    }
+
+    /**
+     * Check selected text for PII before sending to AI
+     */
+    private fun checkSelectionForPii(selectedText: String) {
+        try {
+            val scanResult = SensitiveDataDetector.scanForSensitiveData(selectedText)
+            
+            _state.value = _state.value.copy(
+                detectedPiiCount = scanResult.detected.size,
+                piiRiskLevel = scanResult.riskLevel,
+                showPiiDialog = scanResult.hasSensitiveData
+            )
+
+            Napier.d("PII scan result: ${scanResult.detected.size} items found, risk: ${scanResult.riskLevel}")
+        } catch (e: Exception) {
+            Napier.e("Error scanning for PII", e)
+        }
+    }
+
+    /**
+     * Clear PII dialog
+     */
+    fun dismissPiiDialog() {
+        _state.value = _state.value.copy(
+            showPiiDialog = false,
+            detectedPiiCount = 0,
+            piiRiskLevel = "low"
+        )
+    }
+
     override fun onCleared() {
         super.onCleared()
         recordingJob?.cancel()
         silenceDetectionJob?.cancel()
     }
-}
