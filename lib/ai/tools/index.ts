@@ -9,26 +9,26 @@ export * from './types';
 
 // Re-export registry functions
 export {
-  getGlobalRegistry,
-  registerTool,
-  getTool,
   getAllTools,
+  getGlobalRegistry,
+  getTool,
+  getToolsRequiringPermission,
   hasTool,
   hasToolPermission,
-  getToolsRequiringPermission,
+  registerTool,
 } from './registry';
 
 // Re-export executor functions and class
 export {
-  getGlobalExecutor,
   executeTool,
+  getGlobalExecutor,
   ToolExecutor,
 } from './executor';
 
 // Re-export permissions functions and class
 export {
-  getPermissionManager,
   createPermissionManager,
+  getPermissionManager,
 } from './permissions';
 
 // Re-export permissions store types and implementations
@@ -36,30 +36,28 @@ export * from './permissions-store';
 
 // Re-export tool definitions
 export {
+  clearTestDocuments as clearTestDocumentStore,
+  getDocumentSectionTool,
+  getParagraphTool,
+  getTestDocument as getTestDocumentStore,
+  registerDocumentTools,
+  searchDocumentTool,
+  setTestDocument as setTestDocumentStore,
+} from './document-tools';
+export {
   httpGetTool,
   httpPostTool,
   registerHttpTools,
 } from './http-tools';
-
 export {
-  textEditTool,
-  textInsertTool,
-  textDeleteTool,
+  clearTestDocuments as clearTestTextDocuments,
+  getTestDocument as getTestTextDocument,
   registerTextTools,
   setTestDocument as setTestTextDocument,
-  getTestDocument as getTestTextDocument,
-  clearTestDocuments as clearTestTextDocuments,
+  textDeleteTool,
+  textEditTool,
+  textInsertTool,
 } from './text-tools';
-
-export {
-  searchDocumentTool,
-  getDocumentSectionTool,
-  getParagraphTool,
-  registerDocumentTools,
-  setTestDocument as setTestDocumentStore,
-  getTestDocument as getTestDocumentStore,
-  clearTestDocuments as clearTestDocumentStore,
-} from './document-tools';
 
 /**
  * Initialize all built-in tools

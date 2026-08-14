@@ -3,10 +3,10 @@
  * Handles multi-turn tool execution within a single chat request
  */
 
-import { ToolCall, AiStreamChunk, AiChatRequest } from '@/lib/ai/providers/types';
+import { AiChatRequest,AiStreamChunk, ToolCall } from '@/lib/ai/providers/types';
 import { AiProvider } from '@/lib/ai/providers/types';
-import { getGlobalRegistry } from '@/lib/ai/tools/registry';
 import { getGlobalExecutor } from '@/lib/ai/tools/executor';
+import { getGlobalRegistry } from '@/lib/ai/tools/registry';
 import { ToolExecutionContext } from '@/lib/ai/tools/types';
 
 /**

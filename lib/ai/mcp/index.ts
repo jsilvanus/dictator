@@ -2,7 +2,7 @@
  * MCP (Model Context Protocol) module exports
  */
 
-export * from './types';
+export * from './adapter';
 export * from './client';
 export * from './registry';
-export * from './adapter';
+export * from './types';

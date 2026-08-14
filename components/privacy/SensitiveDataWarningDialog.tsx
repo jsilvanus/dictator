@@ -14,6 +14,7 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import type { DetectedSensitiveData, SensitiveDataType } from '@/lib/privacy/types';
 
 interface SensitiveDataWarningDialogProps {

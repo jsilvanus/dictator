@@ -13,9 +13,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { SensitiveDataWarningDialog } from './SensitiveDataWarningDialog';
-import { ProviderPolicyCard } from './ProviderPolicyCard';
+
 import type { AiProviderPolicy, UserPrivacySettings } from '@/lib/privacy/types';
+
+import { ProviderPolicyCard } from './ProviderPolicyCard';
+import { SensitiveDataWarningDialog } from './SensitiveDataWarningDialog';
 
 interface PrivacySettingsPanelProps {
   userId: string;

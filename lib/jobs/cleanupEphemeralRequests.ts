@@ -13,9 +13,10 @@
  * - By message queue (Bull, RabbitMQ, etc.)
  */
 
+import { and, eq, isNull, lt, not } from 'drizzle-orm';
+
 import { db } from '@/lib/db';
-import { aiTurns, userPrivacySettings, privacyAuditLog } from '@/lib/db/schema';
-import { eq, lt, and, isNull, not } from 'drizzle-orm';
+import { aiTurns, privacyAuditLog,userPrivacySettings } from '@/lib/db/schema';
 
 interface CleanupResult {
   sessionsCleaned: number;

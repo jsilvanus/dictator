@@ -3,11 +3,12 @@
  * Manages user tool permissions
  */
 
+import { and,eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
 import { toolPermissions } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
 
 type PermissionRequest = {
   target: string;

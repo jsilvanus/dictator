@@ -5,12 +5,13 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
-import { type UserSettings } from '@/lib/data/default-settings';
+import { useMemo,useState } from 'react';
+
 import {
-  getCursorCommandsForLanguage,
   type CursorCommandSet,
+  getCursorCommandsForLanguage,
 } from '@/lib/data/cursor-command-defaults';
+import { type UserSettings } from '@/lib/data/default-settings';
 import { parseCursorCommandsFromText } from '@/lib/voice/cursor-parser';
 
 interface CursorSettingsPageProps {

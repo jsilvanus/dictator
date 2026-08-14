@@ -11,12 +11,13 @@
  * Compliant with GDPR Article 17 (Right to be Forgotten)
  */
 
+import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { db } from '@/lib/db';
-import { users, documents, aiTurns, userPrivacySettings, deletionRecords, privacyAuditLog } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+
 import { authOptions } from '@/lib/auth/auth.config';
+import { db } from '@/lib/db';
+import { aiTurns, deletionRecords, documents, privacyAuditLog,userPrivacySettings, users } from '@/lib/db/schema';
 
 interface DeleteAccountRequest {
   selectedOptions: string[];

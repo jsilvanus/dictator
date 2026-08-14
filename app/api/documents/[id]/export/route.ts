@@ -8,17 +8,18 @@
  * - include: 'content' | 'history' | 'audit' | 'all' (default: 'all')
  */
 
+import { and,eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { db } from '@/lib/db';
-import { documents, aiSessions, aiTurnProvenance } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+
 import { authOptions } from '@/lib/auth/auth.config';
+import { db } from '@/lib/db';
+import { aiSessions, aiTurnProvenance,documents } from '@/lib/db/schema';
 import {
-  getExportFormat,
-  type DocumentExportData,
   type AiHistoryItem,
+  type DocumentExportData,
   type ExportFormat,
+  getExportFormat,
 } from '@/lib/export/ExportFormats';
 
 export async function GET(

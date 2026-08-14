@@ -5,7 +5,8 @@
  */
 
 import crypto from 'crypto';
-import type { TelemetryEvent, TelemetryEventType, TelemetryEventMetrics } from './types';
+
+import type { TelemetryEvent, TelemetryEventMetrics,TelemetryEventType } from './types';
 
 /**
  * Configuration for telemetry service

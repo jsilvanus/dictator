@@ -1,14 +1,14 @@
+import { and,eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { buildPanelSystemPrompt } from '@/lib/ai/chat-prompts';
 import { buildPanelContext, type InlineEditorSnapshot, type PanelTurn } from '@/lib/ai/context';
 import { AiProviderFactory } from '@/lib/ai/providers/factory';
+import { streamChatWithTools } from '@/lib/ai/tools/chat-integration';
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
-import { aiSessions, userAiPreferences, documents } from '@/lib/db/schema';
+import { aiSessions, documents,userAiPreferences } from '@/lib/db/schema';
 import { aiRateLimiter } from '@/lib/rate-limiter';
-import { eq, and } from 'drizzle-orm';
-import { streamChatWithTools } from '@/lib/ai/tools/chat-integration';
 
 type ChatRequest = {
   message: string;
