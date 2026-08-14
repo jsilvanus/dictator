@@ -6,12 +6,20 @@ import android.speech.SpeechRecognizer
 import android.speech.SpeechRecognizer.CONFIDENCE_SCORES
 import android.os.Bundle
 import com.dictator.core.service.VoiceService
+import com.dictator.core.data.voice.ActivationCommand
+import com.dictator.core.data.local.VoiceSettingsRepository
+import com.dictator.core.service.SharedPreferences
 import io.github.aakira.napier.Napier
 
-class AndroidVoiceServiceImpl(private val context: Context) : VoiceService {
+class AndroidVoiceServiceImpl(
+    private val context: Context,
+    private val voiceSettingsRepository: VoiceSettingsRepository? = null
+) : VoiceService {
     private var speechRecognizer: SpeechRecognizer? = null
     private var voiceListener: VoiceListener? = null
     private var isListening = false
+    private var currentLanguage: String = "en-US"
+    private var activationCommands: List<ActivationCommand> = emptyList()
 
     interface VoiceListener {
         fun onResults(text: String, confidence: Float)
@@ -20,6 +28,23 @@ class AndroidVoiceServiceImpl(private val context: Context) : VoiceService {
 
     fun setListener(listener: VoiceListener) {
         this.voiceListener = listener
+    }
+
+    /**
+     * Set language and load corresponding activation commands
+     */
+    fun setLanguage(language: String) {
+        currentLanguage = language
+        voiceSettingsRepository?.let {
+            activationCommands = it.getActivationCommandsForLanguage(language)
+        }
+    }
+
+    /**
+     * Get current activation commands for voice recognition
+     */
+    fun getActivationCommands(): List<ActivationCommand> {
+        return activationCommands
     }
 
     fun startListening() {

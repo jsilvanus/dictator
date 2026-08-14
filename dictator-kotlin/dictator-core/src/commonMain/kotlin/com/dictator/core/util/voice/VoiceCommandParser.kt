@@ -1,8 +1,11 @@
 package com.dictator.core.util.voice
 
+import com.dictator.core.data.voice.ActivationCommand
+
 /**
  * Parses voice commands and triggers from spoken text.
  * Maps common voice patterns to editor commands.
+ * Supports language-specific activation commands.
  */
 object VoiceCommandParser {
     
@@ -49,10 +52,47 @@ object VoiceCommandParser {
     /**
      * Parses voice input and returns the matching command.
      * Returns null if no matching command is found.
+     * 
+     * @param voiceInput The spoken text to parse
+     * @param activationCommands Optional language-specific activation commands for trigger detection
+     * @param language Optional language code for multi-language support
      */
-    fun parseCommand(voiceInput: String): ParsedCommand? {
+    fun parseCommand(
+        voiceInput: String,
+        activationCommands: List<ActivationCommand>? = null,
+        language: String? = null
+    ): ParsedCommand? {
         val normalized = voiceInput.lowercase().trim()
         
+        // Check activation commands first if provided
+        if (activationCommands != null) {
+            for (cmd in activationCommands) {
+                for (phrase in cmd.phrases) {
+                    if (normalized.contains(phrase.lowercase())) {
+                        // Map activation command type to trigger
+                        val commandType = when (cmd.type) {
+                            "command" -> CommandType.ACTIVATE_DICTATION
+                            "ai" -> CommandType.ACTIVATE_AI
+                            else -> null
+                        }
+                        
+                        if (commandType != null) {
+                            return ParsedCommand(
+                                type = commandType,
+                                originalInput = voiceInput,
+                                matchedPattern = phrase,
+                                parameters = mapOf(
+                                    "commandType" to cmd.type,
+                                    "language" to (language ?: "unknown")
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Then check standard command patterns
         for ((pattern, commandType) in commandPatterns) {
             if (normalized.contains(pattern)) {
                 return ParsedCommand(
@@ -65,6 +105,13 @@ object VoiceCommandParser {
         
         // If no command matched, treat as regular text input
         return null
+    }
+    
+    /**
+     * Legacy parseCommand for backward compatibility
+     */
+    fun parseCommand(voiceInput: String): ParsedCommand? {
+        return parseCommand(voiceInput, null, null)
     }
     
     /**
@@ -112,6 +159,9 @@ enum class CommandType {
     
     // AI features
     ASK_AI, AI_IMPROVE, AI_REWRITE, AI_GRAMMAR_CHECK, AI_SUMMARIZE,
+    
+    // Activation triggers
+    ACTIVATE_DICTATION, ACTIVATE_AI,
     
     // System
     SAVE, SYNC

@@ -2,13 +2,9 @@ package com.dictator.android.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dictator.core.data.ai.ModelProvider
-import com.dictator.core.service.SharedPreferences
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import javax.inject.Inject
+import com.dictator.core.data.voice.VoiceSettings
+import com.dictator.core.data.voice.ActivationCommand
+import com.dictator.core.data.local.VoiceSettingsRepository
 
 sealed class SettingsMode {
     data object DictatorService : SettingsMode()
@@ -27,7 +23,9 @@ data class SettingsState(
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
     val errorMessage: String? = null,
-    val testConnectionStatus: String? = null
+    val testConnectionStatus: String? = null,
+    // Voice settings
+    val voiceSettings: VoiceSettings? = null
 )
 
 @HiltViewModel

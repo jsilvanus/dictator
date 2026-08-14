@@ -2,6 +2,9 @@ package com.dictator.android.ui.voice
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dictator.core.data.voice.ActivationCommand
+import com.dictator.core.data.voice.VoiceSettings
+import com.dictator.core.data.local.VoiceSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,10 +26,15 @@ data class VoiceUiState(
     val waveformAmplitudes: List<Float> = emptyList(),
     // IMPROVEMENT: Silence detection and timeout tracking
     val silenceDuration: Long = 0L,
-    val recordingDuration: Long = 0L
+    val recordingDuration: Long = 0L,
+    // Language-specific activation commands
+    val currentLanguage: String = "en-US",
+    val activationCommands: List<ActivationCommand> = emptyList()
 )
 
-class VoiceViewModel : ViewModel() {
+class VoiceViewModel(
+    private val voiceSettingsRepository: VoiceSettingsRepository? = null
+) : ViewModel() {
     private val _state = MutableStateFlow(VoiceUiState())
     val state: StateFlow<VoiceUiState> = _state.asStateFlow()
 
@@ -38,6 +46,68 @@ class VoiceViewModel : ViewModel() {
         private const val MAX_RECORDING_DURATION = 30000L  // 30 seconds
         private const val SILENCE_THRESHOLD = 5000L         // 5 seconds of silence = timeout
         private const val SILENCE_CHECK_INTERVAL = 500L     // Check every 500ms
+    }
+
+    init {
+        loadVoiceSettings()
+    }
+
+    /**
+     * Load voice settings and update current language and activation commands
+     */
+    private fun loadVoiceSettings() {
+        viewModelScope.launch {
+            try {
+                val settings = voiceSettingsRepository?.loadVoiceSettings()
+                if (settings != null) {
+                    val commands = settings.activationCommands[settings.language] ?: emptyList()
+                    _state.value = _state.value.copy(
+                        currentLanguage = settings.language,
+                        activationCommands = commands
+                    )
+                }
+            } catch (e: Exception) {
+                // Log error but don't crash
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /**
+     * Update the language and load new activation commands
+     */
+    fun setLanguage(language: String) {
+        viewModelScope.launch {
+            try {
+                voiceSettingsRepository?.setLanguage(language)
+                val settings = voiceSettingsRepository?.loadVoiceSettings()
+                if (settings != null) {
+                    val commands = settings.activationCommands[language] ?: emptyList()
+                    _state.value = _state.value.copy(
+                        currentLanguage = language,
+                        activationCommands = commands
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /**
+     * Get current activation commands for the active language
+     */
+    fun getCurrentActivationCommands(): List<ActivationCommand> {
+        return _state.value.activationCommands
+    }
+
+    /**
+     * Get activation phrases for a specific type (command or ai)
+     */
+    fun getActivationPhrases(type: String): List<String> {
+        return _state.value.activationCommands
+            .filter { it.type == type }
+            .flatMap { it.phrases }
     }
 
     fun requestMicrophonePermission() {
