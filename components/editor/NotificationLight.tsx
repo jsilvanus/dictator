@@ -49,8 +49,6 @@ export function NotificationLight({
         return config.aiRecognized;
       case 'error':
         return config.error;
-      default:
-        return '#cccccc';
     }
   };
 

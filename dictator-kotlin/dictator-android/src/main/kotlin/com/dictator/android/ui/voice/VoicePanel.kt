@@ -50,6 +50,14 @@ fun VoicePanel(
 ) {
     val state by viewModel.state.collectAsState()
 
+    val indicatorState = when (state.state) {
+        VoiceState.IDLE -> VoiceIndicatorState.IDLE
+        VoiceState.LISTENING -> VoiceIndicatorState.LISTENING
+        VoiceState.PROCESSING -> VoiceIndicatorState.COMMAND_RECOGNIZED // Processing a command
+        VoiceState.ERROR -> VoiceIndicatorState.ERROR
+        VoiceState.SUCCESS -> VoiceIndicatorState.IDLE
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -62,10 +70,22 @@ fun VoicePanel(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = stringResource(R.string.voice_input),
-                style = MaterialTheme.typography.titleMedium
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                NotificationIndicator(
+                    state = indicatorState,
+                    settings = VoiceIndicatorSettings(),
+                    size = IndicatorSize.SMALL,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(
+                    text = stringResource(R.string.voice_input),
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
 
             when (state.state) {
                 VoiceState.IDLE -> IdleState(viewModel)
