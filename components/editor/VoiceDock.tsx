@@ -4,6 +4,7 @@ import type { Editor } from '@tiptap/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { clearAiHighlight, setAiHighlight } from '@/components/editor/AiHighlight';
+import { SelectionPermissionDialog } from '@/components/editor/SelectionPermissionDialog';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useCursorState } from '@/components/providers/CursorProvider';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
@@ -17,6 +18,7 @@ import { helpCategories, type HelpCategory } from '@/lib/voice/help';
 import { normalizeSpokenPunctuation } from '@/lib/voice/punctuation';
 import { containsCursorKeywords } from '@/lib/voice/cursor-parser';
 import { handleCursorCommand } from '@/lib/voice/cursor-commands';
+import { scanForSensitiveData } from '@/lib/privacy/SensitiveDataDetector';
 
 import { TriggerChip } from './TriggerChip';
 import { NotificationLight, type LightState } from './NotificationLight';
@@ -99,6 +101,9 @@ export function VoiceDock({
   const [runningCommand, setRunningCommand] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
   const [lightState, setLightState] = useState<LightState>('idle');
+  const [selectionPermissionOpen, setSelectionPermissionOpen] = useState(false);
+  const [detectedPiiTypes, setDetectedPiiTypes] = useState<any[]>([]);
+  const [pendingAiRequest, setPendingAiRequest] = useState<{ content: string; riskLevel: 'low' | 'medium' | 'high'; selectedText: string } | null>(null);
   const clearHighlightTimeoutRef = useRef<number | null>(null);
   const pendingAiChangeRef = useRef<PendingAiChange | null>(null);
 
@@ -165,6 +170,33 @@ export function VoiceDock({
   };
 
   const executeAiInline = async (content: string) => {
+    if (!editor) {
+      return;
+    }
+
+    // Check for PII in selection
+    const selectedText = getSelectionText(editor);
+    if (selectedText) {
+      const scanResult = scanForSensitiveData(selectedText);
+      if (scanResult.hasSensitiveData && scanResult.detected.length > 0) {
+        // Show permission dialog
+        const piiTypes = [...new Set(scanResult.detected.map(d => d.type))];
+        const riskLevel = scanResult.detected.some(d => d.confidence > 0.9) ? 'high' : 
+                         scanResult.detected.some(d => d.confidence > 0.75) ? 'medium' : 'low';
+        
+        setDetectedPiiTypes(piiTypes);
+        setPendingAiRequest({ content, riskLevel, selectedText });
+        setSelectionPermissionOpen(true);
+        setStatus('PII detected - requesting permission...');
+        return;
+      }
+    }
+
+    // No PII detected or no selection, proceed with AI request
+    proceedWithAiRequest(content);
+  };
+
+  const proceedWithAiRequest = async (content: string) => {
     if (!editor) {
       return;
     }
@@ -660,6 +692,31 @@ export function VoiceDock({
           </button>
         </div>
       ) : null}
+      <SelectionPermissionDialog
+        isOpen={selectionPermissionOpen}
+        selectedText={pendingAiRequest?.selectedText || ''}
+        detectedPiiTypes={detectedPiiTypes}
+        confidence={0.85}
+        riskLevel={pendingAiRequest?.riskLevel || 'medium'}
+        onAllow={(scope) => {
+          if (pendingAiRequest) {
+            proceedWithAiRequest(pendingAiRequest.content);
+          }
+          setSelectionPermissionOpen(false);
+          setPendingAiRequest(null);
+        }}
+        onCancel={() => {
+          setSelectionPermissionOpen(false);
+          setPendingAiRequest(null);
+          setStatus('AI request cancelled.');
+        }}
+        onEdit={() => {
+          setSelectionPermissionOpen(false);
+          setStatus('Please edit your selection and try again.');
+        }}
+        ttsEnabled={settings.ttsEnabled}
+        onSpeak={(text) => speakText(text, settings.ttsVoice)}
+      />
     </div>
   );
 }
