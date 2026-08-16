@@ -49,6 +49,7 @@ export function CursorIndicator({ docText }: { docText: string }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ fontWeight: 500 }}>Cursor:</span>
         <span
+          title={sizeLabel.full}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -61,7 +62,6 @@ export function CursorIndicator({ docText }: { docText: string }) {
             borderRadius: '3px',
             fontSize: '0.75rem',
             fontWeight: 600,
-            title: sizeLabel.full,
           }}
         >
           {sizeLabel.short}
@@ -72,13 +72,13 @@ export function CursorIndicator({ docText }: { docText: string }) {
         <span>{positionText}</span>
         {selection?.isActive && (
           <span
+            title="Selection active"
             style={{
               display: 'inline-block',
               width: '8px',
               height: '8px',
               borderRadius: '50%',
               backgroundColor: 'var(--teal, #0d9488)',
-              title: 'Selection active',
             }}
           />
         )}

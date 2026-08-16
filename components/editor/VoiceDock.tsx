@@ -114,6 +114,181 @@ export function VoiceDock({
     [settings.language, settings.activationCommands]
   );
 
+  const speech = useSpeechRecognition({
+    language: settings.language,
+    commandTrigger: activeCommandTrigger,
+    aiTrigger: languageSpecificAiTrigger,
+    onInterim: () => setStatus('Listening…'),
+    onFinal: (rawText) => {
+      if (!editor) {
+        return;
+      }
+
+      const normalized = normalizeSpokenPunctuation(rawText);
+      const segments = parseTriggers(normalized, activeCommandTrigger, languageSpecificAiTrigger);
+      let handledText = false;
+
+      if (segments.some((segment) => segment.type === 'command')) {
+        setCommandDetected(true);
+        window.setTimeout(() => setCommandDetected(false), 800);
+      }
+
+      for (const segment of segments) {
+        if (segment.type === 'text') {
+          // When AI panel is open, route dictation to panel instead of editor
+          if (aiPanelOpen) {
+            onAiPanelMessage(segment.content);
+            handledText = true;
+            continue;
+          }
+
+          const lower = segment.content.toLowerCase().trim();
+
+          // Try custom dictation commands first
+          const customMatched = tryMatchCustomCommand(
+            lower,
+            settings.dictationCommands,
+            editor,
+            inlineAiSession,
+            {
+              lastDictatedRange,
+              setStatus,
+              onSave: onSaveNow,
+              onCreateDocument,
+              onSetTitle,
+              onPrint: () => window.print(),
+              onMicStop: () => speech.stop(),
+              onMicPause: () => speech.pause(),
+              onMicResume: () => speech.resume(),
+              onOpenHelp,
+              onTemporaryTriggerChange: setTemporaryTrigger,
+              onSpeak: (spoken) => {
+                if (settings.ttsEnabled) {
+                  speakText(spoken, settings.ttsVoice);
+                }
+              },
+              clearDocumentConfirmUntil,
+              setClearDocumentConfirmUntil,
+            },
+          );
+
+          if (customMatched) {
+            handledText = true;
+            continue;
+          }
+
+          // Fallback to standard text insertion
+          const from = editor.state.selection.from;
+          editor.chain().focus().insertContent(segment.content).run();
+          const to = editor.state.selection.from;
+          onLastDictatedRange({ from, to });
+          handledText = true;
+          continue;
+        }
+
+        if (segment.type === 'command') {
+          setRunningCommand(true);
+
+          // Check if this might be a cursor command
+          const docText = editor?.state.doc.textBetween(0, editor.state.doc.content.size, '\n', '\n') || '';
+          const isCursorCommand = containsCursorKeywords(segment.content, settings.language);
+
+          let matched = false;
+
+          // Try cursor command first if it looks like a cursor command
+          if (isCursorCommand && editor) {
+            // Handle cursor command asynchronously
+            handleCursorCommand(
+              segment.content,
+              cursor.cursorState,
+              docText,
+              settings.language,
+              {
+                onSetCursorSize: cursor.setCursorSize,
+                onMoveCursor: (direction) => cursor.moveCursor(direction, docText),
+                onExpandSelection: (direction) => cursor.expandSelection(direction, docText),
+                onStartSelection: () => cursor.startSelectMode(docText),
+                onEndSelection: () => cursor.endSelection(),
+                onSelectAll: () => cursor.selectAll(docText),
+                customAliases: (settings as any).customCommandAliases || {},
+              }
+            )
+              .then((result) => {
+                if (result.success) {
+                  setStatus(result.feedback.join('. '));
+                  if (settings.ttsEnabled && result.feedback.length > 0) {
+                    speakText(result.feedback[0], settings.ttsVoice);
+                  }
+                }
+              })
+              .catch((error) => {
+                console.error('Cursor command error:', error);
+                setStatus(`Command error: ${segment.content}`);
+              })
+              .finally(() => {
+                setRunningCommand(false);
+              });
+
+            matched = true;
+          } else {
+            // Standard command handling
+            matched = executeCommand(segment.content, editor, inlineAiSession, {
+              lastDictatedRange,
+              setStatus,
+              onSave: onSaveNow,
+              onCreateDocument,
+              onSetTitle,
+              onPrint: () => window.print(),
+              onMicStop: () => speech.stop(),
+              onMicPause: () => speech.pause(),
+              onMicResume: () => speech.resume(),
+              onOpenHelp: (category) => {
+                if (!category) {
+                  if (settings.ttsEnabled) {
+                    speakText(`Help categories: ${helpCategories.join(', ')}`, settings.ttsVoice);
+                  }
+                  onOpenHelp();
+                  return;
+                }
+
+                onOpenHelp(category);
+              },
+              onTemporaryTriggerChange: setTemporaryTrigger,
+              onSpeak: (spoken) => {
+                if (settings.ttsEnabled) {
+                  speakText(spoken, settings.ttsVoice);
+                }
+              },
+              clearDocumentConfirmUntil,
+              setClearDocumentConfirmUntil,
+            });
+
+            if (!matched) {
+              setStatus(`Unknown command: ${segment.content}`);
+            }
+
+            setRunningCommand(false);
+          }
+
+          continue;
+        }
+
+        if (segment.type === 'ai') {
+          if (aiPanelOpen) {
+            onAiPanelMessage(segment.content);
+          } else {
+            void executeAiInline(segment.content);
+          }
+        }
+      }
+
+      if (handledText) {
+        setStatus('Committed final speech.');
+      }
+    },
+    onError: (message) => setStatus(message),
+  });
+
   useEffect(() => {
     onActiveTriggerInfo(activeCommandTrigger, temporaryTrigger !== null);
   }, [activeCommandTrigger, onActiveTriggerInfo, temporaryTrigger]);
@@ -325,181 +500,6 @@ export function VoiceDock({
       setAiThinking(false);
     }
   };
-
-  const speech = useSpeechRecognition({
-    language: settings.language,
-    commandTrigger: activeCommandTrigger,
-    aiTrigger: languageSpecificAiTrigger,
-    onInterim: () => setStatus('Listening…'),
-    onFinal: (rawText) => {
-      if (!editor) {
-        return;
-      }
-
-      const normalized = normalizeSpokenPunctuation(rawText);
-      const segments = parseTriggers(normalized, activeCommandTrigger, languageSpecificAiTrigger);
-      let handledText = false;
-
-      if (segments.some((segment) => segment.type === 'command')) {
-        setCommandDetected(true);
-        window.setTimeout(() => setCommandDetected(false), 800);
-      }
-
-      for (const segment of segments) {
-        if (segment.type === 'text') {
-          // When AI panel is open, route dictation to panel instead of editor
-          if (aiPanelOpen) {
-            onAiPanelMessage(segment.content);
-            handledText = true;
-            continue;
-          }
-
-          const lower = segment.content.toLowerCase().trim();
-
-          // Try custom dictation commands first
-          const customMatched = tryMatchCustomCommand(
-            lower,
-            settings.dictationCommands,
-            editor,
-            inlineAiSession,
-            {
-              lastDictatedRange,
-              setStatus,
-              onSave: onSaveNow,
-              onCreateDocument,
-              onSetTitle,
-              onPrint: () => window.print(),
-              onMicStop: () => speech.stop(),
-              onMicPause: () => speech.pause(),
-              onMicResume: () => speech.resume(),
-              onOpenHelp,
-              onTemporaryTriggerChange: setTemporaryTrigger,
-              onSpeak: (spoken) => {
-                if (settings.ttsEnabled) {
-                  speakText(spoken, settings.ttsVoice);
-                }
-              },
-              clearDocumentConfirmUntil,
-              setClearDocumentConfirmUntil,
-            },
-          );
-
-          if (customMatched) {
-            handledText = true;
-            continue;
-          }
-
-          // Fallback to standard text insertion
-          const from = editor.state.selection.from;
-          editor.chain().focus().insertContent(segment.content).run();
-          const to = editor.state.selection.from;
-          onLastDictatedRange({ from, to });
-          handledText = true;
-          continue;
-        }
-
-        if (segment.type === 'command') {
-          setRunningCommand(true);
-          
-          // Check if this might be a cursor command
-          const docText = editor?.state.doc.textBetween(0, editor.state.doc.content.size, '\n', '\n') || '';
-          const isCursorCommand = containsCursorKeywords(segment.content, settings.language);
-          
-          let matched = false;
-          
-          // Try cursor command first if it looks like a cursor command
-          if (isCursorCommand && editor) {
-            // Handle cursor command asynchronously
-            handleCursorCommand(
-              segment.content,
-              cursor.cursorState,
-              docText,
-              settings.language,
-              {
-                onSetCursorSize: cursor.setCursorSize,
-                onMoveCursor: (direction) => cursor.moveCursor(direction, docText),
-                onExpandSelection: (direction) => cursor.expandSelection(direction, docText),
-                onStartSelection: () => cursor.startSelectMode(docText),
-                onEndSelection: () => cursor.endSelection(),
-                onSelectAll: () => cursor.selectAll(docText),
-                customAliases: (settings as any).customCommandAliases || {},
-              }
-            )
-              .then((result) => {
-                if (result.success) {
-                  setStatus(result.feedback.join('. '));
-                  if (settings.ttsEnabled && result.feedback.length > 0) {
-                    speakText(result.feedback[0], settings.ttsVoice);
-                  }
-                }
-              })
-              .catch((error) => {
-                console.error('Cursor command error:', error);
-                setStatus(`Command error: ${segment.content}`);
-              })
-              .finally(() => {
-                setRunningCommand(false);
-              });
-            
-            matched = true;
-          } else {
-            // Standard command handling
-            matched = executeCommand(segment.content, editor, inlineAiSession, {
-              lastDictatedRange,
-              setStatus,
-              onSave: onSaveNow,
-              onCreateDocument,
-              onSetTitle,
-              onPrint: () => window.print(),
-              onMicStop: () => speech.stop(),
-              onMicPause: () => speech.pause(),
-              onMicResume: () => speech.resume(),
-              onOpenHelp: (category) => {
-                if (!category) {
-                  if (settings.ttsEnabled) {
-                    speakText(`Help categories: ${helpCategories.join(', ')}`, settings.ttsVoice);
-                  }
-                  onOpenHelp();
-                  return;
-                }
-
-                onOpenHelp(category as HelpCategory);
-              },
-              onTemporaryTriggerChange: setTemporaryTrigger,
-              onSpeak: (spoken) => {
-                if (settings.ttsEnabled) {
-                  speakText(spoken, settings.ttsVoice);
-                }
-              },
-              clearDocumentConfirmUntil,
-              setClearDocumentConfirmUntil,
-            });
-
-            if (!matched) {
-              setStatus(`Unknown command: ${segment.content}`);
-            }
-
-            setRunningCommand(false);
-          }
-          
-          continue;
-        }
-
-        if (segment.type === 'ai') {
-          if (aiPanelOpen) {
-            onAiPanelMessage(segment.content);
-          } else {
-            void executeAiInline(segment.content);
-          }
-        }
-      }
-
-      if (handledText) {
-        setStatus('Committed final speech.');
-      }
-    },
-    onError: (message) => setStatus(message),
-  });
 
   useEffect(() => {
     return () => {

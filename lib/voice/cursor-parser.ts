@@ -70,13 +70,13 @@ export function parseCursorCommandsFromText(
 /**
  * Detect cursor size from command
  */
-export function detectCursorSize(commands: string[]): CursorSize | null {
+export function detectCursorSize(commands: string[]): CursorSize | undefined {
   for (const cmd of commands) {
     if (cmd === 'cursorBig') return 'paragraph';
     if (cmd === 'cursorMedium') return 'word';
     if (cmd === 'cursorSmall') return 'character';
   }
-  return null;
+  return undefined;
 }
 
 /**

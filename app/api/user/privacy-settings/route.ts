@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       aiSessionRetentionDays: Math.max(1, Math.min(365, body.aiSessionRetentionDays ?? 30)),
       preferLocalProcessing: body.preferLocalProcessing ?? true,
       encryptLocalStorage: body.encryptLocalStorage ?? true,
-      updatedAt: new Date(),
+      updatedAt: Date.now(),
     };
 
     // Check if settings exist
@@ -93,7 +93,19 @@ export async function POST(request: NextRequest) {
       // Update existing settings
       result = await db
         .update(userPrivacySettings)
-        .set(settingsData)
+        .set({
+          telemetryEnabled: settingsData.telemetryEnabled ?? false,
+          crashReportsEnabled: settingsData.crashReportsEnabled ?? false,
+          sensitiveDataDetectionEnabled: settingsData.sensitiveDataDetectionEnabled ?? true,
+          warnBeforeSendingToCloud: settingsData.warnBeforeSendingToCloud ?? true,
+          allowDataForTraining: settingsData.allowDataForTraining ?? false,
+          backupEncryptionRequired: settingsData.backupEncryptionRequired ?? true,
+          autoDeleteAiSessions: settingsData.autoDeleteAiSessions ?? false,
+          aiSessionRetentionDays: settingsData.aiSessionRetentionDays ?? 30,
+          preferLocalProcessing: settingsData.preferLocalProcessing ?? true,
+          encryptLocalStorage: settingsData.encryptLocalStorage ?? true,
+          updatedAt: Date.now(),
+        })
         .where(eq(userPrivacySettings.userId, userId))
         .returning();
     } else {
@@ -101,8 +113,19 @@ export async function POST(request: NextRequest) {
       result = await db
         .insert(userPrivacySettings)
         .values({
-          ...settingsData,
+          userId,
+          telemetryEnabled: settingsData.telemetryEnabled ?? false,
+          crashReportsEnabled: settingsData.crashReportsEnabled ?? false,
+          sensitiveDataDetectionEnabled: settingsData.sensitiveDataDetectionEnabled ?? true,
+          warnBeforeSendingToCloud: settingsData.warnBeforeSendingToCloud ?? true,
+          allowDataForTraining: settingsData.allowDataForTraining ?? false,
+          backupEncryptionRequired: settingsData.backupEncryptionRequired ?? true,
+          autoDeleteAiSessions: settingsData.autoDeleteAiSessions ?? false,
+          aiSessionRetentionDays: settingsData.aiSessionRetentionDays ?? 30,
+          preferLocalProcessing: settingsData.preferLocalProcessing ?? true,
+          encryptLocalStorage: settingsData.encryptLocalStorage ?? true,
           createdAt: new Date(),
+          updatedAt: new Date(),
         })
         .returning();
     }

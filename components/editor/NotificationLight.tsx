@@ -53,7 +53,7 @@ export function NotificationLight({
   };
 
   const getAnimationClass = (): string => {
-    if (state === 'idle' || state === 'error') {
+    if (state === 'error') {
       return '';
     }
 

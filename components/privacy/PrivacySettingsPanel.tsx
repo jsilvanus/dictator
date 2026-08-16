@@ -81,7 +81,7 @@ export const PrivacySettingsPanel: React.FC<PrivacySettingsPanelProps> = ({
   }, []);
 
   const handleSettingChange = async (key: keyof UserPrivacySettings, value: unknown) => {
-    const updated = { ...settings, [key]: value, updatedAt: new Date() };
+    const updated = { ...settings, [key]: value, updatedAt: Date.now() };
     setSettings(updated);
     setSaveStatus('saving');
 
