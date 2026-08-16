@@ -16,7 +16,6 @@
  * - audit-log.json (who did what and when)
  */
 
-// @ts-expect-error archiver doesn't have types but works fine at runtime
 import { ZipArchive } from 'archiver';
 import { and, eq, inArray } from 'drizzle-orm';
 import { createReadStream } from 'fs';
@@ -104,12 +103,12 @@ export async function GET(
       provenance: {
         turns: sessions.flatMap((session) =>
           (session.turns || []).map((turn, idx) => ({
-            id: (turn as any).id || `${session.id}-${idx}`,
+            id: turn.id || `${session.id}-${idx}`,
             sessionId: session.id,
             index: idx,
             source: turn,
             createdAt: session.createdAt,
-            metadata: provenance.find((p) => p.aiSessionId === session.id && p.turnId === (turn as any).id) || null,
+            metadata: provenance.find((p) => p.aiSessionId === session.id && p.turnId === turn.id) || null,
           }))
         ),
       },
@@ -170,7 +169,7 @@ export async function GET(
         turnCount: allTurns.length,
         turns: allTurns.map((t, idx) => {
           const turnProv = provenance.find(
-            (p) => p.aiSessionId === t.sessionId && p.turnId === (t.turn as any).id
+            (p) => p.aiSessionId === t.sessionId && p.turnId === t.turn.id
           );
           return {
             index: idx,

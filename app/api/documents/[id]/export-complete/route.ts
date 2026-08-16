@@ -184,7 +184,7 @@ This export contains your document with provenance and optional C2PA signature.
 ## Files Included
 - ${result.mainFileName} - Your document content
 ${result.sidecarFiles
-  ?.map((f: any) => `- ${f.fileName} - ${getFileDescription(f.fileName)}`)
+  ?.map((f) => `- ${f.fileName} - ${getFileDescription(f.fileName)}`)
   .join('\n') || ''}
 
 ## Export Metadata

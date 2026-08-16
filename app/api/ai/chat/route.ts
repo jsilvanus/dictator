@@ -143,7 +143,7 @@ export async function POST(request: Request) {
             const assistantContent = fullText.trim();
             const updatedTurns = [
               ...history.slice(-20).map((turn) => ({
-                id: (turn as any).id || getRandomUUID(),
+                id: turn.id || getRandomUUID(),
                 role: turn.role,
                 content: turn.content,
               })),
@@ -215,7 +215,7 @@ export async function POST(request: Request) {
             const assistantContent = fullText.trim();
             const updatedTurns = [
               ...history.slice(-20).map((turn) => ({
-                id: (turn as any).id || getRandomUUID(),
+                id: turn.id || getRandomUUID(),
                 role: turn.role,
                 content: turn.content,
               })),
