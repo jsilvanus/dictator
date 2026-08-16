@@ -17,6 +17,7 @@ SDK is the client library for it. Integrating it gives Dictator:
    editor built for a church deployment ships its users' dictated speech off-device by default
    today. Routing dictation through Engine's on-device whisper is what makes Dictator's privacy
    claims true of its primary input path.
+
 Embeddings are deliberately **not** on this list. Aidos Engine serves them and the SDK exposes
 them, but nothing in Dictator consumes vectors — grepping both the web app and `dictator-kotlin`
 turns up only `EmbeddedPackagingStrategy.ts` and `c2pa-manifest.ts`, which are "embedded" in the
