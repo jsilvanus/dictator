@@ -10,9 +10,8 @@
 
 import { and, eq, inArray } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 
-import { authOptions } from '@/lib/auth/auth.config';
+import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { aiSessions, aiTurnProvenance,documents } from '@/lib/db/schema';
 import {
@@ -24,10 +23,10 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -38,7 +37,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const format = (searchParams.get('format') || 'json') as ExportFormat;
     const include = (searchParams.get('include') || 'all');
-    const documentId = params.id;
+    const documentId = (await params).id;
 
     // Validate format
     if (!['json', 'markdown', 'csv'].includes(format)) {
@@ -95,7 +94,7 @@ export async function GET(
 
         // Map turns with provenance
         sessions.forEach(session => {
-          const turns = (session.turns || []) as Array<{ role: string; content: string }>;
+          const turns = (session.turns || []) as Array<{ id?: string; role: string; content: string; createdAt?: number }>;
           let userMessage = '';
           let assistantResponse = '';
 
@@ -104,8 +103,8 @@ export async function GET(
               userMessage = turn.content;
             } else if (turn.role === 'assistant') {
               assistantResponse = turn.content;
-              const turnId = `${session.id}-${index}`;
-              const prov = provenance.find(p => p.turnId === turnId);
+              const turnId = turn.id || `${session.id}-${index}`;
+              const prov = provenance.find(p => p.aiSessionId === session.id && p.turnId === turnId);
 
               aiHistory.push({
                 sessionId: session.id,
@@ -119,7 +118,7 @@ export async function GET(
                   confidence: prov.confidence
                     ? parseFloat(prov.confidence.toString())
                     : undefined,
-                  contentScope: prov.contentScope,
+                  contentScope: prov.contentScope ?? undefined,
                   device: prov.device,
                   reviewedAt: prov.reviewedAt?.getTime(),
                   thinkingBudgetTokens: prov.thinkingBudgetTokens || undefined,
@@ -154,7 +153,7 @@ export async function GET(
       ? content
       : Buffer.from(content, 'utf-8');
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': exportFormat.mimeType,
         'Content-Disposition': `attachment; filename="${exportFormat.getFilename(

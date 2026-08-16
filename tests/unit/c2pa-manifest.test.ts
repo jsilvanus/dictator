@@ -119,16 +119,18 @@ describe('Text Selectors', () => {
     it('should create char offset selector when possible', () => {
       const content = 'The service begins at 10.';
       const selector = createTextualRegionSelector(content, 'service');
-      
-      expect(selector.type).toBe('TextualRegion');
-      expect(selector.value).toMatch(/^char=\d+,\d+$/);
+
+      expect(selector).not.toBeNull();
+      expect(selector!.type).toBe('TextualRegion');
+      expect(selector!.value).toMatch(/^char=\d+,\d+$/);
     });
 
     it('should include refinements', () => {
       const content = 'The service begins at 10.';
       const selector = createTextualRegionSelector(content, 'service');
-      
-      expect(selector.type).toBe('TextualRegion');
+
+      expect(selector).not.toBeNull();
+      expect(selector!.type).toBe('TextualRegion');
     });
   });
 
@@ -179,7 +181,7 @@ describe('C2PA Manifest Generation', () => {
       expect(manifest.generatedBy.name).toBe('Dictator');
       expect(manifest.claim.assertions).toBeDefined();
       expect(manifest.contentBinding).toBeDefined();
-      expect(manifest.contentBinding.algorithm).toBe('sha256');
+      expect(manifest.contentBinding!.algorithm).toBe('sha256');
     });
 
     it('should include content binding hash', () => {

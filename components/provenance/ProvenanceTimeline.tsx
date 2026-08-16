@@ -102,7 +102,7 @@ function convertToTimelineEvents(provenance: ParagraphProvenance[]): TimelineEve
         timestamp: new Date(event.timestamp),
         type,
         paragraphId: para.paragraphId,
-        content: para.content,
+        content: para.content ?? '',
         details: event.aiPrompt,
         confidence: event.confidence,
       });
@@ -112,7 +112,7 @@ function convertToTimelineEvents(provenance: ParagraphProvenance[]): TimelineEve
           timestamp: new Date(event.reviewedAt),
           type: 'review',
           paragraphId: para.paragraphId,
-          content: para.content,
+          content: para.content ?? '',
         });
       }
     }

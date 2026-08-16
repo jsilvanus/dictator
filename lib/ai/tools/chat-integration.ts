@@ -114,11 +114,11 @@ export async function executeChatWithTools(
         const result = await executor.execute(toolCall, context);
         results.push({
           toolCall,
-          result,
+          result: { success: true, result },
         });
         toolCalls.push({
           toolCall,
-          result,
+          result: { success: true, result },
         });
       } catch (error) {
         results.push({
@@ -233,8 +233,8 @@ export async function* streamChatWithTools(
         toolResults.push({
           toolCallId: toolCall.id,
           name: toolCall.name,
-          result,
-          error: result.error,
+          result: { success: true, result },
+          error: undefined,
         });
 
         yield {

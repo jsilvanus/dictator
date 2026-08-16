@@ -24,11 +24,16 @@ describe('Sidecar Packaging Strategy', () => {
         currentContent: 'Hello world',
         currentContentHash: 'abc123',
         createdAt: Date.now(),
+        updatedAt: Date.now(),
         events: [
           {
             eventType: 'human-written',
             timestamp: Date.now(),
-            confidence: 1,
+            contentHash: 'abc123',
+            contentHashAlgorithm: 'sha256',
+            source: 'human-written',
+            device: 'web',
+            userId: 'user-123',
           },
         ],
       },
@@ -119,10 +124,16 @@ describe('Embedded Packaging Strategy', () => {
         currentContent: 'Embedded test',
         currentContentHash: 'def456',
         createdAt: Date.now(),
+        updatedAt: Date.now(),
         events: [
           {
             eventType: 'ai-generation',
             timestamp: Date.now(),
+            contentHash: 'def456',
+            contentHashAlgorithm: 'sha256',
+            source: 'ai-generated',
+            device: 'web',
+            userId: 'user-456',
             confidence: 0.95,
           },
         ],
@@ -198,6 +209,7 @@ describe('Export Packaging Manager', () => {
         currentContent: 'Manager test',
         currentContentHash: 'ghi789',
         createdAt: Date.now(),
+        updatedAt: Date.now(),
         events: [],
       },
     ];

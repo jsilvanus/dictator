@@ -6,9 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 
-import { authOptions } from '@/lib/auth/auth.config';
+import { auth } from '@/auth';
 import { SensitiveDataDetector } from '@/lib/privacy/SensitiveDataDetector';
 
 const MAX_CONTENT_SIZE = 1024 * 1024; // 1MB
@@ -16,7 +15,7 @@ const MAX_CONTENT_SIZE = 1024 * 1024; // 1MB
 export async function POST(request: NextRequest) {
   try {
     // Authenticate user
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
         { message: 'Unauthorized' },
@@ -47,10 +46,8 @@ export async function POST(request: NextRequest) {
 
     // Redact if sensitive data found
     let redactedContent = content;
-    if (scanResults.detectedData.length > 0) {
-      redactedContent = detector.redact(content, {
-        replacementStrategy: 'placeholder', // [CREDIT_CARD_REDACTED], [SSN_REDACTED], etc.
-      });
+    if (scanResults.detected.length > 0) {
+      redactedContent = detector.redact(content, '[REDACTED]');
     }
 
     // Track telemetry
@@ -58,8 +55,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       redactedContent,
-      hasSensitiveData: scanResults.detectedData.length > 0,
-      redactedCount: scanResults.detectedData.length,
+      hasSensitiveData: scanResults.detected.length > 0,
+      redactedCount: scanResults.detected.length,
     });
   } catch (error) {
     console.error('[/api/ai/privacy/redact-sensitive] Error:', error);

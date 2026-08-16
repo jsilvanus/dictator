@@ -13,19 +13,20 @@
  * Returns:
  * - For sidecar packaging: ZIP file with main content + sidecar JSON files
  * - For embedded packaging: Single file with embedded provenance metadata
+ *
+ * Note: archiver module doesn't have TypeScript types but works fine at runtime
  */
 
-import archiver from 'archiver';
-import { and,eq } from 'drizzle-orm';
-import { createWriteStream } from 'fs';
-import { createReadStream } from 'fs';
+import { ZipArchive } from 'archiver';
+import { and, eq } from 'drizzle-orm';
+import { createReadStream, createWriteStream } from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
-import { getParagraphProvenanceForDocument } from '@/lib/db/paragraph-provenance-queries';
+import { ParagraphProvenanceRepository } from '@/lib/db/paragraph-provenance-queries';
 import { documents } from '@/lib/db/schema';
 import { createExportPipelineFromEnv } from '@/lib/export/ExportPipeline';
 
@@ -33,7 +34,7 @@ export const maxDuration = 60; // Long operation timeout
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getRequiredSession();
@@ -49,7 +50,7 @@ export async function GET(
     const packaging = (searchParams.get('packaging') || undefined) as string | undefined;
     const sign = searchParams.get('sign') !== 'false'; // default true
     const includeProvenance = searchParams.get('includeProvenance') !== 'false'; // default true
-    const documentId = params.id;
+    const documentId = (await params).id;
 
     // Fetch document
     const doc = await db
@@ -76,15 +77,12 @@ export async function GET(
       : JSON.stringify(document.content);
 
     // Fetch paragraph provenance
-    let provenance = [];
-    if (includeProvenance) {
-      try {
-        provenance = await getParagraphProvenanceForDocument(documentId);
-      } catch (error) {
-        console.warn('Could not fetch paragraph provenance:', error);
-        provenance = [];
-      }
-    }
+    const paragraphProvenances = includeProvenance
+      ? await ParagraphProvenanceRepository.getDocumentParagraphs(
+          documentId,
+          session.userId
+        )
+      : [];
 
     // Create export pipeline
     const pipeline = createExportPipelineFromEnv();
@@ -109,7 +107,7 @@ export async function GET(
     // Execute export pipeline
     const result = await pipeline.execute(
       content,
-      provenance,
+      paragraphProvenances,
       {
         documentId,
         documentTitle: document.title,
@@ -130,7 +128,7 @@ export async function GET(
       ? result.mainContent
       : Buffer.from(result.mainContent, 'utf-8');
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': result.mainMimeType,
         'Content-Disposition': `attachment; filename="${result.mainFileName}"`,
@@ -158,7 +156,7 @@ async function createZipResponse(
 ): Promise<NextResponse> {
   const tmpFile = join(tmpdir(), `export-${documentId}-${Date.now()}.zip`);
   const output = createWriteStream(tmpFile);
-  const archive = archiver('zip', { zlib: { level: 9 } });
+  const archive = new ZipArchive({ zlib: { level: 9 } });
 
   archive.pipe(output);
 
@@ -186,7 +184,7 @@ This export contains your document with provenance and optional C2PA signature.
 ## Files Included
 - ${result.mainFileName} - Your document content
 ${result.sidecarFiles
-  ?.map(f => `- ${f.fileName} - ${getFileDescription(f.fileName)}`)
+  ?.map((f: { fileName: string; content: Buffer | string; mimeType: string }) => `- ${f.fileName} - ${getFileDescription(f.fileName)}`)
   .join('\n') || ''}
 
 ## Export Metadata
@@ -217,7 +215,26 @@ For more information, see the provenance metadata JSON files included.
   // Send file
   const fileStream = createReadStream(tmpFile);
 
-  return new NextResponse(fileStream, {
+  // Convert Node.js ReadStream to Web ReadableStream
+  const webStream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      fileStream.on('data', (chunk: Buffer | string) => {
+        if (typeof chunk === 'string') {
+          controller.enqueue(new Uint8Array(Buffer.from(chunk, 'utf-8')));
+        } else {
+          controller.enqueue(new Uint8Array(chunk));
+        }
+      });
+      fileStream.on('end', () => {
+        controller.close();
+      });
+      fileStream.on('error', (error: Error) => {
+        controller.error(error);
+      });
+    },
+  });
+
+  return new NextResponse(webStream, {
     headers: {
       'Content-Type': 'application/zip',
       'Content-Disposition': `attachment; filename="document-export-${documentId}-${Date.now()}.zip"`,

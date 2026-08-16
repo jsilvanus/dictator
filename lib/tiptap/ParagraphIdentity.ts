@@ -33,10 +33,6 @@ declare module '@tiptap/core' {
     paragraphIdentity: {
       /** Assign a fresh paragraph ID to the block at the selection. */
       assignParagraphId: () => ReturnType;
-      /** Read the paragraph ID at the selection, or null. */
-      getParagraphIdAtSelection: (options?: { useBlockId: boolean }) => ReturnType;
-      /** Every paragraph ID in the document, in document order. */
-      getAllParagraphIds: () => ReturnType;
       /** Mark a paragraph as needing a database write. */
       markParagraphForSave: (options: { paragraphId: string }) => ReturnType;
     };
@@ -207,47 +203,6 @@ export const ParagraphIdentity = Extension.create<
       },
 
       /**
-       * Get the paragraph ID of the current block.
-       */
-      // `useBlockId` is accepted but not yet implemented; the binding is renamed
-      // rather than the key, so callers keep passing `{ useBlockId }` as documented.
-      getParagraphIdAtSelection: ({ useBlockId: _useBlockId } = { useBlockId: false }) => ({
-        editor,
-      }: CommandProps) => {
-        const { $from } = editor.state.selection;
-
-        for (let d = $from.depth; d > 0; d--) {
-          const node = $from.node(d);
-          if (PARAGRAPH_NODE_TYPES.includes(node.type.name)) {
-            const paragraphId = node.attrs?.paragraphId;
-            if (paragraphId && isParagraphId(paragraphId)) {
-              return paragraphId;
-            }
-          }
-        }
-
-        return null;
-      },
-
-      /**
-       * Get all paragraph IDs in the document.
-       */
-      getAllParagraphIds: () => ({ editor }: CommandProps) => {
-        const ids: string[] = [];
-
-        editor.state.doc.descendants((node: ProseMirrorNode) => {
-          if (PARAGRAPH_NODE_TYPES.includes(node.type.name)) {
-            const paragraphId = node.attrs?.paragraphId;
-            if (paragraphId && isParagraphId(paragraphId)) {
-              ids.push(paragraphId);
-            }
-          }
-        });
-
-        return ids;
-      },
-
-      /**
        * Mark a paragraph as needing to be saved to the database.
        */
       markParagraphForSave: ({ paragraphId: _paragraphId }: { paragraphId: string }) => () => {
@@ -264,6 +219,48 @@ export const ParagraphIdentity = Extension.create<
     };
   },
 });
+
+/**
+ * Read the paragraph ID at the current selection, or null if the block has none.
+ *
+ * Not a TipTap command: commands must return boolean, and this returns a value.
+ * It was declared inside addCommands and had no callers, so it never worked.
+ */
+export function getParagraphIdAtSelection(editor: Editor): string | null {
+  const { $from } = editor.state.selection;
+
+  for (let d = $from.depth; d > 0; d--) {
+    const node = $from.node(d);
+    if (PARAGRAPH_NODE_TYPES.includes(node.type.name)) {
+      const paragraphId = node.attrs?.paragraphId;
+      if (paragraphId && isParagraphId(paragraphId)) {
+        return paragraphId;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Every paragraph ID in the document, in document order.
+ *
+ * Not a TipTap command, for the same reason as above.
+ */
+export function getAllParagraphIds(editor: Editor): string[] {
+  const ids: string[] = [];
+
+  editor.state.doc.descendants((node: ProseMirrorNode) => {
+    if (PARAGRAPH_NODE_TYPES.includes(node.type.name)) {
+      const paragraphId = node.attrs?.paragraphId;
+      if (paragraphId && isParagraphId(paragraphId)) {
+        ids.push(paragraphId);
+      }
+    }
+  });
+
+  return ids;
+}
 
 /**
  * Helper: Add paragraph ID attributes to node specs.

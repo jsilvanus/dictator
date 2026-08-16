@@ -13,11 +13,10 @@
 
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 
-import { authOptions } from '@/lib/auth/auth.config';
+import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { aiTurns, deletionRecords, documents, privacyAuditLog, userPrivacySettings } from '@/lib/db/schema';
+import { aiSessions, deletionRecords, documents, privacyAuditLog, userPrivacySettings } from '@/lib/db/schema';
 
 interface DeleteAccountRequest {
   selectedOptions: string[];
@@ -27,7 +26,7 @@ interface DeleteAccountRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -76,7 +75,7 @@ export async function POST(request: NextRequest) {
           await db.delete(documents).where(eq(documents.id, doc.id));
         }
         if (deletions.includes('ai-sessions')) {
-          await db.delete(aiTurns).where(eq(aiTurns.documentId, doc.id));
+          await db.delete(aiSessions).where(eq(aiSessions.documentId, doc.id));
         }
 
         // Log deletion

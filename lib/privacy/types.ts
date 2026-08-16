@@ -189,7 +189,7 @@ export interface TelemetryEvent {
 // Sensitive Data Detection Types
 // ============================================================================
 
-export type SensitiveDataType = 
+export type SensitiveDataType =
   | 'credit-card'
   | 'ssn'
   | 'phone'
@@ -197,6 +197,7 @@ export type SensitiveDataType =
   | 'api-key'
   | 'password'
   | 'jwt-token'
+  | 'auth-token'
   | 'auth-header'
   | 'private-key'
   | 'database-connection';

@@ -38,9 +38,9 @@ export interface PackageResult {
 export interface IPackagingStrategy {
   /** Strategy name */
   name: 'sidecar' | 'embedded';
-  
+
   /** Supported export formats for this strategy */
-  supportedFormats: Array<'markdown' | 'text' | 'html' | 'pdf' | 'json'>;
+  supportedFormats: readonly ('markdown' | 'text' | 'html' | 'pdf' | 'json')[];
   
   /**
    * Package content with provenance metadata

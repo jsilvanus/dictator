@@ -93,13 +93,16 @@ export function extractTextFromNode(node: any): string {
 
   // Node with content array
   if (node.content && Array.isArray(node.content)) {
-    const parts = node.content.map((child) => extractTextFromNode(child));
-    
+    const parts: string[] = [];
+    for (const child of node.content) {
+      parts.push(extractTextFromNode(child));
+    }
+
     // Add newlines between block-level elements
     if (node.type && isBlockElement(node.type)) {
       return parts.join('');
     }
-    
+
     return parts.join('');
   }
 

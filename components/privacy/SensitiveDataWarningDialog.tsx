@@ -42,6 +42,7 @@ function getSensitiveDataDescription(type: SensitiveDataType): string {
     password: 'Password Field',
     'jwt-token': 'JWT Authentication Token',
     'auth-header': 'Authorization Header',
+    'auth-token': 'Authentication Token',
     'private-key': 'Private Key or Certificate',
     'database-connection': 'Database Connection String',
   };

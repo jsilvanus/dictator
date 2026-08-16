@@ -1,13 +1,15 @@
-import { and,eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { buildPanelSystemPrompt } from '@/lib/ai/chat-prompts';
 import { buildPanelContext, type InlineEditorSnapshot, type PanelTurn } from '@/lib/ai/context';
 import { AiProviderFactory } from '@/lib/ai/providers/factory';
+import { type ModelProvider } from '@/lib/ai/providers/types';
 import { streamChatWithTools } from '@/lib/ai/tools/chat-integration';
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
-import { aiSessions, documents,userAiPreferences } from '@/lib/db/schema';
+import { aiSessions, documents, userAiPreferences } from '@/lib/db/schema';
+import { getRandomUUID } from '@/lib/provenance/paragraph-id';
 import { aiRateLimiter } from '@/lib/rate-limiter';
 
 type ChatRequest = {
@@ -41,19 +43,21 @@ export async function POST(request: Request) {
 
     // Get user's AI preferences and document settings
     let provider = AiProviderFactory.createFromEnv();
-    let userPrefs: { preferredProvider: string; preferredModel?: string; customTemperature?: { toString(): string } | number | null; customMaxTokens?: number | null; ollamaUrl?: string | null; thinkingBudgetTokens?: number | null; systemPrompt?: string | null } | undefined;
+    let userPrefs: (typeof userAiPreferences.$inferSelect) | undefined;
     let docSystemPromptOverride: string | null = null;
 
     try {
-      userPrefs = await db.query.userAiPreferences.findFirst({
+      const dbPrefs = await db.query.userAiPreferences.findFirst({
         where: eq(userAiPreferences.userId, session.userId),
       });
+      userPrefs = dbPrefs;
 
       if (userPrefs) {
-        provider = AiProviderFactory.createByType(userPrefs.preferredProvider, {
-          apiKey: process.env[`${userPrefs.preferredProvider.toUpperCase()}_API_KEY`],
-          baseUrl: userPrefs.ollamaUrl || process.env[`${userPrefs.preferredProvider.toUpperCase()}_BASE_URL`],
-          model: userPrefs.preferredModel,
+        const providerType = userPrefs.preferredProvider as ModelProvider;
+        provider = AiProviderFactory.createByType(providerType, {
+          apiKey: process.env[`${providerType.toUpperCase()}_API_KEY`],
+          baseUrl: (userPrefs.ollamaUrl ?? undefined) || process.env[`${providerType.toUpperCase()}_BASE_URL`],
+          model: userPrefs.preferredModel ?? undefined,
           temperature: userPrefs.customTemperature ? Number(userPrefs.customTemperature) : undefined,
           maxTokens: userPrefs.customMaxTokens ?? undefined,
         });
@@ -140,10 +144,14 @@ export async function POST(request: Request) {
             }
 
             const assistantContent = fullText.trim();
-            const updatedTurns: Array<{ role: string; content: string }> = [
-              ...history.slice(-20),
-              { role: 'user', content: message },
-              { role: 'assistant', content: assistantContent },
+            const updatedTurns = [
+              ...history.slice(-20).map((turn) => ({
+                id: getRandomUUID(),
+                role: turn.role,
+                content: turn.content,
+              })),
+              { id: getRandomUUID(), role: 'user' as const, content: message },
+              { id: getRandomUUID(), role: 'assistant' as const, content: assistantContent },
             ];
 
             // Save to database (non-blocking)
@@ -208,10 +216,14 @@ export async function POST(request: Request) {
             }
 
             const assistantContent = fullText.trim();
-            const updatedTurns: Array<{ role: string; content: string }> = [
-              ...history.slice(-20),
-              { role: 'user', content: message },
-              { role: 'assistant', content: assistantContent },
+            const updatedTurns = [
+              ...history.slice(-20).map((turn) => ({
+                id: getRandomUUID(),
+                role: turn.role,
+                content: turn.content,
+              })),
+              { id: getRandomUUID(), role: 'user' as const, content: message },
+              { id: getRandomUUID(), role: 'assistant' as const, content: assistantContent },
             ];
 
             // Save to database (non-blocking)

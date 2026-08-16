@@ -35,7 +35,7 @@ export function VoiceEditor({
   const { settings } = useSettings();
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
-  const [status, setStatus] = useState<'Saved' | 'Saving…' | 'Unsaved'>('Saved');
+  const [status, setStatus] = useState<'Saved' | 'Saving…' | 'Unsaved' | 'Error saving'>('Saved');
   const [saveCount, setSaveCount] = useState(0);
   const [lastDictatedRange, setLastDictatedRange] = useState<{ from: number; to: number } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
