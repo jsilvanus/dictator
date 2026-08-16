@@ -118,7 +118,7 @@ export async function GET(
                   confidence: prov.confidence
                     ? parseFloat(prov.confidence.toString())
                     : undefined,
-                  contentScope: prov.contentScope,
+                  contentScope: prov.contentScope ?? undefined,
                   device: prov.device,
                   reviewedAt: prov.reviewedAt?.getTime(),
                   thinkingBudgetTokens: prov.thinkingBudgetTokens || undefined,

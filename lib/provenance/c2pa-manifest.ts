@@ -300,7 +300,7 @@ export class C2PAManifestService {
 
     const action: C2PAAction = {
       action: 'c2pa.reviewed',
-      when: new Date(reviewEvent.reviewedAt).toISOString(),
+      when: new Date(reviewEvent.reviewedAt || Date.now()).toISOString(),
       actor: reviewEvent.reviewedBy
         ? {
             displayName: 'Human Reviewer',

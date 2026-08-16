@@ -21,11 +21,16 @@ describe('Export Pipeline', () => {
         currentContent: 'Pipeline test content',
         currentContentHash: 'hash123',
         createdAt: Date.now(),
+        updatedAt: Date.now(),
         events: [
           {
             eventType: 'human-written',
             timestamp: Date.now(),
-            confidence: 1,
+            contentHash: 'hash123',
+            contentHashAlgorithm: 'sha256',
+            source: 'human-written',
+            device: 'web',
+            userId: 'user-pipeline',
           },
         ],
       },
@@ -85,8 +90,7 @@ describe('Export Pipeline', () => {
   it('should export content without provenance', async () => {
     const result = await pipeline.exportContent(
       'Simple test content',
-      'markdown',
-      'test.md'
+      'markdown'
     );
 
     expect(result.mainContent).toBe('Simple test content');

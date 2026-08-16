@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     const result = await executor.execute(body.toolCall, {
       userId: session.userId,
       documentId: body.documentId,
-      sessionId: session.sessionId,
+      sessionId: `session-${Date.now()}`,
       requestId: request.headers.get('x-request-id') || `req-${Date.now()}`,
     });
 

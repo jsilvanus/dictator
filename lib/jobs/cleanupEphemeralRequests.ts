@@ -13,10 +13,10 @@
  * - By message queue (Bull, RabbitMQ, etc.)
  */
 
-import { and, eq, lt, or } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { aiTurns, privacyAuditLog,userPrivacySettings } from '@/lib/db/schema';
+import { aiSessions, privacyAuditLog,userPrivacySettings } from '@/lib/db/schema';
 
 interface CleanupResult {
   sessionsCleaned: number;
@@ -98,43 +98,36 @@ async function cleanupUserEphemeralRequests(
     // Find old AI turns that should be deleted
     const oldTurns = await db
       .select()
-      .from(aiTurns)
-      .where(
-        and(
-          lt(aiTurns.createdAt, cutoffDate),
-          // Only delete if explicitly marked as ephemeral or after retention period
-          or(
-            isEphemeral(aiTurns),
-            lt(aiTurns.createdAt, cutoffDate)
-          )
-        )
-      );
+      .from(aiSessions)
+      .where(lt(aiSessions.createdAt, cutoffDate));
 
-    // Delete old turns
-    for (const turn of oldTurns) {
+    // Delete old sessions and their turns
+    for (const session of oldTurns) {
       try {
-        // Calculate bytes being freed
-        const turnSize =
-          (turn.userMessage?.length || 0) + (turn.assistantResponse?.length || 0);
+        // Calculate bytes being freed from all turns in the session
+        const sessionSize = (session.turns || []).reduce((total, turn) => {
+          return total + (turn.content?.length || 0);
+        }, 0);
 
         // Delete from database
-        await db.delete(aiTurns).where(eq(aiTurns.id, turn.id));
+        await db.delete(aiSessions).where(eq(aiSessions.id, session.id));
 
-        result.requestsDeleted++;
-        result.bytesFreed += turnSize;
+        result.requestsDeleted += (session.turns || []).length;
+        result.bytesFreed += sessionSize;
 
         // Log deletion
         await db.insert(privacyAuditLog).values({
           userId,
           eventType: 'ephemeral_request_deleted',
           details: {
-            turnId: turn.id,
+            sessionId: session.id,
+            turnCount: (session.turns || []).length,
             reason: 'Auto-deletion after retention period',
-            bytesFreed: turnSize,
+            bytesFreed: sessionSize,
           },
         });
       } catch (error) {
-        console.error(`Failed to delete turn ${turn.id}:`, error);
+        console.error(`Failed to delete session ${session.id}:`, error);
       }
     }
 
@@ -144,16 +137,6 @@ async function cleanupUserEphemeralRequests(
   }
 
   return result;
-}
-
-/**
- * Helper function to check if a turn is ephemeral
- * In a real implementation, this would check a flag in the turn data
- */
-function isEphemeral(_turn: any) {
-  // This would check: turn.ephemeral || turn.metadata?.ephemeral
-  // For now, return false (implement based on schema)
-  return false;
 }
 
 /**
@@ -184,24 +167,26 @@ export async function cleanupEphemeralRequestsImproved(): Promise<CleanupResult>
         // Get old turns for this user
         const oldTurns = await db
           .select()
-          .from(aiTurns)
-          .where(lt(aiTurns.createdAt, cutoffDate));
+          .from(aiSessions)
+          .where(lt(aiSessions.createdAt, cutoffDate));
 
-        for (const turn of oldTurns) {
-          const turnSize =
-            (turn.userMessage?.length || 0) + (turn.assistantResponse?.length || 0);
+        for (const session of oldTurns) {
+          const sessionSize = (session.turns || []).reduce((total, turn) => {
+            return total + (turn.content?.length || 0);
+          }, 0);
 
-          await db.delete(aiTurns).where(eq(aiTurns.id, turn.id));
+          await db.delete(aiSessions).where(eq(aiSessions.id, session.id));
 
-          result.requestsDeleted++;
-          result.bytesFreed += turnSize;
+          result.requestsDeleted += (session.turns || []).length;
+          result.bytesFreed += sessionSize;
 
           // Log
           await db.insert(privacyAuditLog).values({
             userId: userSettings.userId,
             eventType: 'ai_session_deleted_by_retention_policy',
             details: {
-              turnId: turn.id,
+              sessionId: session.id,
+              turnCount: (session.turns || []).length,
               retentionDays: userSettings.aiSessionRetentionDays,
               deletedAt: new Date().toISOString(),
             },
