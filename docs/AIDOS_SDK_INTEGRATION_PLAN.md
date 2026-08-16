@@ -53,13 +53,22 @@ this integration that avoids the upgrade.
 
 - Kotlin 1.9.25 → 2.4.10 across `dictator-core` and `dictator-android`.
 - JVM 11 → 21.
-- Knock-on work: Compose moves to the `kotlin("plugin.compose")` Gradle plugin; SQLDelight 2.0.1
-  needs a Kotlin-2.x-compatible release; Hilt 2.50's `kapt` should move to KSP.
-- `.github/workflows/ci.yml` does not build `dictator-kotlin` at all today — add a Gradle job in
-  this same PR, so regressions from a change this broad are visible rather than discovered later.
+- Knock-on work: Compose moves to the `kotlin("plugin.compose")` Gradle plugin, and SQLDelight
+  2.0.1 needs a Kotlin-2.x-compatible release. Hilt was expected to move from `kapt` to KSP, but
+  KSP publishes no build for Kotlin 2.4.10 (newest is 2.3.9), so it stays on `kapt` until KSP
+  catches up.
+- `.github/workflows/ci.yml` does not build `dictator-kotlin` at all today. The Gradle job is
+  deliberately deferred until the module compiles: adding it now would put a permanently red check
+  on `main`.
 
 This touches every Kotlin module in the Android port, so it should land on its own, first, before
 any Aidos-specific code.
+
+**Status:** the toolchain half is done and Gradle now evaluates, which it did not before — a
+`kotlin-parcelize` plugin id with no marker artifact was failing *every* invocation, including
+`:dictator-core`. With that cleared, `:dictator-core` compiled for the first time and reports **402
+source errors** (unresolved Ktor imports, serialization inference, and more). The module had never
+been built, so none of it was ever verified. That, plus the CI job, is the remainder of D0.
 
 **Done when:** `cd dictator-kotlin && ./gradlew build` passes on Kotlin 2.4.10 / JVM 21, in CI.
 
