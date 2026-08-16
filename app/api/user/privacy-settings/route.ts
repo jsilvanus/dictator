@@ -13,16 +13,15 @@
 
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 
-import { authOptions } from '@/lib/auth/auth.config';
+import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { userPrivacySettings } from '@/lib/db/schema';
 import type { UserPrivacySettings } from '@/lib/privacy/types';
 
 export async function GET(_request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
         { message: 'Unauthorized' },
@@ -55,7 +54,7 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
         { message: 'Unauthorized' },

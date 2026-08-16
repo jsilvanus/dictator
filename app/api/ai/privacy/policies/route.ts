@@ -11,8 +11,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 
+import { auth } from '@/auth';
 import {
   type AiProviderPolicy,
   createDefaultPolicyManager,
@@ -35,7 +35,7 @@ interface ProviderPolicyResponse {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     // Require authentication
-    const session = await getServerSession();
+    const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

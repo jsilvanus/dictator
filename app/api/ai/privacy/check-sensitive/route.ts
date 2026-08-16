@@ -9,9 +9,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 
-import { createDefaultDetector, type SensitiveDataScanResult } from '@/lib/privacy';
+import { auth } from '@/auth';
+import {
+  createDefaultDetector,
+  type SensitiveDataScanResult,
+} from '@/lib/privacy';
 import { getTelemetryService } from '@/lib/privacy/TelemetryService';
 
 export const runtime = 'nodejs';
@@ -32,7 +35,7 @@ interface CheckSensitiveResponse {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Require authentication
-    const session = await getServerSession();
+    const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

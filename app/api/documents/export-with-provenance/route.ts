@@ -16,25 +16,24 @@
  * - audit-log.json (who did what and when)
  */
 
-import archiver from 'archiver';
-import { and,eq } from 'drizzle-orm';
+import { ZipArchive } from 'archiver';
+import { and, eq } from 'drizzle-orm';
 import { createReadStream } from 'fs';
 import { createWriteStream } from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
-import { authOptions } from '@/lib/auth/auth.config';
+import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { aiProviderPolicies, aiTurnProvenance, aiTurns, documents, privacyAuditLog } from '@/lib/db/schema';
+import { aiProviderPolicies, aiSessions, aiTurnProvenance, documents, privacyAuditLog } from '@/lib/db/schema';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
         { message: 'Unauthorized' },
@@ -65,18 +64,18 @@ export async function GET(
 
     const document = doc[0];
 
-    // Fetch AI turns with provenance
-    const turns = await db
+    // Fetch AI sessions with provenance
+    const sessions = await db
       .select()
-      .from(aiTurns)
-      .where(eq(aiTurns.documentId, documentId));
+      .from(aiSessions)
+      .where(eq(aiSessions.documentId, documentId));
 
     const provenance = await db
       .select()
       .from(aiTurnProvenance)
       .where(
-        turns.length > 0
-          ? eq(aiTurnProvenance.turnId, turns[0].id)
+        sessions.length > 0
+          ? eq(aiTurnProvenance.turnId, sessions[0].id)
           : eq(aiTurnProvenance.turnId, '')
       );
 
@@ -102,15 +101,16 @@ export async function GET(
         wordCount: (typeof document.content === 'string' ? document.content : '').split(/\s+/).length || 0,
       },
       provenance: {
-        turns: turns.map((turn) => ({
-          id: turn.id,
-          index: turn.index,
-          userMessage: turn.userMessage,
-          assistantResponse: turn.assistantResponse,
-          model: turn.model,
-          createdAt: turn.createdAt,
-          metadata: provenance.find((p) => p.turnId === turn.id) || null,
-        })),
+        turns: sessions.flatMap((session) =>
+          (session.turns || []).map((turn, idx) => ({
+            id: `${session.id}-${idx}`,
+            sessionId: session.id,
+            index: idx,
+            source: turn,
+            createdAt: session.createdAt,
+            metadata: provenance.find((p) => p.turnId === `${session.id}-${idx}`) || null,
+          }))
+        ),
       },
       policies: policies.map((policy) => ({
         id: policy.id,
@@ -133,7 +133,7 @@ export async function GET(
       exportMetadata: {
         exportedAt: new Date().toISOString(),
         exportFormat: 'privacy-provenance-v1',
-        includesAiHistory: turns.length > 0,
+        includesAiHistory: sessions.length > 0,
         includesAuditTrail: auditLog.length > 0,
       },
     };
@@ -141,7 +141,7 @@ export async function GET(
     // Create ZIP file
     const tmpFile = join(tmpdir(), `export-${documentId}-${Date.now()}.zip`);
     const output = createWriteStream(tmpFile);
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = new ZipArchive({ zlib: { level: 9 } });
 
     archive.pipe(output);
 
@@ -156,16 +156,22 @@ export async function GET(
     });
 
     // Add AI history
-    if (turns.length > 0) {
+    const allTurns = sessions.flatMap((session) =>
+      (session.turns || []).map((turn, idx) => ({
+        sessionId: session.id,
+        index: idx,
+        turn,
+        createdAt: session.createdAt,
+      }))
+    );
+    if (allTurns.length > 0) {
       const aiHistory = {
-        turnCount: turns.length,
-        turns: turns.map((turn, idx) => ({
+        turnCount: allTurns.length,
+        turns: allTurns.map((t, idx) => ({
           index: idx,
-          userMessage: turn.userMessage,
-          assistantResponse: turn.assistantResponse,
-          model: turn.model,
-          createdAt: turn.createdAt,
-          source: provenance.find((p) => p.turnId === turn.id)?.source || 'unknown',
+          turn: t.turn,
+          createdAt: t.createdAt,
+          source: 'unknown',
         })),
       };
       archive.append(JSON.stringify(aiHistory, null, 2), {

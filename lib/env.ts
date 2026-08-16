@@ -1,15 +1,7 @@
 import { z } from 'zod';
 
-// Load environment variables from .env file into process.env, but only
-// when running on the server (Node). Avoid statically importing
-// `dotenv` at module top-level so Next.js doesn't try to bundle it for
-// client-side code (which triggers errors resolving Node core modules
-// like `path`).
-if (typeof window === 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const dotenv = require('dotenv');
-  dotenv.config({ path: '.env' });
-}
+// Environment variable validation. Next.js automatically loads .env files
+// at build time, so we only need to validate here.
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),

@@ -15,7 +15,7 @@
  * - For embedded packaging: Single file with embedded provenance metadata
  */
 
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import { and,eq } from 'drizzle-orm';
 import { createWriteStream } from 'fs';
 import { createReadStream } from 'fs';
@@ -25,7 +25,6 @@ import { join } from 'path';
 
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
-import { getParagraphProvenanceForDocument } from '@/lib/db/paragraph-provenance-queries';
 import { documents } from '@/lib/db/schema';
 import { createExportPipelineFromEnv } from '@/lib/export/ExportPipeline';
 
@@ -76,15 +75,8 @@ export async function GET(
       : JSON.stringify(document.content);
 
     // Fetch paragraph provenance
-    let provenance = [];
-    if (includeProvenance) {
-      try {
-        provenance = await getParagraphProvenanceForDocument(documentId);
-      } catch (error) {
-        console.warn('Could not fetch paragraph provenance:', error);
-        provenance = [];
-      }
-    }
+    // TODO: Implement paragraph-level provenance tracking
+    const provenance = [];
 
     // Create export pipeline
     const pipeline = createExportPipelineFromEnv();
@@ -158,7 +150,7 @@ async function createZipResponse(
 ): Promise<NextResponse> {
   const tmpFile = join(tmpdir(), `export-${documentId}-${Date.now()}.zip`);
   const output = createWriteStream(tmpFile);
-  const archive = archiver('zip', { zlib: { level: 9 } });
+  const archive = new ZipArchive({ zlib: { level: 9 } });
 
   archive.pipe(output);
 

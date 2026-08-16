@@ -6,9 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 
-import { authOptions } from '@/lib/auth/auth.config';
+import { auth } from '@/auth';
 import { SensitiveDataDetector } from '@/lib/privacy/SensitiveDataDetector';
 
 const MAX_CONTENT_SIZE = 1024 * 1024; // 1MB
@@ -16,7 +15,7 @@ const MAX_CONTENT_SIZE = 1024 * 1024; // 1MB
 export async function POST(request: NextRequest) {
   try {
     // Authenticate user
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
         { message: 'Unauthorized' },

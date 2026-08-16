@@ -13,9 +13,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 
-import { authOptions } from '@/lib/auth/auth.config';
+import { auth } from '@/auth';
 import { cleanupEphemeralRequestsImproved } from '@/lib/jobs/cleanupEphemeralRequests';
 
 /**
@@ -44,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     if (!isCron) {
       // Check if user is admin
-      const session = await getServerSession(authOptions);
+      const session = await auth();
 
       if (!session?.user?.id) {
         return NextResponse.json(
@@ -93,7 +92,7 @@ export async function GET(request: NextRequest) {
     const isCron = verifyCronSecret(request);
 
     if (!isCron) {
-      const session = await getServerSession(authOptions);
+      const session = await auth();
       if (!session?.user?.id) {
         return NextResponse.json(
           { message: 'Unauthorized' },

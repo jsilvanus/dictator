@@ -9,11 +9,10 @@
  * - offset: pagination offset (default: 0)
  */
 
-import { and, desc,eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 
-import { authOptions } from '@/lib/auth/auth.config';
+import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { aiSessions, aiTurnProvenance,documents } from '@/lib/db/schema';
 
@@ -22,7 +21,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
