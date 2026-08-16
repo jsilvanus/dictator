@@ -9,12 +9,12 @@
  * - offset: pagination offset (default: 0)
  */
 
-import { and, desc, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { aiSessions, aiTurnProvenance,documents } from '@/lib/db/schema';
+import { aiSessions, aiTurnProvenance, documents } from '@/lib/db/schema';
 
 export async function GET(
   request: NextRequest,
@@ -80,19 +80,16 @@ export async function GET(
       .select()
       .from(aiTurnProvenance)
       .where(
-        aiTurnProvenance.aiSessionId.inArray ? 
-          aiTurnProvenance.aiSessionId.inArray(sessionIds) :
-          eq(aiTurnProvenance.aiSessionId, sessionIds[0]!)
-      )
-      .orderBy(desc(aiTurnProvenance.createdAt))
-      .limit(limit)
-      .offset(offset);
+        sessionIds.length > 0
+          ? inArray(aiTurnProvenance.aiSessionId, sessionIds)
+          : undefined
+      );
 
     // Map turns from sessions with provenance data
     const turnsWithProvenance = sessions.flatMap(session => {
-      const turns = (session.turns || []) as Array<{ role: string; content: string }>;
+      const turns = (session.turns || []) as Array<{ id?: string; role: string; content: string; createdAt?: number }>;
       return turns.map((turn, index) => {
-        const prov = provenance.find(p => p.turnId === `${session.id}-${index}`);
+        const prov = provenance.find(p => p.aiSessionId === session.id && p.turnId === (turn.id || `${session.id}-${index}`));
         return {
           sessionId: session.id,
           turnIndex: index,
@@ -104,7 +101,6 @@ export async function GET(
             contentScope: prov.contentScope,
             device: prov.device,
             reviewedAt: prov.reviewedAt,
-            thinkingContent: prov.thinkingContent,
             thinkingBudgetTokens: prov.thinkingBudgetTokens,
             createdAt: prov.createdAt,
           } : null,
@@ -112,8 +108,8 @@ export async function GET(
       });
     })
     .sort((a, b) => {
-      const aTime = a.provenance?.createdAt || 0;
-      const bTime = b.provenance?.createdAt || 0;
+      const aTime = a.provenance?.createdAt?.getTime() || 0;
+      const bTime = b.provenance?.createdAt?.getTime() || 0;
       return bTime - aTime;
     })
     .slice(offset, offset + limit);

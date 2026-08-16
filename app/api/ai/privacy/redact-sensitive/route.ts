@@ -46,10 +46,8 @@ export async function POST(request: NextRequest) {
 
     // Redact if sensitive data found
     let redactedContent = content;
-    if (scanResults.detectedData.length > 0) {
-      redactedContent = detector.redact(content, {
-        replacementStrategy: 'placeholder', // [CREDIT_CARD_REDACTED], [SSN_REDACTED], etc.
-      });
+    if (scanResults.detected.length > 0) {
+      redactedContent = detector.redact(content, '[REDACTED]');
     }
 
     // Track telemetry
@@ -57,8 +55,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       redactedContent,
-      hasSensitiveData: scanResults.detectedData.length > 0,
-      redactedCount: scanResults.detectedData.length,
+      hasSensitiveData: scanResults.detected.length > 0,
+      redactedCount: scanResults.detected.length,
     });
   } catch (error) {
     console.error('[/api/ai/privacy/redact-sensitive] Error:', error);

@@ -1,4 +1,4 @@
-import { and,eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { buildPanelSystemPrompt } from '@/lib/ai/chat-prompts';
@@ -7,7 +7,8 @@ import { AiProviderFactory } from '@/lib/ai/providers/factory';
 import { streamChatWithTools } from '@/lib/ai/tools/chat-integration';
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
-import { aiSessions, documents,userAiPreferences } from '@/lib/db/schema';
+import { aiSessions, documents, userAiPreferences } from '@/lib/db/schema';
+import { getRandomUUID } from '@/lib/provenance/paragraph-id';
 import { aiRateLimiter } from '@/lib/rate-limiter';
 
 type ChatRequest = {
@@ -140,10 +141,14 @@ export async function POST(request: Request) {
             }
 
             const assistantContent = fullText.trim();
-            const updatedTurns: Array<{ role: string; content: string }> = [
-              ...history.slice(-20),
-              { role: 'user', content: message },
-              { role: 'assistant', content: assistantContent },
+            const updatedTurns = [
+              ...history.slice(-20).map((turn) => ({
+                id: (turn as any).id || getRandomUUID(),
+                role: turn.role,
+                content: turn.content,
+              })),
+              { id: getRandomUUID(), role: 'user' as const, content: message },
+              { id: getRandomUUID(), role: 'assistant' as const, content: assistantContent },
             ];
 
             // Save to database (non-blocking)
@@ -208,10 +213,14 @@ export async function POST(request: Request) {
             }
 
             const assistantContent = fullText.trim();
-            const updatedTurns: Array<{ role: string; content: string }> = [
-              ...history.slice(-20),
-              { role: 'user', content: message },
-              { role: 'assistant', content: assistantContent },
+            const updatedTurns = [
+              ...history.slice(-20).map((turn) => ({
+                id: (turn as any).id || getRandomUUID(),
+                role: turn.role,
+                content: turn.content,
+              })),
+              { id: getRandomUUID(), role: 'user' as const, content: message },
+              { id: getRandomUUID(), role: 'assistant' as const, content: assistantContent },
             ];
 
             // Save to database (non-blocking)

@@ -94,7 +94,7 @@ export async function GET(
 
         // Map turns with provenance
         sessions.forEach(session => {
-          const turns = (session.turns || []) as Array<{ role: string; content: string }>;
+          const turns = (session.turns || []) as Array<{ id?: string; role: string; content: string; createdAt?: number }>;
           let userMessage = '';
           let assistantResponse = '';
 
@@ -103,8 +103,8 @@ export async function GET(
               userMessage = turn.content;
             } else if (turn.role === 'assistant') {
               assistantResponse = turn.content;
-              const turnId = `${session.id}-${index}`;
-              const prov = provenance.find(p => p.turnId === turnId);
+              const turnId = turn.id || `${session.id}-${index}`;
+              const prov = provenance.find(p => p.aiSessionId === session.id && p.turnId === turnId);
 
               aiHistory.push({
                 sessionId: session.id,
@@ -153,7 +153,7 @@ export async function GET(
       ? content
       : Buffer.from(content, 'utf-8');
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': exportFormat.mimeType,
         'Content-Disposition': `attachment; filename="${exportFormat.getFilename(

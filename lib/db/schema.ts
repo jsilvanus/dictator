@@ -102,7 +102,7 @@ export const aiSessions = pgTable(
       .notNull()
       .references(() => users.id),
     mode: aiSessionModeEnum('mode').notNull(),
-    turns: jsonb('turns').$type<Array<{ role: string; content: string }>>().notNull().default([]),
+    turns: jsonb('turns').$type<Array<{ id: string; role: string; content: string; createdAt?: number; acceptedAt?: number | null; discardedAt?: number | null }>>().notNull().default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },

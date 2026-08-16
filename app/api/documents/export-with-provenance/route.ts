@@ -16,8 +16,9 @@
  * - audit-log.json (who did what and when)
  */
 
+// @ts-expect-error archiver doesn't have types but works fine at runtime
 import { ZipArchive } from 'archiver';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { createReadStream } from 'fs';
 import { createWriteStream } from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
@@ -75,8 +76,8 @@ export async function GET(
       .from(aiTurnProvenance)
       .where(
         sessions.length > 0
-          ? eq(aiTurnProvenance.turnId, sessions[0].id)
-          : eq(aiTurnProvenance.turnId, '')
+          ? inArray(aiTurnProvenance.aiSessionId, sessions.map(s => s.id))
+          : undefined
       );
 
     // Fetch policies used
@@ -103,12 +104,12 @@ export async function GET(
       provenance: {
         turns: sessions.flatMap((session) =>
           (session.turns || []).map((turn, idx) => ({
-            id: `${session.id}-${idx}`,
+            id: (turn as any).id || `${session.id}-${idx}`,
             sessionId: session.id,
             index: idx,
             source: turn,
             createdAt: session.createdAt,
-            metadata: provenance.find((p) => p.turnId === `${session.id}-${idx}`) || null,
+            metadata: provenance.find((p) => p.aiSessionId === session.id && p.turnId === (turn as any).id) || null,
           }))
         ),
       },
@@ -167,12 +168,17 @@ export async function GET(
     if (allTurns.length > 0) {
       const aiHistory = {
         turnCount: allTurns.length,
-        turns: allTurns.map((t, idx) => ({
-          index: idx,
-          turn: t.turn,
-          createdAt: t.createdAt,
-          source: 'unknown',
-        })),
+        turns: allTurns.map((t, idx) => {
+          const turnProv = provenance.find(
+            (p) => p.aiSessionId === t.sessionId && p.turnId === (t.turn as any).id
+          );
+          return {
+            index: idx,
+            turn: t.turn,
+            createdAt: t.createdAt,
+            source: turnProv?.source || 'unknown',
+          };
+        }),
       };
       archive.append(JSON.stringify(aiHistory, null, 2), {
         name: 'ai-history.json',
@@ -229,7 +235,22 @@ For more information, see PRIVACY_ARCHITECTURE.md in the main documentation.
     // Read and send file
     const fileStream = createReadStream(tmpFile);
 
-    return new NextResponse(fileStream, {
+    // Convert Node.js ReadStream to Web ReadableStream
+    const webStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        fileStream.on('data', (chunk: Buffer) => {
+          controller.enqueue(new Uint8Array(chunk));
+        });
+        fileStream.on('end', () => {
+          controller.close();
+        });
+        fileStream.on('error', (error: Error) => {
+          controller.error(error);
+        });
+      },
+    });
+
+    return new NextResponse(webStream, {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="document-export-${document.id}-${Date.now()}.zip"`,

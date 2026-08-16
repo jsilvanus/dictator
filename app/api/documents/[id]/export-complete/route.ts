@@ -13,18 +13,20 @@
  * Returns:
  * - For sidecar packaging: ZIP file with main content + sidecar JSON files
  * - For embedded packaging: Single file with embedded provenance metadata
+ *
+ * Note: archiver module doesn't have TypeScript types but works fine at runtime
  */
 
 import { ZipArchive } from 'archiver';
-import { and,eq } from 'drizzle-orm';
-import { createWriteStream } from 'fs';
-import { createReadStream } from 'fs';
+import { and, eq } from 'drizzle-orm';
+import { createReadStream, createWriteStream } from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
 import { getRequiredSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
+import { ParagraphProvenanceRepository } from '@/lib/db/paragraph-provenance-queries';
 import { documents } from '@/lib/db/schema';
 import { createExportPipelineFromEnv } from '@/lib/export/ExportPipeline';
 
@@ -75,8 +77,12 @@ export async function GET(
       : JSON.stringify(document.content);
 
     // Fetch paragraph provenance
-    // TODO: Implement paragraph-level provenance tracking
-    const provenance = [];
+    const paragraphProvenances = includeProvenance
+      ? await ParagraphProvenanceRepository.getDocumentParagraphs(
+          documentId,
+          session.userId
+        )
+      : [];
 
     // Create export pipeline
     const pipeline = createExportPipelineFromEnv();
@@ -101,7 +107,7 @@ export async function GET(
     // Execute export pipeline
     const result = await pipeline.execute(
       content,
-      provenance,
+      paragraphProvenances,
       {
         documentId,
         documentTitle: document.title,
@@ -122,7 +128,7 @@ export async function GET(
       ? result.mainContent
       : Buffer.from(result.mainContent, 'utf-8');
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': result.mainMimeType,
         'Content-Disposition': `attachment; filename="${result.mainFileName}"`,
@@ -178,7 +184,7 @@ This export contains your document with provenance and optional C2PA signature.
 ## Files Included
 - ${result.mainFileName} - Your document content
 ${result.sidecarFiles
-  ?.map(f => `- ${f.fileName} - ${getFileDescription(f.fileName)}`)
+  ?.map((f: any) => `- ${f.fileName} - ${getFileDescription(f.fileName)}`)
   .join('\n') || ''}
 
 ## Export Metadata
@@ -209,7 +215,22 @@ For more information, see the provenance metadata JSON files included.
   // Send file
   const fileStream = createReadStream(tmpFile);
 
-  return new NextResponse(fileStream, {
+  // Convert Node.js ReadStream to Web ReadableStream
+  const webStream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      fileStream.on('data', (chunk: Buffer) => {
+        controller.enqueue(new Uint8Array(chunk));
+      });
+      fileStream.on('end', () => {
+        controller.close();
+      });
+      fileStream.on('error', (error: Error) => {
+        controller.error(error);
+      });
+    },
+  });
+
+  return new NextResponse(webStream, {
     headers: {
       'Content-Type': 'application/zip',
       'Content-Disposition': `attachment; filename="document-export-${documentId}-${Date.now()}.zip"`,
