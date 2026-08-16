@@ -4,9 +4,9 @@ import com.dictator.core.data.database.DatabaseManager
 import com.dictator.core.data.database.DatabaseDriverProvider
 import com.dictator.core.di.coreModule
 import io.github.aakira.napier.Napier
-import io.insert-koin.koin-core.Koin
-import io.insert-koin.koin-core.context.startKoin
-import io.insert-koin.koin-core.module.Module
+import org.koin.core.Koin
+import org.koin.core.context.startKoin
+import org.koin.core.module.Module
 
 /**
  * Dictator Core Library initialization.

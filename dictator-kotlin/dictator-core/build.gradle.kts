@@ -1,18 +1,14 @@
 plugins {
-    id("org.jetbrains.kotlin.multiplatform") version "1.9.25"
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.25"
-    id("app.cash.sqldelight") version "2.0.1"
+    // Versions come from settings.gradle.kts pluginManagement (D0).
+    id("org.jetbrains.kotlin.multiplatform")
+    id("org.jetbrains.kotlin.plugin.serialization")
+    id("app.cash.sqldelight")
 }
 
 kotlin {
     // Multiplatform configuration
-    jvm {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "11"
-            }
-        }
-    }
+    jvmToolchain(21)
+    jvm()
 
     sourceSets {
         val commonMain by getting {
