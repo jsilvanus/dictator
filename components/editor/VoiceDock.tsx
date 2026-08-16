@@ -39,6 +39,10 @@ type PendingAiChange =
       afterTitle: string;
     };
 
+function isValidHelpCategory(category: string): category is HelpCategory {
+  return helpCategories.includes(category as HelpCategory);
+}
+
 function getSelectionText(editor: Editor) {
   const { from, to } = editor.state.selection;
   if (from === to) {
@@ -160,7 +164,13 @@ export function VoiceDock({
               onMicStop: () => speech.stop(),
               onMicPause: () => speech.pause(),
               onMicResume: () => speech.resume(),
-              onOpenHelp,
+              onOpenHelp: (category?: string) => {
+                if (category && isValidHelpCategory(category)) {
+                  onOpenHelp(category);
+                } else if (!category) {
+                  onOpenHelp();
+                }
+              },
               onTemporaryTriggerChange: setTemporaryTrigger,
               onSpeak: (spoken) => {
                 if (settings.ttsEnabled) {
@@ -242,7 +252,7 @@ export function VoiceDock({
               onMicStop: () => speech.stop(),
               onMicPause: () => speech.pause(),
               onMicResume: () => speech.resume(),
-              onOpenHelp: (category) => {
+              onOpenHelp: (category?: string) => {
                 if (!category) {
                   if (settings.ttsEnabled) {
                     speakText(`Help categories: ${helpCategories.join(', ')}`, settings.ttsVoice);
@@ -251,7 +261,9 @@ export function VoiceDock({
                   return;
                 }
 
-                onOpenHelp(category);
+                if (isValidHelpCategory(category)) {
+                  onOpenHelp(category);
+                }
               },
               onTemporaryTriggerChange: setTemporaryTrigger,
               onSpeak: (spoken) => {

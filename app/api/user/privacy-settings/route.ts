@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
           aiSessionRetentionDays: settingsData.aiSessionRetentionDays ?? 30,
           preferLocalProcessing: settingsData.preferLocalProcessing ?? true,
           encryptLocalStorage: settingsData.encryptLocalStorage ?? true,
-          updatedAt: Date.now(),
+          updatedAt: new Date(),
         })
         .where(eq(userPrivacySettings.userId, userId))
         .returning();
