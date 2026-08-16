@@ -146,8 +146,9 @@ export async function GET(
     archive.pipe(output);
 
     // Add document content
-    archive.append(document.content || '', {
-      name: `document.${document.content ? 'md' : 'txt'}`,
+    const contentStr = typeof document.content === 'string' ? document.content : (document.content?.toString() || '');
+    archive.append(contentStr, {
+      name: `document.${contentStr ? 'md' : 'txt'}`,
     });
 
     // Add provenance metadata
@@ -237,8 +238,12 @@ For more information, see PRIVACY_ARCHITECTURE.md in the main documentation.
     // Convert Node.js ReadStream to Web ReadableStream
     const webStream = new ReadableStream<Uint8Array>({
       start(controller) {
-        fileStream.on('data', (chunk: Buffer) => {
-          controller.enqueue(new Uint8Array(chunk));
+        fileStream.on('data', (chunk: Buffer | string) => {
+          if (typeof chunk === 'string') {
+            controller.enqueue(new Uint8Array(Buffer.from(chunk, 'utf-8')));
+          } else {
+            controller.enqueue(new Uint8Array(chunk));
+          }
         });
         fileStream.on('end', () => {
           controller.close();

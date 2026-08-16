@@ -57,24 +57,26 @@ export class DictatorProvider implements AiProvider {
   }
 
   async chat(request: AiChatRequest): Promise<ReadableStream<AiStreamChunk>> {
-    return new ReadableStream(async (controller) => {
-      try {
-        const response = await fetch(`${this.baseUrl}/v1/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: request.messages,
-            systemPrompt: request.systemPrompt,
-            temperature: request.temperature ?? 0.7,
-            maxTokens: request.maxTokens ?? 2048,
-            thinkingBudgetTokens: request.thinkingBudgetTokens,
-            model: this.model,
-            tools: request.tools,
-            stream: true,
-          }),
-        });
+    return new ReadableStream<AiStreamChunk>(
+      {
+        start: async (controller: ReadableStreamDefaultController<AiStreamChunk>) => {
+          try {
+            const response = await fetch(`${this.baseUrl}/v1/chat`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                messages: request.messages,
+                systemPrompt: request.systemPrompt,
+                temperature: request.temperature ?? 0.7,
+                maxTokens: request.maxTokens ?? 2048,
+                thinkingBudgetTokens: request.thinkingBudgetTokens,
+                model: this.model,
+                tools: request.tools,
+                stream: true,
+              }),
+            });
 
         if (!response.ok) {
           controller.enqueue({
@@ -154,7 +156,9 @@ export class DictatorProvider implements AiProvider {
         });
         controller.close();
       }
-    });
+        },
+      } as UnderlyingSource<AiStreamChunk>
+    );
   }
 
   isConfigured(): boolean {

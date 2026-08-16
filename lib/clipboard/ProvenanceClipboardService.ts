@@ -216,16 +216,13 @@ export class ProvenanceClipboardService {
         const pastedParagraph = ParagraphProvenanceService.createParagraph(
           targetDocumentId,
           null,
-          sourceData.content,
-          'copy-paste', // Event type indicating this came from clipboard
+          sourceData.content || sourceData.currentContentHash,
+          'human-written', // Indicate this was pasted by user
           {
             device: 'web',
             userId,
-            sourceDocumentId: clipboard.provenanceData.sourceDocumentId,
-            sourceParagraphId: sourceData.sourceParagraphId,
-            sourceContentHash: sourceData.currentContentHash,
-            // Preserve the full provenance chain
-            originEvents: sourceData.sourceProvenance.events,
+            aiSessionId: undefined,
+            aiTurnId: undefined,
           }
         );
 
@@ -249,7 +246,6 @@ export class ProvenanceClipboardService {
           {
             device: 'web',
             userId,
-            source: 'external-paste',
           }
         );
 
@@ -291,7 +287,7 @@ export class ProvenanceClipboardService {
 
     for (const paragraph of paragraphs) {
       // Add content
-      lines.push(paragraph.currentContent);
+      lines.push(paragraph.currentContent || '');
       lines.push('');
 
       // Add provenance comment
@@ -348,7 +344,6 @@ export class ProvenanceClipboardService {
           {
             device: 'web',
             userId,
-            source: `external-import-${sourceFormat}`,
           }
         );
 

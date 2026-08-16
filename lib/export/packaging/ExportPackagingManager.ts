@@ -93,7 +93,7 @@ export class ExportPackagingManager {
       format,
       provenance,
       c2paManifest,
-      config.options
+      config.options as Record<string, unknown> | undefined
     );
   }
 

@@ -167,8 +167,8 @@ export class GenericOpenAiProvider extends BaseAiProvider {
    * Handles text deltas, tool calls, and thinking blocks
    */
   private createStreamFromResponse(body: ReadableStream<Uint8Array>): ReadableStream<AiStreamChunk> {
-    return new ReadableStream({
-      async start(controller) {
+    return new ReadableStream<AiStreamChunk>({
+      start: async (controller: ReadableStreamDefaultController<AiStreamChunk>) => {
         const reader = body.getReader();
         const decoder = new TextDecoder();
         let toolCallBuffer: Record<string, { id: string; function?: { name: string; arguments: string } }> = {};

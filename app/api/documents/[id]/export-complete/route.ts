@@ -184,7 +184,7 @@ This export contains your document with provenance and optional C2PA signature.
 ## Files Included
 - ${result.mainFileName} - Your document content
 ${result.sidecarFiles
-  ?.map((f) => `- ${f.fileName} - ${getFileDescription(f.fileName)}`)
+  ?.map((f: { fileName: string; content: Buffer | string; mimeType: string }) => `- ${f.fileName} - ${getFileDescription(f.fileName)}`)
   .join('\n') || ''}
 
 ## Export Metadata
@@ -218,8 +218,12 @@ For more information, see the provenance metadata JSON files included.
   // Convert Node.js ReadStream to Web ReadableStream
   const webStream = new ReadableStream<Uint8Array>({
     start(controller) {
-      fileStream.on('data', (chunk: Buffer) => {
-        controller.enqueue(new Uint8Array(chunk));
+      fileStream.on('data', (chunk: Buffer | string) => {
+        if (typeof chunk === 'string') {
+          controller.enqueue(new Uint8Array(Buffer.from(chunk, 'utf-8')));
+        } else {
+          controller.enqueue(new Uint8Array(chunk));
+        }
       });
       fileStream.on('end', () => {
         controller.close();
