@@ -29,13 +29,12 @@ const PII_DESCRIPTIONS: Record<SensitiveDataType, string> = {
   phone: 'Phone Number',
   email: 'Email Address',
   'api-key': 'API Key',
-  'auth-token': 'Authentication Token',
   password: 'Password',
-  ip: 'IP Address',
-  'license-plate': 'License Plate',
-  'bank-account': 'Bank Account Number',
-  'routing-number': 'Routing Number',
-  url: 'URL',
+  'jwt-token': 'JWT Token',
+  'auth-token': 'Authentication Token',
+  'auth-header': 'Auth Header',
+  'private-key': 'Private Key',
+  'database-connection': 'Database Connection',
 };
 
 const RISK_COLORS = {
@@ -63,7 +62,7 @@ export function SelectionPermissionDialog({
   onSpeak,
 }: SelectionPermissionDialogProps) {
   const [voiceMode, setVoiceMode] = useState(false);
-  const speakTimeoutRef = useRef<NodeJS.Timeout>();
+  const speakTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-read permission request if voice is enabled
   useEffect(() => {

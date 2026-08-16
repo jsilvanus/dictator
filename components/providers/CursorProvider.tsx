@@ -104,8 +104,8 @@ export function CursorProvider({ children }: { children: ReactNode }) {
     };
   }, [cursorState]);
 
-  const startSelectMode = useCallback((text: string) => {
-    const selection = startSelection(text, cursorState.current.size, cursorState.current);
+  const startSelectMode = useCallback((_text: string) => {
+    const selection = startSelection(cursorState.current);
     const newState = {
       ...cursorState,
       selection,
@@ -125,7 +125,7 @@ export function CursorProvider({ children }: { children: ReactNode }) {
         };
       }
 
-      const expanded = expandSelectionTo(cursorState.selection, cursorState.current, direction, text);
+      const expanded = expandSelectionTo(text, cursorState.selection, direction);
       const newState = {
         ...cursorState,
         selection: expanded,

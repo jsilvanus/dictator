@@ -233,13 +233,12 @@ export function formatPiiTypesForVoice(piiTypes: SensitiveDataType[]): string {
     phone: 'phone number',
     email: 'email address',
     'api-key': 'API key',
-    'auth-token': 'authentication token',
     password: 'password',
-    ip: 'IP address',
-    'license-plate': 'license plate',
-    'bank-account': 'bank account',
-    'routing-number': 'routing number',
-    url: 'URL',
+    'jwt-token': 'JWT token',
+    'auth-token': 'authentication token',
+    'auth-header': 'auth header',
+    'private-key': 'private key',
+    'database-connection': 'database connection',
   };
 
   const formatted = piiTypes.map((type) => labels[type] || type).join(', ');

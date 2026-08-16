@@ -22,6 +22,7 @@ import {
 } from '@/lib/cursor/selection';
 import { parseCursorCommand, handleCursorCommand } from '@/lib/voice/cursor-commands';
 import { extractCursorIntent, parseCursorCommandsFromText } from '@/lib/voice/cursor-parser';
+import type { CursorState } from '@/lib/types/cursor';
 
 describe('Cursor Navigation', () => {
   const sampleText = 'This is the first paragraph.\n\nThis is the second paragraph.\n\nThis is the third paragraph.';
@@ -275,7 +276,7 @@ describe('Integration: Cursor Context', () => {
 
   it('should maintain valid state through operations', () => {
     const text = 'Hello world.';
-    let state = {
+    let state: CursorState = {
       current: { startChar: 0, endChar: 5, size: 'word' as const },
       lastAction: 'move' as const,
     };

@@ -26,10 +26,10 @@ interface ProviderPolicyResponse {
     provider: string;
     displayName: string;
     privacyRating: number;
-    summary: string;
+    summary?: string;
     recommendation?: string;
   }>;
-  recommendations: string[];
+  recommendations?: string[];
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {

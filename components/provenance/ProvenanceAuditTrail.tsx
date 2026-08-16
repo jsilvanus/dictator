@@ -37,7 +37,7 @@ function convertToAuditTrail(provenance: ParagraphProvenance[]): AuditTrailEntry
         timestamp: new Date(event.timestamp),
         metadata: {
           paragraphId: para.paragraphId,
-          contentPreview: para.content.substring(0, 50),
+          contentPreview: (para.content ?? '').substring(0, 50),
         },
         severity: 'info',
         action: '',
