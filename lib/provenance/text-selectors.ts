@@ -157,7 +157,7 @@ export interface TextualRegionSelector {
 export function createTextualRegionSelector(
   content: string,
   target: string,
-  contextLength: number = 50
+  _contextLength: number = 50
 ): TextualRegionSelector | null {
   // Validation
   if (!target || target.length === 0) {
@@ -177,21 +177,6 @@ export function createTextualRegionSelector(
   // If text cannot be found, return null rather than creating unreliable selector
   // This is safer than creating a contextual selector that may not match
   return null;
-}
-
-/**
- * Normalize text for comparison.
- * 
- * Removes extra whitespace while preserving semantic content.
- * 
- * @param text - Text to normalize
- * @returns Normalized text
- */
-function normalizeText(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 /**

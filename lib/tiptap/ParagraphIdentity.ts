@@ -157,7 +157,7 @@ export const ParagraphIdentity = Extension.create<
       /**
        * Get the paragraph ID of the current block.
        */
-      getParagraphIdAtSelection: ({ useBlockId } = { useBlockId: false }) => ({
+      getParagraphIdAtSelection: ({ _useBlockId } = { _useBlockId: false }) => ({
         editor,
       }) => {
         const { $from } = editor.state.selection;
@@ -216,7 +216,7 @@ export const ParagraphIdentity = Extension.create<
  */
 function ensureAllParagraphsHaveIds(
   doc: ProseMirrorNode,
-  extension: any
+  _extension: any
 ): void {
   doc.descendants((node: ProseMirrorNode, pos: number) => {
     if (PARAGRAPH_NODE_TYPES.includes(node.type.name)) {
