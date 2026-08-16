@@ -396,3 +396,30 @@ export interface PiiDetectionResult {
     endIndex: number;
   }>;
 }
+
+/**
+ * A user's privacy preferences.
+ *
+ * Mirrors the user_privacy_settings table (ai_session_retention_days added by
+ * drizzle/0017). Retention and approval fields here are the enforcement inputs
+ * for the cleanup job and the AI-request approval path, not merely display state.
+ */
+export interface UserPrivacySettings {
+  id?: string;
+  userId: string;
+  backupInclusionPolicy: BackupInclusionPolicy;
+  includeEncryptionKeysInBackup: boolean;
+  encryptBackups: boolean;
+  /** null = keep indefinitely. */
+  backupRetentionDays?: number | null;
+  allowTelemetry: boolean;
+  allowCrashReporting: boolean;
+  enableSensitiveDataDetection: boolean;
+  requireExplicitAiApproval: boolean;
+  defaultAiRequestScope: AiRequestScope;
+  allowModelTraining: boolean;
+  /** Days an AI session is kept before the cleanup job removes it. */
+  aiSessionRetentionDays: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
