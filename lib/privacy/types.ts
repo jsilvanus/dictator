@@ -14,12 +14,13 @@ export type DataProcessingPurpose =
   | 'compliance'
   | 'security';
 
-export type DataGeographicLocation = 
+export type DataGeographicLocation =
   | 'us'
   | 'eu'
   | 'uk'
   | 'ca'
   | 'au'
+  | 'on-device'
   | 'other';
 
 export interface AiProviderPolicy {
@@ -395,4 +396,28 @@ export interface PiiDetectionResult {
     startIndex: number;
     endIndex: number;
   }>;
+}
+
+/**
+ * A user's privacy preferences.
+ *
+ * Mirrors the user_privacy_settings table. Matches the schema created by
+ * drizzle/0009_privacy_architecture.sql and extended by drizzle/0017.
+ */
+export interface UserPrivacySettings {
+  id?: string;
+  userId: string;
+  telemetryEnabled: boolean;
+  crashReportsEnabled: boolean;
+  sensitiveDataDetectionEnabled: boolean;
+  warnBeforeSendingToCloud: boolean;
+  allowDataForTraining: boolean;
+  backupEncryptionRequired: boolean;
+  autoDeleteAiSessions: boolean;
+  /** Days an AI session is kept before the cleanup job removes it. */
+  aiSessionRetentionDays: number;
+  preferLocalProcessing: boolean;
+  encryptLocalStorage: boolean;
+  createdAt?: number;
+  updatedAt?: number;
 }

@@ -24,7 +24,6 @@ export * from './types';
 
 // Re-exports for convenience
 export {
-  type AiProviderPolicy,
   createDefaultPolicyManager,
   getPolicyManager,
   initializePolicyManager,
@@ -32,20 +31,26 @@ export {
 } from './ProviderPolicyManager';
 export {
   createDefaultDetector,
-  type DetectedSensitiveData,
   getSensitiveDataWarning,
   scanForSensitiveData,
   SensitiveDataDetector,
-  type SensitiveDataScanResult,
 } from './SensitiveDataDetector';
 export {
   getTelemetryService,
   initializeTelemetry,
   type TelemetryConfig,
-  type TelemetryEvent,
-  type TelemetryEventMetrics,
-  type TelemetryEventType,
 } from './TelemetryService';
+
+// Declared in ./types and merely imported by the modules above; re-exporting
+// them from there would violate isolatedModules.
+export type {
+  AiProviderPolicy,
+  DetectedSensitiveData,
+  SensitiveDataScanResult,
+  TelemetryEvent,
+  TelemetryEventMetrics,
+  TelemetryEventType,
+} from './types';
 export {
   type AiContentSource,
   type AiRequestPolicy,

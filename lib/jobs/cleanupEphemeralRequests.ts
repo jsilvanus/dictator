@@ -13,7 +13,7 @@
  * - By message queue (Bull, RabbitMQ, etc.)
  */
 
-import { and, eq, lt } from 'drizzle-orm';
+import { and, eq, lt, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
 import { aiTurns, privacyAuditLog,userPrivacySettings } from '@/lib/db/schema';
@@ -126,8 +126,8 @@ async function cleanupUserEphemeralRequests(
         // Log deletion
         await db.insert(privacyAuditLog).values({
           userId,
-          action: 'ephemeral_request_deleted',
-          context: {
+          eventType: 'ephemeral_request_deleted',
+          details: {
             turnId: turn.id,
             reason: 'Auto-deletion after retention period',
             bytesFreed: turnSize,
@@ -199,8 +199,8 @@ export async function cleanupEphemeralRequestsImproved(): Promise<CleanupResult>
           // Log
           await db.insert(privacyAuditLog).values({
             userId: userSettings.userId,
-            action: 'ai_session_deleted_by_retention_policy',
-            context: {
+            eventType: 'ai_session_deleted_by_retention_policy',
+            details: {
               turnId: turn.id,
               retentionDays: userSettings.aiSessionRetentionDays,
               deletedAt: new Date().toISOString(),
@@ -235,9 +235,9 @@ export async function cleanupEphemeralRequestsImproved(): Promise<CleanupResult>
 async function logCleanupJob(result: CleanupResult): Promise<void> {
   try {
     await db.insert(privacyAuditLog).values({
-      userId: 'system',
-      action: 'ephemeral_cleanup_job_executed',
-      context: {
+      userId: 'system' as unknown as string,
+      eventType: 'ephemeral_cleanup_job_executed',
+      details: {
         sessionsCleaned: result.sessionsCleaned,
         requestsDeleted: result.requestsDeleted,
         bytesFreed: result.bytesFreed,

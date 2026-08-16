@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
     // Create audit log entry
     await db.insert(privacyAuditLog).values({
       userId,
-      action: 'account_deletion_initiated',
-      context: {
+      eventType: 'account_deletion_initiated',
+      details: {
         selectedOptions: body.selectedOptions,
         exportRequested: body.exportBeforeDeletion,
         timestamp: new Date().toISOString(),
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       const userDocs = await db
         .select({ id: documents.id })
         .from(documents)
-        .where(eq(documents.userId, userId));
+        .where(eq(documents.ownerId, userId));
 
       for (const doc of userDocs) {
         if (deletions.includes('documents')) {
@@ -81,14 +81,12 @@ export async function POST(request: NextRequest) {
 
         // Log deletion
         await db.insert(deletionRecords).values({
+          resourceType: 'document',
+          resourceId: doc.id,
           userId,
-          documentId: doc.id,
-          deletionType: deletions.includes('documents')
-            ? 'document_and_ai_sessions'
-            : 'ai_sessions_only',
-          reason: 'User requested account deletion',
           status: 'completed',
-          deletedAt: new Date(),
+          method: 'hard-delete',
+          completedAt: new Date(),
         });
       }
     }
@@ -103,11 +101,11 @@ export async function POST(request: NextRequest) {
       // TODO: Mark user for cloud sync deletion
       // TODO: Clear cloud backups after retention period (30 days)
       await db.insert(deletionRecords).values({
+        resourceType: 'account',
+        resourceId: userId,
         userId,
-        deletionType: 'cloud_backups',
-        reason: 'User requested account deletion',
-        status: 'pending', // Will be processed by background job
-        deletedAt: new Date(),
+        status: 'pending',
+        method: 'soft-delete',
       });
     }
 
@@ -115,11 +113,11 @@ export async function POST(request: NextRequest) {
     if (deletions.includes('provider-history')) {
       // TODO: Submit deletion requests to Claude, OpenAI, etc.
       await db.insert(deletionRecords).values({
+        resourceType: 'ai-history',
+        resourceId: userId,
         userId,
-        deletionType: 'ai_provider_history',
-        reason: 'User requested account deletion',
-        status: 'pending', // Provider may take 30+ days
-        deletedAt: new Date(),
+        status: 'pending',
+        method: 'hard-delete',
       });
     }
 
@@ -127,19 +125,20 @@ export async function POST(request: NextRequest) {
     if (deletions.includes('telemetry')) {
       // TODO: Delete telemetry events from analytics backend
       await db.insert(deletionRecords).values({
+        resourceType: 'account',
+        resourceId: userId,
         userId,
-        deletionType: 'telemetry_and_analytics',
-        reason: 'User requested account deletion',
         status: 'completed',
-        deletedAt: new Date(),
+        method: 'hard-delete',
+        completedAt: new Date(),
       });
     }
 
     // Final audit log
     await db.insert(privacyAuditLog).values({
       userId,
-      action: 'account_deletion_completed',
-      context: {
+      eventType: 'account_deletion_completed',
+      details: {
         deletedOptions: deletions,
         completedAt: new Date().toISOString(),
       },

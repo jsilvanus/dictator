@@ -103,6 +103,28 @@ export interface ParagraphProvenanceEvent {
 
   /** User ID of reviewer (if reviewed by someone other than creator) */
   reviewedBy?: string;
+
+  /**
+   * Content hash after this event was applied.
+   * Distinct from [contentHash], which is the hash at the moment the event was
+   * recorded; for events that mutate content the two differ.
+   */
+  contentHashAfterEvent?: string;
+
+  /** Free-form event metadata; shape varies by [eventType]. */
+  metadata?: Record<string, unknown>;
+
+  /** Human-readable description, for audit trails and timelines. */
+  description?: string;
+
+  /** Model identifier, when this event came from an AI provider. */
+  aiModel?: string;
+
+  /** Provider identifier, when this event came from an AI provider. */
+  aiProvider?: string;
+
+  /** Prompt that produced this content, when the user consented to storing it. */
+  aiPrompt?: string;
 }
 
 /**
@@ -135,6 +157,18 @@ export interface ParagraphProvenance {
    * May be omitted to save storage.
    */
   currentContent?: string;
+
+  /**
+   * Alias of [currentContent] used by the query layer and export pipeline.
+   * Both name the cached plaintext at [currentContentHash].
+   */
+  content?: string;
+
+  /**
+   * If this paragraph originated from another (copy/paste), the source
+   * paragraph identifier. Establishes lineage across documents.
+   */
+  parentParagraphId?: string;
 
   /**
    * Complete chronological history of events affecting this paragraph.
@@ -243,4 +277,57 @@ export interface ParagraphC2PAReference {
    * Primary C2PA action type based on dominant event.
    */
   primaryAction: 'c2pa.generated' | 'c2pa.modified' | 'c2pa.reviewed';
+}
+
+/**
+ * A provenance event as surfaced to UI and audit consumers.
+ *
+ * Structurally the stored event; named separately because timeline and audit
+ * components import it under this name.
+ */
+export type ProvenanceEvent = ParagraphProvenanceEvent;
+
+/**
+ * Query filter for provenance lookups.
+ *
+ * Every field is optional and narrows the result set; omitting all of them
+ * matches everything for the given document.
+ */
+export interface ProvenanceQuery {
+  documentId?: string;
+  paragraphId?: string;
+  userId?: string;
+  eventTypes?: ParagraphProvenanceEventType[];
+  /** Inclusive lower bound, milliseconds since epoch. */
+  since?: number;
+  /** Inclusive upper bound, milliseconds since epoch. */
+  until?: number;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * A stored C2PA manifest for one exported document version.
+ *
+ * Mirrors the c2pa_manifests table (drizzle/0016, reconciled by 0017).
+ */
+export interface C2PAManifest {
+  id?: string;
+  documentId: string;
+  /** Export format the manifest describes: json, markdown, html, pdf. */
+  format: string;
+  documentVersion: number;
+  /** The manifest document itself. */
+  manifestJson: Record<string, unknown>;
+  contentHash: string;
+  contentHashAlgorithm: 'sha256';
+  /** unsigned | signed | failed. */
+  status: string;
+  signedAt?: number;
+  signedByKeyId?: string;
+  signature?: string;
+  userId: string;
+  createdAt?: number;
+  errorMessage?: string;
+  failedAt?: number;
 }

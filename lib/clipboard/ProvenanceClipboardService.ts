@@ -26,7 +26,7 @@ export interface ClipboardProvenanceData {
   sourceDocumentId: string;
   paragraphs: Array<{
     sourceParagraphId: string;
-    content: string;
+    content?: string; // Optional, matching ParagraphProvenance.currentContent
     currentContentHash: string;
     sourceProvenance: ParagraphProvenance;
   }>;

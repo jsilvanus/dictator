@@ -369,16 +369,16 @@ export const userPrivacySettings = pgTable(
       .notNull()
       .unique()
       .references(() => users.id, { onDelete: 'cascade' }),
-    backupInclusionPolicy: backupInclusionPolicyEnum('backup_inclusion_policy').notNull().default('local-only'),
-    includeEncryptionKeysInBackup: boolean('include_encryption_keys_in_backup').notNull().default(false),
-    encryptBackups: boolean('encrypt_backups').notNull().default(true),
-    backupRetentionDays: integer('backup_retention_days'), // null = indefinite
-    allowTelemetry: boolean('allow_telemetry').notNull().default(true),
-    allowCrashReporting: boolean('allow_crash_reporting').notNull().default(true),
-    enableSensitiveDataDetection: boolean('enable_sensitive_data_detection').notNull().default(true),
-    requireExplicitAiApproval: boolean('require_explicit_ai_approval').notNull().default(false),
-    defaultAiRequestScope: aiRequestScopeEnum('default_ai_request_scope').notNull().default('selected-text'),
-    allowModelTraining: boolean('allow_model_training').notNull().default(false),
+    telemetryEnabled: boolean('telemetry_enabled').notNull().default(false),
+    crashReportsEnabled: boolean('crash_reports_enabled').notNull().default(false),
+    sensitiveDataDetectionEnabled: boolean('sensitive_data_detection_enabled').notNull().default(true),
+    warnBeforeSendingToCloud: boolean('warn_before_sending_to_cloud').notNull().default(true),
+    allowDataForTraining: boolean('allow_data_for_training').notNull().default(false),
+    backupEncryptionRequired: boolean('backup_encryption_required').notNull().default(true),
+    autoDeleteAiSessions: boolean('auto_delete_ai_sessions').notNull().default(false),
+    aiSessionRetentionDays: integer('ai_session_retention_days').notNull().default(30),
+    preferLocalProcessing: boolean('prefer_local_processing').notNull().default(true),
+    encryptLocalStorage: boolean('encrypt_local_storage').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -603,5 +603,131 @@ export const privacyAuditLogRelations = relations(privacyAuditLog, ({ one }) => 
     references: [documents.id],
   }),
 }));
+
+
+// ---------------------------------------------------------------------------
+// Paragraph-level provenance and C2PA storage.
+//
+// Created by drizzle/0015 and 0016 and reconciled with the query layer by
+// drizzle/0017; these definitions follow the post-0017 columns. They were never
+// mirrored here before, so every `import { paragraph_provenances } from
+// '@/lib/db/schema'` resolved to nothing and the schema drift stayed invisible.
+// ---------------------------------------------------------------------------
+
+export const paragraph_provenances = pgTable(
+  'paragraph_provenances',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    paragraphId: text('paragraph_id').notNull(),
+    /** Copy/paste lineage; nullable, added by 0017. */
+    parentParagraphId: text('parent_paragraph_id'),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    currentContentHash: text('current_content_hash').notNull(),
+    /** Cached plaintext at the current hash; nullable per 0015. */
+    currentContent: text('current_content'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique('paragraph_provenances_document_paragraph').on(t.documentId, t.paragraphId)],
+);
+
+export const paragraph_provenance_events = pgTable('paragraph_provenance_events', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  paragraphProvenanceId: uuid('paragraph_provenance_id')
+    .notNull()
+    .references(() => paragraph_provenances.id, { onDelete: 'cascade' }),
+  /** Stable paragraph identifier, denormalised from the parent by 0017. */
+  paragraphId: text('paragraph_id').notNull(),
+  eventType: text('event_type').notNull(),
+  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
+  contentHash: text('content_hash').notNull(),
+  contentHashAfterEvent: text('content_hash_after_event'),
+  previousHash: text('previous_hash'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  description: text('description'),
+  contentHashAlgorithm: text('content_hash_algorithm').default('sha256').notNull(),
+  source: text('source').notNull(),
+  /** 0-1 for AI-generated content. */
+  confidence: numeric('confidence', { precision: 3, scale: 2 }),
+  device: text('device').notNull(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id),
+  aiSessionId: uuid('ai_session_id').references(() => aiSessions.id),
+  aiTurnId: text('ai_turn_id'),
+  selectionScope: text('selection_scope'),
+  originFromParagraphId: text('origin_from_paragraph_id'),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  reviewedBy: uuid('reviewed_by').references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const c2pa_manifests = pgTable('c2pa_manifests', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  documentId: uuid('document_id')
+    .notNull()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+  format: text('format').notNull(),
+  documentVersion: bigint('document_version', { mode: 'number' }).notNull(),
+  manifestJson: jsonb('manifest_json').notNull(),
+  contentHash: text('content_hash').notNull(),
+  contentHashAlgorithm: text('content_hash_algorithm').default('sha256').notNull(),
+  status: text('status').default('unsigned').notNull(),
+  signedAt: timestamp('signed_at', { withTimezone: true }),
+  signedByKeyId: text('signed_by_key_id'),
+  signature: text('signature'),
+  /** Renamed from created_by_user_id by 0017. */
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  errorMessage: text('error_message'),
+  failedAt: timestamp('failed_at', { withTimezone: true }),
+});
+
+export const document_versions_with_provenance = pgTable('document_versions_with_provenance', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  documentId: uuid('document_id')
+    .notNull()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+  documentVersion: bigint('document_version', { mode: 'number' }).notNull(),
+  content: jsonb('content').notNull(),
+  /** Array of ParagraphProvenance objects, per 0016. */
+  paragraphProvenances: jsonb('paragraph_provenances').notNull(),
+  contentHash: text('content_hash').notNull(),
+  contentHashAlgorithm: text('content_hash_algorithm').default('sha256').notNull(),
+  createdByDevice: text('created_by_device').notNull(),
+  createdByUserId: uuid('created_by_user_id')
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const export_history = pgTable('export_history', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  documentId: uuid('document_id')
+    .notNull()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+  /** Renamed from format by 0017. */
+  exportFormat: text('export_format').notNull(),
+  documentVersion: bigint('document_version', { mode: 'number' }).notNull(),
+  includedParagraphs: integer('included_paragraphs').notNull(),
+  includedAiTurns: integer('included_ai_turns').notNull(),
+  hasC2paManifest: boolean('has_c2pa_manifest').default(false).notNull(),
+  c2paManifestId: uuid('c2pa_manifest_id').references(() => c2pa_manifests.id),
+  isSigned: boolean('is_signed').default(false).notNull(),
+  filename: text('filename'),
+  fileSizeBytes: integer('file_size_bytes'),
+  /** Renamed from exported_by_user_id by 0017. */
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id),
+  exportedAt: timestamp('exported_at', { withTimezone: true }).defaultNow().notNull(),
+});
 
 export const searchVector = sql`to_tsvector('simple', coalesce(${documents.title}, ''))`;

@@ -8,7 +8,7 @@
  * - include: 'content' | 'history' | 'audit' | 'all' (default: 'all')
  */
 
-import { and,eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 
@@ -88,9 +88,9 @@ export async function GET(
           .select()
           .from(aiTurnProvenance)
           .where(
-            aiTurnProvenance.aiSessionId.inArray ?
-              aiTurnProvenance.aiSessionId.inArray(sessionIds) :
-              eq(aiTurnProvenance.aiSessionId, sessionIds[0]!)
+            sessionIds.length > 0
+              ? inArray(aiTurnProvenance.aiSessionId, sessionIds)
+              : undefined
           );
 
         // Map turns with provenance
