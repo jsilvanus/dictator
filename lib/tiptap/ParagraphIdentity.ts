@@ -22,11 +22,26 @@
  * ```
  */
 
-import { Extension } from '@tiptap/core';
+import { CommandProps, Editor, Extension } from '@tiptap/core';
 import { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 
 import { generateParagraphId, isParagraphId } from '@/lib/provenance/paragraph-id';
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    paragraphIdentity: {
+      /** Assign a fresh paragraph ID to the block at the selection. */
+      assignParagraphId: () => ReturnType;
+      /** Read the paragraph ID at the selection, or null. */
+      getParagraphIdAtSelection: (options?: { useBlockId: boolean }) => ReturnType;
+      /** Every paragraph ID in the document, in document order. */
+      getAllParagraphIds: () => ReturnType;
+      /** Mark a paragraph as needing a database write. */
+      markParagraphForSave: (options: { paragraphId: string }) => ReturnType;
+    };
+  }
+}
 
 interface ParagraphIdentityStorage {
   paragraphIds: Map<string, string>; // maps node content hash to paragraph ID
@@ -49,6 +64,43 @@ interface ParagraphIdentityOptions {
  * Includes block-level elements that can carry provenance.
  */
 const PARAGRAPH_NODE_TYPES = ['paragraph', 'heading', 'blockquote'];
+
+/**
+ * Helper: Ensure all paragraphs in a document have IDs.
+ */
+function ensureAllParagraphsHaveIds(doc: ProseMirrorNode, editor: Editor) {
+  let needsUpdate = false;
+  const tr = editor.state.tr;
+
+  doc.descendants((node: ProseMirrorNode, pos: number) => {
+    if (PARAGRAPH_NODE_TYPES.includes(node.type.name)) {
+      const paragraphId = node.attrs?.paragraphId;
+      if (!paragraphId || !isParagraphId(paragraphId)) {
+        const newId = generateParagraphId();
+        tr.setNodeMarkup(pos, undefined, {
+          ...node.attrs,
+          paragraphId: newId,
+        });
+        needsUpdate = true;
+      }
+    }
+  });
+
+  if (needsUpdate && editor.view) {
+    editor.view.dispatch(tr);
+  }
+}
+
+/**
+ * Helper: Get the paragraph ID from a node.
+ */
+function getParagraphId(node: ProseMirrorNode): string | null {
+  const paragraphId = node.attrs?.paragraphId;
+  if (paragraphId && isParagraphId(paragraphId)) {
+    return paragraphId;
+  }
+  return null;
+}
 
 /**
  * TipTap Extension for paragraph identity management.
@@ -87,13 +139,13 @@ export const ParagraphIdentity = Extension.create<
          */
         state: {
           init(config, state) {
-            extension.ensureAllParagraphsHaveIds(state.doc, extension);
+            ensureAllParagraphsHaveIds(state.doc, extension.editor);
             return null;
           },
 
           apply(tr, value, oldState, newState) {
             // Ensure new paragraphs get IDs
-            extension.ensureAllParagraphsHaveIds(newState.doc, extension);
+            ensureAllParagraphsHaveIds(newState.doc, extension.editor);
             return null;
           },
         },
@@ -118,7 +170,7 @@ export const ParagraphIdentity = Extension.create<
 
             // Content changed
             if (oldContent !== newContent) {
-              const paragraphId = extension.getParagraphId(newNode);
+              const paragraphId = getParagraphId(newNode);
               if (paragraphId && extension.options.onParagraphEdited) {
                 extension.options.onParagraphEdited(
                   paragraphId,
@@ -140,7 +192,7 @@ export const ParagraphIdentity = Extension.create<
       /**
        * Manually assign a paragraph ID to the current node.
        */
-      assignParagraphId: () => ({ commands, editor }) => {
+      assignParagraphId: () => ({ commands, editor }: CommandProps) => {
         const { $from } = editor.state.selection;
         const node = $from.node($from.depth);
 
@@ -161,7 +213,7 @@ export const ParagraphIdentity = Extension.create<
       // rather than the key, so callers keep passing `{ useBlockId }` as documented.
       getParagraphIdAtSelection: ({ useBlockId: _useBlockId } = { useBlockId: false }) => ({
         editor,
-      }) => {
+      }: CommandProps) => {
         const { $from } = editor.state.selection;
 
         for (let d = $from.depth; d > 0; d--) {
@@ -180,7 +232,7 @@ export const ParagraphIdentity = Extension.create<
       /**
        * Get all paragraph IDs in the document.
        */
-      getAllParagraphIds: () => ({ editor }) => {
+      getAllParagraphIds: () => ({ editor }: CommandProps) => {
         const ids: string[] = [];
 
         editor.state.doc.descendants((node: ProseMirrorNode) => {

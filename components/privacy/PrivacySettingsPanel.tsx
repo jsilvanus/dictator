@@ -36,8 +36,8 @@ const DEFAULT_SETTINGS: UserPrivacySettings = {
   aiSessionRetentionDays: 30,
   preferLocalProcessing: true,
   encryptLocalStorage: true,
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  createdAt: undefined,
+  updatedAt: undefined,
 };
 
 interface ProviderWithPolicy {

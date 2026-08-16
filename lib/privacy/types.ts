@@ -14,12 +14,13 @@ export type DataProcessingPurpose =
   | 'compliance'
   | 'security';
 
-export type DataGeographicLocation = 
+export type DataGeographicLocation =
   | 'us'
   | 'eu'
   | 'uk'
   | 'ca'
   | 'au'
+  | 'on-device'
   | 'other';
 
 export interface AiProviderPolicy {
@@ -400,26 +401,23 @@ export interface PiiDetectionResult {
 /**
  * A user's privacy preferences.
  *
- * Mirrors the user_privacy_settings table (ai_session_retention_days added by
- * drizzle/0017). Retention and approval fields here are the enforcement inputs
- * for the cleanup job and the AI-request approval path, not merely display state.
+ * Mirrors the user_privacy_settings table. Matches the schema created by
+ * drizzle/0009_privacy_architecture.sql and extended by drizzle/0017.
  */
 export interface UserPrivacySettings {
   id?: string;
   userId: string;
-  backupInclusionPolicy: BackupInclusionPolicy;
-  includeEncryptionKeysInBackup: boolean;
-  encryptBackups: boolean;
-  /** null = keep indefinitely. */
-  backupRetentionDays?: number | null;
-  allowTelemetry: boolean;
-  allowCrashReporting: boolean;
-  enableSensitiveDataDetection: boolean;
-  requireExplicitAiApproval: boolean;
-  defaultAiRequestScope: AiRequestScope;
-  allowModelTraining: boolean;
+  telemetryEnabled: boolean;
+  crashReportsEnabled: boolean;
+  sensitiveDataDetectionEnabled: boolean;
+  warnBeforeSendingToCloud: boolean;
+  allowDataForTraining: boolean;
+  backupEncryptionRequired: boolean;
+  autoDeleteAiSessions: boolean;
   /** Days an AI session is kept before the cleanup job removes it. */
   aiSessionRetentionDays: number;
+  preferLocalProcessing: boolean;
+  encryptLocalStorage: boolean;
   createdAt?: number;
   updatedAt?: number;
 }

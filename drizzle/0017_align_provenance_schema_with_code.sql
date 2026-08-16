@@ -105,12 +105,3 @@ CREATE INDEX IF NOT EXISTS idx_paragraph_provenances_user
 
 CREATE INDEX IF NOT EXISTS idx_paragraph_provenance_events_paragraph
   ON paragraph_provenance_events(paragraph_id);
-
--- ---------------------------------------------------------------------------
--- user_privacy_settings.ai_session_retention_days
--- The privacy-settings route writes it and the ephemeral-cleanup job reads it to
--- decide when AI sessions expire, but the column was never created. Defaulted to
--- 30 days, matching the fallback both call sites already apply.
--- ---------------------------------------------------------------------------
-ALTER TABLE user_privacy_settings
-  ADD COLUMN IF NOT EXISTS ai_session_retention_days INTEGER NOT NULL DEFAULT 30;

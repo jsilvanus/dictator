@@ -369,18 +369,16 @@ export const userPrivacySettings = pgTable(
       .notNull()
       .unique()
       .references(() => users.id, { onDelete: 'cascade' }),
-    backupInclusionPolicy: backupInclusionPolicyEnum('backup_inclusion_policy').notNull().default('local-only'),
-    includeEncryptionKeysInBackup: boolean('include_encryption_keys_in_backup').notNull().default(false),
-    encryptBackups: boolean('encrypt_backups').notNull().default(true),
-    backupRetentionDays: integer('backup_retention_days'), // null = indefinite
-    allowTelemetry: boolean('allow_telemetry').notNull().default(true),
-    allowCrashReporting: boolean('allow_crash_reporting').notNull().default(true),
-    enableSensitiveDataDetection: boolean('enable_sensitive_data_detection').notNull().default(true),
-    requireExplicitAiApproval: boolean('require_explicit_ai_approval').notNull().default(false),
-    defaultAiRequestScope: aiRequestScopeEnum('default_ai_request_scope').notNull().default('selected-text'),
-    allowModelTraining: boolean('allow_model_training').notNull().default(false),
-    /** Added by 0017; drives ephemeral AI-session cleanup. */
+    telemetryEnabled: boolean('telemetry_enabled').notNull().default(false),
+    crashReportsEnabled: boolean('crash_reports_enabled').notNull().default(false),
+    sensitiveDataDetectionEnabled: boolean('sensitive_data_detection_enabled').notNull().default(true),
+    warnBeforeSendingToCloud: boolean('warn_before_sending_to_cloud').notNull().default(true),
+    allowDataForTraining: boolean('allow_data_for_training').notNull().default(false),
+    backupEncryptionRequired: boolean('backup_encryption_required').notNull().default(true),
+    autoDeleteAiSessions: boolean('auto_delete_ai_sessions').notNull().default(false),
     aiSessionRetentionDays: integer('ai_session_retention_days').notNull().default(30),
+    preferLocalProcessing: boolean('prefer_local_processing').notNull().default(true),
+    encryptLocalStorage: boolean('encrypt_local_storage').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },

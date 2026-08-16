@@ -51,7 +51,7 @@ export async function GET(
       .where(
         and(
           eq(documents.id, documentId),
-          eq(documents.userId, session.user.id)
+          eq(documents.ownerId, session.user.id)
         )
       )
       .limit(1);
@@ -99,7 +99,7 @@ export async function GET(
         content: document.content,
         createdAt: document.createdAt,
         updatedAt: document.updatedAt,
-        wordCount: document.content?.split(/\s+/).length || 0,
+        wordCount: (typeof document.content === 'string' ? document.content : '').split(/\s+/).length || 0,
       },
       provenance: {
         turns: turns.map((turn) => ({
@@ -125,9 +125,9 @@ export async function GET(
         .filter((entry) => entry.documentId === documentId || !entry.documentId)
         .map((entry) => ({
           id: entry.id,
-          action: entry.action,
-          context: entry.context,
-          timestamp: entry.timestamp,
+          eventType: entry.eventType,
+          details: entry.details,
+          timestamp: entry.createdAt.getTime(),
           documentId: entry.documentId,
         })),
       exportMetadata: {
@@ -178,9 +178,9 @@ export async function GET(
       const log = auditLog
         .filter((entry) => entry.documentId === documentId || !entry.documentId)
         .map((entry) => ({
-          timestamp: entry.timestamp,
-          action: entry.action,
-          context: entry.context,
+          timestamp: entry.createdAt.getTime(),
+          eventType: entry.eventType,
+          details: entry.details,
         }));
       archive.append(JSON.stringify(log, null, 2), {
         name: 'audit-log.json',
