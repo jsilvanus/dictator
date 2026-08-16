@@ -7,31 +7,9 @@
 
 import { createContext, ReactNode,useCallback, useContext, useState } from 'react';
 
-import {
-  getCursorAtDocEnd,
-  getCursorAtDocStart,
-  getTextAtCursor,
-  moveCursorInDirection,
-  validateCursorRange,
-} from '@/lib/cursor/navigation';
-import {
-  clearSelection,
-  collapseSelection,
-  expandSelectionTo,
-  getSelectedText,
-  getSelectionText,
-  hasSelection,
-  selectAllText,
-  startSelection,
-  validateSelection,
-} from '@/lib/cursor/selection';
-import type {
-  CursorOperationResult,
-  CursorPosition,
-  CursorSize,
-  CursorState,
-  SelectionState,
-} from '@/lib/types/cursor';
+import { moveCursorInDirection, validateCursorRange } from '@/lib/cursor/navigation';
+import { clearSelection, expandSelectionTo, getSelectedText, getSelectionText, hasSelection, selectAllText, startSelection } from '@/lib/cursor/selection';
+import type { CursorOperationResult, CursorSize, CursorState } from '@/lib/types/cursor';
 
 export interface CursorContextType {
   cursorState: CursorState;

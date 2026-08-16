@@ -17,7 +17,7 @@ import { getServerSession } from 'next-auth/next';
 
 import { authOptions } from '@/lib/auth/auth.config';
 import { db } from '@/lib/db';
-import { aiTurns, deletionRecords, documents, privacyAuditLog,userPrivacySettings, users } from '@/lib/db/schema';
+import { aiTurns, deletionRecords, documents, privacyAuditLog, userPrivacySettings } from '@/lib/db/schema';
 
 interface DeleteAccountRequest {
   selectedOptions: string[];

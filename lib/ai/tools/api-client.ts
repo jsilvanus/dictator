@@ -4,7 +4,6 @@
  */
 
 import { AiTool,ToolCall, ToolResult } from '@/lib/ai/providers/types';
-import { ToolExecutionContext } from '@/lib/ai/tools/types';
 
 /**
  * Client-side errors when calling tool APIs

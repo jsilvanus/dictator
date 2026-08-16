@@ -73,11 +73,6 @@ export const AccountDeletionPanel: React.FC = () => {
   };
 
   const selectedCount = options.filter((o) => o.selected).length;
-  const allSelected = selectedCount === options.length;
-
-  const handleProceedToOptions = () => {
-    setStep('options');
-  };
 
   const handleProceedToConfirm = () => {
     setStep('confirm');
@@ -131,7 +126,7 @@ export const AccountDeletionPanel: React.FC = () => {
             <li>✓ Download your data (ZIP with audit trail)</li>
             <li>✓ This action affects all synced devices</li>
             <li>✓ Cloud backups will be deleted after 30 days</li>
-            <li>✓ You can't undo this</li>
+            <li>✓ You can&apos;t undo this</li>
           </ul>
         </div>
 
@@ -245,7 +240,7 @@ export const AccountDeletionPanel: React.FC = () => {
         {/* Confirmation Input */}
         <div>
           <p className="mb-2 font-semibold text-gray-900">
-            Type "{confirmationRequired}" to confirm:
+            Type &quot;{confirmationRequired}&quot; to confirm:
           </p>
           <input
             type="text"

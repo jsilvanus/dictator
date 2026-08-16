@@ -17,7 +17,6 @@ import React, { useEffect, useState } from 'react';
 import type { AiProviderPolicy, UserPrivacySettings } from '@/lib/privacy/types';
 
 import { ProviderPolicyCard } from './ProviderPolicyCard';
-import { SensitiveDataWarningDialog } from './SensitiveDataWarningDialog';
 
 interface PrivacySettingsPanelProps {
   userId: string;
@@ -239,7 +238,7 @@ export const PrivacySettingsPanel: React.FC<PrivacySettingsPanelProps> = ({
                   <p className="font-semibold mb-2">📝 What we collect:</p>
                   <ul className="list-inside space-y-1 text-xs">
                     <li>✓ App version and platform</li>
-                    <li>✓ Operation types (e.g., "document_edit", "ai_request")</li>
+                    <li>✓ Operation types (e.g., &quot;document_edit&quot;, &quot;ai_request&quot;)</li>
                     <li>✓ AI model used (but not the prompt)</li>
                     <li>✓ Response latency in milliseconds</li>
                     <li>✓ Token counts (if applicable)</li>

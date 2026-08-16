@@ -13,7 +13,7 @@
  * - By message queue (Bull, RabbitMQ, etc.)
  */
 
-import { and, eq, isNull, lt, not } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
 import { aiTurns, privacyAuditLog,userPrivacySettings } from '@/lib/db/schema';
@@ -150,7 +150,7 @@ async function cleanupUserEphemeralRequests(
  * Helper function to check if a turn is ephemeral
  * In a real implementation, this would check a flag in the turn data
  */
-function isEphemeral(turn: any) {
+function isEphemeral(_turn: any) {
   // This would check: turn.ephemeral || turn.metadata?.ephemeral
   // For now, return false (implement based on schema)
   return false;

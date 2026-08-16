@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { useSettings } from '@/components/providers/SettingsProvider';
-import type { ActivationCommand, VoiceNotificationLight } from '@/lib/data/default-settings';
+import type { VoiceNotificationLight } from '@/lib/data/default-settings';
 import {
   defaultNotificationLight,
   getDefaultActivationCommandsForLanguage,
@@ -11,7 +11,6 @@ import {
 
 export function VoiceSettings() {
   const { settings, patchSettings } = useSettings();
-  const [editingLanguage, setEditingLanguage] = useState<string | null>(null);
   const [newPhrase, setNewPhrase] = useState('');
   const [editingCommand, setEditingCommand] = useState<{ language: string; type: 'command' | 'ai' } | null>(null);
 

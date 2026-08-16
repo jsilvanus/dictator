@@ -5,7 +5,7 @@
 
 import { NextResponse } from 'next/server';
 
-import { ToolCall, ToolResult } from '@/lib/ai/providers/types';
+import { ToolCall } from '@/lib/ai/providers/types';
 import { getGlobalExecutor } from '@/lib/ai/tools/executor';
 import { getRequiredSession } from '@/lib/auth/session';
 import { aiRateLimiter } from '@/lib/rate-limiter';

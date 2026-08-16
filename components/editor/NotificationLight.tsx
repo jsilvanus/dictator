@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 
 import type { VoiceNotificationLight } from '@/lib/data/default-settings';
 

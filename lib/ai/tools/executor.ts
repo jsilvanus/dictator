@@ -76,14 +76,11 @@ export class ToolExecutor {
     if (tool.requiresPermission) {
       // Extract target from arguments based on tool name
       let target: string | undefined;
-      let toolType: 'http' | 'mcp' = 'http';
 
       if (toolCall.name.startsWith('http_')) {
         target = toolCall.arguments.url as string;
-        toolType = 'http';
       } else if (toolCall.name.startsWith('mcp_')) {
         target = toolCall.name; // MCP tools use their name as target
-        toolType = 'mcp';
       }
 
       if (target) {

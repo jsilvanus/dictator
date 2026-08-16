@@ -8,7 +8,7 @@
 
 import React, { useMemo } from 'react';
 
-import type { ParagraphProvenance, ProvenanceEvent } from '@/lib/provenance/types';
+import type { ParagraphProvenance } from '@/lib/provenance/types';
 
 interface TimelineEvent {
   timestamp: Date;
@@ -216,7 +216,7 @@ export function ProvenanceTimeline({ provenance }: ProvenanceTimelineProps) {
 
                     {/* Content preview */}
                     <p className="text-sm text-gray-600 dark:text-gray-400 italic mb-2 line-clamp-2">
-                      "{event.content}"
+                      &quot;{event.content}&quot;
                     </p>
 
                     {/* Prompt if available */}

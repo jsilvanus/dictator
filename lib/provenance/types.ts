@@ -6,7 +6,6 @@
  */
 
 import type { AiContentSource, AiRequestScope } from '@/lib/privacy/types';
-import type { ParagraphId } from '@/lib/provenance/paragraph-id';
 
 /**
  * Event type for paragraph provenance tracking.

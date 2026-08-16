@@ -194,7 +194,7 @@ export async function DELETE(request: Request) {
     }
 
     // Delete all permissions for this target for the user
-    const result = await db
+    await db
       .delete(toolPermissions)
       .where(
         and(

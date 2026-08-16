@@ -3,7 +3,7 @@
  * Includes safety checks like URL validation, timeouts, and response size limits
  */
 
-import { RegisteredTool, ToolExecutionContext } from './types';
+import { RegisteredTool } from './types';
 
 /**
  * URL whitelist/blacklist for security
@@ -29,7 +29,7 @@ const DEFAULT_URL_BLACKLIST: RegExp[] = [
  */
 function isUrlSafe(url: string): boolean {
   try {
-    const urlObj = new URL(url);
+    new URL(url); // throws for malformed input; the throw is the validation
 
     // Check whitelist
     const isWhitelisted = DEFAULT_URL_WHITELIST.some((pattern) => pattern.test(url));

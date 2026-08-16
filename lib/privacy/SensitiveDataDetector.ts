@@ -152,7 +152,7 @@ export class SensitiveDataDetector {
     const detected: DetectedSensitiveData[] = [];
     const allPatterns = [...SENSITIVE_PATTERNS, ...this.customPatterns];
 
-    for (const { type, pattern, confidence, description } of allPatterns) {
+    for (const { type, pattern, confidence } of allPatterns) {
       let match;
       // Reset regex lastIndex for global patterns
       if (pattern.global) {

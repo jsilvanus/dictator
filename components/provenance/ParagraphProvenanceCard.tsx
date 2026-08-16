@@ -95,7 +95,7 @@ export function ParagraphProvenanceCard({ provenance }: ParagraphProvenanceCardP
       {/* Header with paragraph excerpt */}
       <div className="mb-4">
         <p className="text-gray-600 dark:text-gray-300 text-sm italic mb-3 line-clamp-2">
-          "{provenance.content}"
+          &quot;{provenance.content}&quot;
         </p>
         <div className="flex flex-wrap gap-2">
           {provenance.events.map((event, idx) => (

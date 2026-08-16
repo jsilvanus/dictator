@@ -10,11 +10,7 @@ import {
   createTextualRegionSelector,
   type TextualRegionSelector,
 } from '@/lib/provenance/text-selectors';
-import type {
-  ParagraphC2PAReference,
-  ParagraphProvenance,
-  ParagraphProvenanceEvent,
-} from '@/lib/provenance/types';
+import type { ParagraphC2PAReference, ParagraphProvenance } from '@/lib/provenance/types';
 
 /**
  * C2PA Action representing a single provenance claim.

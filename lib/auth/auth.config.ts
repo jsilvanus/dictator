@@ -6,7 +6,6 @@
 
 import type { NextAuthOptions } from 'next-auth';
 
-import { auth } from '@/auth';
 
 /**
  * NextAuth configuration options

@@ -24,14 +24,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { pipeline } from 'stream';
-import { promisify } from 'util';
 
 import { authOptions } from '@/lib/auth/auth.config';
 import { db } from '@/lib/db';
 import { aiProviderPolicies, aiTurnProvenance, aiTurns, documents, privacyAuditLog } from '@/lib/db/schema';
-
-const pipelineAsync = promisify(pipeline);
 
 export async function GET(
   request: NextRequest,

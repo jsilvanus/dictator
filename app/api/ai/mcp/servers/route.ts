@@ -18,7 +18,7 @@ import { mcpServers } from '@/lib/db/schema';
 /**
  * GET /api/ai/mcp/servers - List all MCP servers for the user
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {

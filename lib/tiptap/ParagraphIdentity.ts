@@ -157,7 +157,9 @@ export const ParagraphIdentity = Extension.create<
       /**
        * Get the paragraph ID of the current block.
        */
-      getParagraphIdAtSelection: ({ _useBlockId } = { _useBlockId: false }) => ({
+      // `useBlockId` is accepted but not yet implemented; the binding is renamed
+      // rather than the key, so callers keep passing `{ useBlockId }` as documented.
+      getParagraphIdAtSelection: ({ useBlockId: _useBlockId } = { useBlockId: false }) => ({
         editor,
       }) => {
         const { $from } = editor.state.selection;
@@ -196,7 +198,7 @@ export const ParagraphIdentity = Extension.create<
       /**
        * Mark a paragraph as needing to be saved to the database.
        */
-      markParagraphForSave: ({ paragraphId }: { paragraphId: string }) => () => {
+      markParagraphForSave: ({ paragraphId: _paragraphId }: { paragraphId: string }) => () => {
         // This would be handled by the extension storage
         return true;
       },
@@ -210,33 +212,6 @@ export const ParagraphIdentity = Extension.create<
     };
   },
 });
-
-/**
- * Utility: Ensure all paragraphs in document have IDs.
- */
-function ensureAllParagraphsHaveIds(
-  doc: ProseMirrorNode,
-  _extension: any
-): void {
-  doc.descendants((node: ProseMirrorNode, pos: number) => {
-    if (PARAGRAPH_NODE_TYPES.includes(node.type.name)) {
-      const existingId = node.attrs?.paragraphId;
-
-      if (!existingId || !isParagraphId(existingId)) {
-        // Paragraph needs an ID
-        // This will be handled by the spec's default value or parseHTML
-      }
-    }
-  });
-}
-
-/**
- * Utility: Extract paragraph ID from a node.
- */
-function getParagraphId(node: ProseMirrorNode): string | null {
-  const id = node.attrs?.paragraphId;
-  return id && isParagraphId(id) ? id : null;
-}
 
 /**
  * Helper: Add paragraph ID attributes to node specs.

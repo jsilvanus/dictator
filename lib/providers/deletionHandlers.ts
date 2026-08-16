@@ -106,11 +106,11 @@ async function submitDeletionToProvider(
  *
  * No direct API for deletion, so we log the request for manual processing
  */
-async function deleteFromAnthropicProvider(_userId: string): Promise<DeletionResponse> {
+async function deleteFromAnthropicProvider(userId: string): Promise<DeletionResponse> {
   try {
     // Log deletion request for Anthropic support team
     await db.insert(privacyAuditLog).values({
-      userId: _userId,
+      userId,
       action: 'anthropic_deletion_request_logged',
       context: {
         provider: 'anthropic',
@@ -149,11 +149,11 @@ async function deleteFromAnthropicProvider(_userId: string): Promise<DeletionRes
  *
  * No direct API for bulk deletion via user ID
  */
-async function deleteFromOpenAIProvider(_userId: string): Promise<DeletionResponse> {
+async function deleteFromOpenAIProvider(userId: string): Promise<DeletionResponse> {
   try {
     // Log deletion request for OpenAI support
     await db.insert(privacyAuditLog).values({
-      userId: _userId,
+      userId,
       action: 'openai_deletion_request_logged',
       context: {
         provider: 'openai',

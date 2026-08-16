@@ -151,13 +151,11 @@ export interface TextualRegionSelector {
  * 
  * @param content - Text content
  * @param target - Target text to select
- * @param contextLength - Characters for context (if using contextual selector)
  * @returns Textual region selector object, or null if text not found
  */
 export function createTextualRegionSelector(
   content: string,
-  target: string,
-  _contextLength: number = 50
+  target: string
 ): TextualRegionSelector | null {
   // Validation
   if (!target || target.length === 0) {
@@ -177,41 +175,6 @@ export function createTextualRegionSelector(
   // If text cannot be found, return null rather than creating unreliable selector
   // This is safer than creating a contextual selector that may not match
   return null;
-}
-
-/**
- * Convert normalized position back to original position.
- * 
- * Accounts for whitespace and case differences.
- * 
- * @param original - Original text
- * @param normalizedPos - Position in normalized text
- * @returns Position in original text
- */
-function getOriginalPosition(original: string, normalizedPos: number): number {
-  let normalizedCount = 0;
-  let normalizing = false;
-  
-  for (let i = 0; i < original.length; i++) {
-    const char = original[i];
-    const isWhitespace = /\s/.test(char);
-    
-    if (isWhitespace) {
-      if (!normalizing) {
-        normalizing = true;
-        normalizedCount++;
-      }
-    } else {
-      normalizing = false;
-      normalizedCount++;
-    }
-    
-    if (normalizedCount === normalizedPos) {
-      return i + 1;
-    }
-  }
-  
-  return original.length;
 }
 
 /**

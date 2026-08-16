@@ -22,7 +22,7 @@ export type ExtendedTriggerSegment = TriggerSegment | CursorTriggerSegment;
 /**
  * Check if text contains cursor-related keywords
  */
-export function containsCursorKeywords(text: string, language: string = 'en'): boolean {
+export function containsCursorKeywords(text: string, _language: string = 'en'): boolean {
   const keywords = [
     'cursor',
     'navigate',

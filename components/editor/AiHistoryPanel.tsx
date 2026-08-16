@@ -141,7 +141,7 @@ export function AiHistoryPanel({ documentId, open, onClose }: AiHistoryPanelProp
           </div>
         )}
 
-        {turns.map((turn, idx) => {
+        {turns.map((turn) => {
           const turnId = `${turn.sessionId}-${turn.turnIndex}`;
           const isExpanded = expandedTurn === turnId;
           const prov = turn.provenance;

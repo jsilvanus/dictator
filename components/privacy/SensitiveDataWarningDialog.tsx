@@ -179,10 +179,10 @@ export const SensitiveDataWarningDialog: React.FC<SensitiveDataWarningDialogProp
         <div className="mb-6 rounded-lg bg-blue-50 p-4 text-sm text-blue-900 border border-blue-200">
           <p className="font-semibold mb-2">💡 Tips:</p>
           <ul className="list-inside list-disc space-y-1 text-xs">
-            <li>Use "Redact" to automatically remove sensitive data before sending</li>
+            <li>Use &quot;Redact&quot; to automatically remove sensitive data before sending</li>
             <li>Send only selected text when possible, not the full document</li>
             <li>Consider using local AI models (Ollama, Dictator) for sensitive content</li>
-            <li>Review your provider's privacy policy in Settings</li>
+            <li>Review your provider&apos;s privacy policy in Settings</li>
           </ul>
         </div>
 
