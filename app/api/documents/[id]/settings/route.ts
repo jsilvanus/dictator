@@ -9,7 +9,7 @@ type DocumentSettingsUpdateRequest = {
   systemPromptOverride?: string;
 };
 
-export async function GET({ params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getRequiredSession();
     const { id } = await params;
@@ -34,7 +34,7 @@ export async function GET({ params }: { params: Promise<{ id: string }> }) {
   }
 }
 
-export async function POST({ params }: { params: Promise<{ id: string }> }, request: Request) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getRequiredSession();
     const { id } = await params;

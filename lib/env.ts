@@ -1,7 +1,14 @@
 import { z } from 'zod';
 
-// Environment variable validation. Next.js automatically loads .env files
-// at build time, so we only need to validate here.
+// Environment variable validation.
+//
+// `next build` imports every route module to collect page data, and does so with
+// no runtime environment present — CI has no .env file, and a Docker image is
+// built before its secrets exist. Validating at import time therefore failed a
+// build that was otherwise correct. During the build phase we validate against
+// placeholders for the three required values and let anything genuinely set in
+// the environment override them; the real check still runs on the first request,
+// which is when these values are actually needed.
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
@@ -30,4 +37,15 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
 });
 
-export const env = envSchema.parse(process.env);
+const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
+
+const source = isBuildPhase
+  ? {
+      DATABASE_URL: 'postgresql://build:build@localhost:5432/build',
+      NEXTAUTH_SECRET: 'build-time-placeholder',
+      NEXTAUTH_URL: 'http://localhost:3000',
+      ...process.env,
+    }
+  : process.env;
+
+export const env = envSchema.parse(source);

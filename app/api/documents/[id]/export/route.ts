@@ -23,7 +23,7 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -37,7 +37,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const format = (searchParams.get('format') || 'json') as ExportFormat;
     const include = (searchParams.get('include') || 'all');
-    const documentId = params.id;
+    const documentId = (await params).id;
 
     // Validate format
     if (!['json', 'markdown', 'csv'].includes(format)) {

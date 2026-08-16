@@ -34,7 +34,7 @@ export const maxDuration = 60; // Long operation timeout
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getRequiredSession();
@@ -50,7 +50,7 @@ export async function GET(
     const packaging = (searchParams.get('packaging') || undefined) as string | undefined;
     const sign = searchParams.get('sign') !== 'false'; // default true
     const includeProvenance = searchParams.get('includeProvenance') !== 'false'; // default true
-    const documentId = params.id;
+    const documentId = (await params).id;
 
     // Fetch document
     const doc = await db

@@ -52,10 +52,11 @@ export async function submitProviderDeletionRequests(
       // Log the deletion request
       await db.insert(deletionRecords).values({
         userId,
-        deletionType: `${provider}_history`,
-        reason: `Deletion requested via account deletion`,
+        resourceType: 'ai-history',
+        resourceId: provider,
+        method: 'hard-delete',
         status: response.status === 'error' ? 'failed' : 'pending',
-        deletedAt: response.status === 'completed' ? new Date() : null,
+        completedAt: response.status === 'completed' ? new Date() : null,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -111,8 +112,8 @@ async function deleteFromAnthropicProvider(userId: string): Promise<DeletionResp
     // Log deletion request for Anthropic support team
     await db.insert(privacyAuditLog).values({
       userId,
-      action: 'anthropic_deletion_request_logged',
-      context: {
+      eventType: 'anthropic_deletion_request_logged',
+      details: {
         provider: 'anthropic',
         requestedAt: new Date().toISOString(),
         note: 'Anthropic support must process deletion manually. Data retained for 30 days by default.',
@@ -154,8 +155,8 @@ async function deleteFromOpenAIProvider(userId: string): Promise<DeletionRespons
     // Log deletion request for OpenAI support
     await db.insert(privacyAuditLog).values({
       userId,
-      action: 'openai_deletion_request_logged',
-      context: {
+      eventType: 'openai_deletion_request_logged',
+      details: {
         provider: 'openai',
         requestedAt: new Date().toISOString(),
         note: 'Users must delete conversations manually from OpenAI account. Data retained for 30 days.',

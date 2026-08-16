@@ -18,7 +18,7 @@ import { aiSessions, aiTurnProvenance, documents } from '@/lib/db/schema';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -32,7 +32,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const offset = parseInt(searchParams.get('offset') || '0');
-    const documentId = params.id;
+    const documentId = (await params).id;
 
     // Verify user owns the document
     const doc = await db

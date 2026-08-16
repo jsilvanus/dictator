@@ -30,7 +30,7 @@ import { aiProviderPolicies, aiSessions, aiTurnProvenance, documents, privacyAud
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -41,7 +41,7 @@ export async function GET(
       );
     }
 
-    const documentId = params.id;
+    const documentId = (await params).id;
 
     // Fetch document
     const doc = await db
