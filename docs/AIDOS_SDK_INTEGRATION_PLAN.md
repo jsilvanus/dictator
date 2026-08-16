@@ -29,15 +29,15 @@ on the same Android device; a server cannot do that. Nothing in `lib/ai/provider
 ## What Dictator depends on from the Aidos side
 
 None of the Dictator phases below can start against a working Engine until these land. They are
-tracked in the canonical plan as S0–S4.
+tracked in the canonical plan as S0–S4. **S0 and S1 are done and on Aidos's `main`.**
 
-| Phase | What | Why Dictator needs it |
-|---|---|---|
-| S0 | The SDK compiles at all | `sdk/` is currently red in CI: a missing brace, undeclared `kernel` and serialization dependencies, and Kotlin 2.1.0 against the rest of the repo's 2.4.10 |
-| S1 | Handshake permission `signature` → `normal` | Dictator is signed with a different certificate, so today it gets a `SecurityException` at `bindService` and never reaches the user-approval screen that was built for exactly this case |
-| S2 | A real SDK client: Binder handshake, three-state approval result, OkHttp transport, **SSE streaming**, typed capability negotiation | `EngineClientImpl.initialize()` currently contains no Binder code and returns `false` unconditionally |
-| S3 | Published artifacts on GitHub Packages | How Dictator consumes it |
-| S4 | Real token streaming in Engine | Engine's SSE currently chunks an already-complete response, so first-token latency equals full generation time |
+| Phase | Status | What | Why Dictator needs it |
+|---|---|---|---|
+| S0 | **done** (aidos#37) | The SDK compiles at all | It had never compiled: a missing brace, `private val modelId` conflicting with its own `override val`, `Turn.System.text` where kernel declares `content`, undeclared `kernel` and serialization dependencies, and Kotlin 2.1.0 against the repo's 2.4.10 |
+| S1 | **done** (aidos#39) | Handshake permission `signature` → `normal` | Dictator is signed with a different certificate. Under `signature` it took a `SecurityException` at `bindService` and never reached the approval screen built for exactly this case. Trust now comes from the Binder-verified caller identity plus the user's persisted approval |
+| S2 | pending | A real SDK client: Binder handshake, three-state approval result, OkHttp transport, **SSE streaming**, typed capability negotiation | `EngineClientImpl.initialize()` still contains no Binder code and returns `false` unconditionally |
+| S3 | pending | Published artifacts on GitHub Packages | How Dictator consumes it |
+| S4 | pending | Real token streaming in Engine | Engine's SSE chunks an already-complete response, so first-token latency equals full generation time |
 
 Dictator depends on `aidos-sdk-client` only — the artifact with **no** dependency on Aidos's
 `kernel` contract types. The `ModelAdapter` bindings ship separately as `aidos-sdk-adapters` for
