@@ -1,4 +1,4 @@
-import { AiChatRequest, AiInlineRequest, AiProvider, AiResponse, AiStreamChunk, ToolCall } from './types';
+import { AiChatRequest, AiInlineRequest, AiProvider, AiResponse, AiStreamChunk } from './types';
 
 /**
  * Dictator Service AI Provider
@@ -77,7 +77,6 @@ export class DictatorProvider implements AiProvider {
         });
 
         if (!response.ok) {
-          const errorData = (await response.json().catch(() => ({}))) as Record<string, unknown>;
           controller.enqueue({
             type: 'error',
             error: `Dictator AI error: ${response.statusText}`,

@@ -7,10 +7,7 @@
 
 import { useMemo,useState } from 'react';
 
-import {
-  type CursorCommandSet,
-  getCursorCommandsForLanguage,
-} from '@/lib/data/cursor-command-defaults';
+import { getCursorCommandsForLanguage } from '@/lib/data/cursor-command-defaults';
 import { type UserSettings } from '@/lib/data/default-settings';
 import { parseCursorCommandsFromText } from '@/lib/voice/cursor-parser';
 
@@ -34,7 +31,6 @@ export function CursorSettingsPage({ settings, onUpdateSettings }: CursorSetting
   );
   const [testText, setTestText] = useState('');
   const [testResults, setTestResults] = useState<string[]>([]);
-  const [showTesting, setShowTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Get all available commands
@@ -141,7 +137,7 @@ export function CursorSettingsPage({ settings, onUpdateSettings }: CursorSetting
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Default Cursor Size</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Choose the default cursor size for navigation. Say "big", "medium", or "small" to change it
+          Choose the default cursor size for navigation. Say &quot;big&quot;, &quot;medium&quot;, or &quot;small&quot; to change it
           during use.
         </p>
         <div className="flex gap-3">
@@ -229,7 +225,7 @@ export function CursorSettingsPage({ settings, onUpdateSettings }: CursorSetting
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Custom Aliases</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Add your own voice keywords as shortcuts for commands. For example, alias "go" to "next".
+          Add your own voice keywords as shortcuts for commands. For example, alias &quot;go&quot; to &quot;next&quot;.
         </p>
 
         {/* Add Alias Form */}
@@ -281,7 +277,7 @@ export function CursorSettingsPage({ settings, onUpdateSettings }: CursorSetting
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
               >
                 <div>
-                  <p className="text-sm font-medium text-gray-900">"{alias}"</p>
+                  <p className="text-sm font-medium text-gray-900">&quot;{alias}&quot;</p>
                   <p className="text-xs text-gray-600">→ {command}</p>
                 </div>
                 <button
@@ -341,7 +337,7 @@ export function CursorSettingsPage({ settings, onUpdateSettings }: CursorSetting
         <h4 className="font-medium text-blue-900 mb-2">💡 Tips</h4>
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• Commands are case-insensitive</li>
-          <li>• Chain commands together: "select big next next next"</li>
+          <li>• Chain commands together: &quot;select big next next next&quot;</li>
           <li>• Aliases override default commands when they match</li>
           <li>• You can always use default commands even with custom aliases</li>
         </ul>

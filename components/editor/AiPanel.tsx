@@ -244,10 +244,6 @@ export function AiPanel({
     }
   }
 
-  function startNewChat() {
-    void clearConversation();
-  }
-
   if (!open) return null;
 
   return (
@@ -269,7 +265,7 @@ export function AiPanel({
           )}
           {showContextInfo && contextSize > 0 && (
             <p style={{ fontSize: '0.7rem', color: 'var(--muted)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
-              Context includes document content and conversation history. Use "Compact" to reduce context size.
+              Context includes document content and conversation history. Use &quot;Compact&quot; to reduce context size.
             </p>
           )}
         </div>

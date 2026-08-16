@@ -7,10 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import {
-  formatPiiTypesForVoice,
-  generatePermissionVoiceFeedback,
-} from '@/lib/privacy/SelectionPermissionManager';
+import { generatePermissionVoiceFeedback } from '@/lib/privacy/SelectionPermissionManager';
 import type { SensitiveDataType } from '@/lib/privacy/types';
 
 interface SelectionPermissionDialogProps {
@@ -220,7 +217,7 @@ export function SelectionPermissionDialog({
         {/* Voice hint */}
         {voiceMode && (
           <div className="px-6 py-3 bg-blue-100 border-t border-blue-200 text-sm text-blue-800 text-center">
-            Listening... Say "allow" to proceed or "cancel" to reject.
+            Listening... Say &quot;allow&quot; to proceed or &quot;cancel&quot; to reject.
           </div>
         )}
       </div>

@@ -11,11 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 
-import {
-  createDefaultDetector,
-  getSensitiveDataWarning,
-  type SensitiveDataScanResult,
-} from '@/lib/privacy';
+import { createDefaultDetector, type SensitiveDataScanResult } from '@/lib/privacy';
 import { getTelemetryService } from '@/lib/privacy/TelemetryService';
 
 export const runtime = 'nodejs';

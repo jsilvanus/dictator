@@ -13,12 +13,6 @@ interface PermissionCheckOptions {
   piiDetectionResult: PiiDetectionResult;
 }
 
-interface PermissionGrant {
-  piiType: SensitiveDataType;
-  scope: PermissionScope;
-  grantedBy: 'voice' | 'ui';
-}
-
 /**
  * In-memory permission cache during a session
  * Keys are "{userId}:{piiType}:{scope}" or "{userId}:{documentId}:{piiType}"
@@ -257,15 +251,8 @@ export function formatPiiTypesForVoice(piiTypes: SensitiveDataType[]): string {
  */
 export function generatePermissionVoiceFeedback(
   piiTypes: SensitiveDataType[],
-  scope: PermissionScope = 'model',
+  _scope: PermissionScope = 'model',
 ): string {
   const formattedPii = formatPiiTypesForVoice(piiTypes);
-  const scopeLabel =
-    scope === 'document'
-      ? 'this document'
-      : scope === 'user'
-        ? 'your account'
-        : 'this session';
-
   return `The selection contains ${formattedPii}. Do you allow sending this to the AI? Say yes or allow to accept, no or cancel to reject.`;
 }

@@ -4,11 +4,7 @@
  * Supports command chaining: "select big cursor next next"
  */
 
-import {
-  type CursorCommandSet,
-  flattenCursorCommands,
-  getCursorCommandsForLanguage,
-} from '@/lib/data/cursor-command-defaults';
+import { flattenCursorCommands, getCursorCommandsForLanguage } from '@/lib/data/cursor-command-defaults';
 import type { CursorOperationResult,CursorState } from '@/lib/types/cursor';
 
 type CursorCommand =

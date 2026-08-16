@@ -4,9 +4,8 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 
-import { McpServerConfig, McpServerState, McpToolDefinition, McpToolResult } from './types';
+import { McpServerConfig, McpToolDefinition, McpToolResult } from './types';
 
 /**
  * MCP Client wrapper

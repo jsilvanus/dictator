@@ -21,7 +21,7 @@ export function convertMcpToolToRegisteredTool(
     name: toolName,
     description: `[${serverId}] ${mcpTool.description || mcpTool.name}`,
     inputSchema: mcpTool.inputSchema,
-    handler: async (args) => {
+    handler: async (_args) => {
       // Handler will be called by executor, which will route to MCP manager
       // This is a placeholder - actual execution happens in executor
       return {
@@ -67,7 +67,6 @@ export async function registerMcpServerTools(serverId: string): Promise<number> 
  * Unregister all tools from an MCP server from the tool registry
  */
 export function unregisterMcpServerTools(serverId: string): number {
-  const registry = getGlobalRegistry();
   const allTools = getAllMcpTools();
   let unregisteredCount = 0;
 

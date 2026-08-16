@@ -21,12 +21,6 @@
 import { db } from '@/lib/db';
 import { deletionRecords, privacyAuditLog } from '@/lib/db/schema';
 
-interface ProviderDeletionRequest {
-  userId: string;
-  provider: 'claude' | 'openai' | 'ollama' | string;
-  reason?: string;
-}
-
 interface DeletionResponse {
   provider: string;
   success: boolean;
@@ -193,7 +187,7 @@ async function deleteFromOpenAIProvider(userId: string): Promise<DeletionRespons
  * Ollama runs locally, so deletion is user's responsibility
  * No remote deletion needed
  */
-async function deleteFromOllamaProvider(userId: string): Promise<DeletionResponse> {
+async function deleteFromOllamaProvider(_userId: string): Promise<DeletionResponse> {
   return {
     provider: 'ollama',
     success: true,

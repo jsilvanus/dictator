@@ -698,7 +698,7 @@ export function VoiceDock({
         detectedPiiTypes={detectedPiiTypes}
         confidence={0.85}
         riskLevel={pendingAiRequest?.riskLevel || 'medium'}
-        onAllow={(scope) => {
+        onAllow={(_scope) => {
           if (pendingAiRequest) {
             proceedWithAiRequest(pendingAiRequest.content);
           }

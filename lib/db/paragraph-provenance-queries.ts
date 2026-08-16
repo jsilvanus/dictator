@@ -8,14 +8,7 @@
 import { and, desc, eq, gt, inArray,lt } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import {
-  c2pa_manifests,
-  document_versions_with_provenance,
-  export_history,
-  paragraph_provenance_events,
-  paragraph_provenances,
-} from '@/lib/db/schema';
-import { ParagraphProvenanceService } from '@/lib/provenance/paragraph-provenance-service';
+import { c2pa_manifests, export_history, paragraph_provenance_events, paragraph_provenances } from '@/lib/db/schema';
 import type {
   C2PAManifest,
   ParagraphProvenance,
