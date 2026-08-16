@@ -17,7 +17,10 @@ SDK is the client library for it. Integrating it gives Dictator:
    editor built for a church deployment ships its users' dictated speech off-device by default
    today. Routing dictation through Engine's on-device whisper is what makes Dictator's privacy
    claims true of its primary input path.
-3. **Embeddings**, as a capability only for now.
+Embeddings are deliberately **not** on this list. Aidos Engine serves them and the SDK exposes
+them, but nothing in Dictator consumes vectors — grepping both the web app and `dictator-kotlin`
+turns up only `EmbeddedPackagingStrategy.ts` and `c2pa-manifest.ts`, which are "embedded" in the
+unrelated file-packaging sense. See "Embeddings, and why they are not a phase here" below.
 
 **The Next.js web app is out of scope by construction.** The SDK reaches Engine over `127.0.0.1`
 on the same Android device; a server cannot do that. Nothing in `lib/ai/providers/` changes.
@@ -101,18 +104,30 @@ utterance-at-a-time and returns no partials.
 
 **Done when:** a user can dictate a document in airplane mode with Engine installed.
 
-## D3 · Embeddings
+## Embeddings, and why they are not a phase here
 
-Client method and provider surface only. Nothing in Dictator consumes embeddings today, so a UI
-consumer — semantic document search — is new feature work to be scoped on its own merits, not
-bundled here.
+The SDK serves embeddings — that is fixed, and does not depend on Dictator wanting them. What is
+missing is a consumer: adding a provider method with no caller ships plumbing that rots until
+something uses it.
 
-**Done when:** Dictator can request an embedding through the SDK and receives a vector.
+The feature that would use it is semantic search over dictated documents, and it carries design
+questions that have nothing to do with talking to Aidos Engine:
+
+- **Where do vectors live?** A new SQLDelight table — and a decision about whether it participates
+  in the offline-first sync layer or is explicitly excluded from it.
+- **What gets embedded?** Whole documents, or paragraphs. Paragraphs are the interesting answer,
+  because Dictator already has paragraph-level identity and provenance to hang them off.
+- **When are they recomputed?** Every recompute is an Engine call, and Engine may not be installed.
+- **How is similarity searched?** SQLite has no native vector index.
+- **What is the actual feature?** "Search my documents by meaning" and "surface related passages
+  while dictating" are different products with different latency budgets.
+
+That gets scoped on its own merits. When it is, the SDK side is already built and waiting.
 
 ## Sequencing
 
 D0 is independent of all Aidos-side work and should start immediately; it is the long pole. D1
-needs D0 plus S1 and S3. D2 and D3 follow D1.
+needs D0 plus S1 and S3. D2 follows D1.
 
 ## Risks
 
