@@ -1,0 +1,28 @@
+-- Document versions table
+CREATE TABLE documentVersions (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    content TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    createdBy TEXT,
+    createdAt INTEGER NOT NULL,
+    deviceSource TEXT DEFAULT 'kotlin',
+    deviceVersion INTEGER DEFAULT 1,
+    FOREIGN KEY (documentId) REFERENCES documents(id)
+);
+
+getVersionById:
+SELECT * FROM documentVersions WHERE id = ?;
+
+getVersionsByDocumentId:
+SELECT * FROM documentVersions WHERE documentId = ? ORDER BY createdAt DESC;
+
+getVersionsSince:
+SELECT * FROM documentVersions WHERE documentId = ? AND createdAt >= ? ORDER BY createdAt DESC;
+
+insertVersion:
+INSERT INTO documentVersions (id, documentId, content, version, createdBy, createdAt, deviceSource, deviceVersion)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteVersionsByDocumentId:
+DELETE FROM documentVersions WHERE documentId = ?;

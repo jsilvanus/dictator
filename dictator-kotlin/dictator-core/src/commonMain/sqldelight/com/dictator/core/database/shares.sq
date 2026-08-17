@@ -1,0 +1,31 @@
+-- Shares table
+CREATE TABLE shares (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    sharedWithUserId TEXT NOT NULL,
+    permission TEXT NOT NULL,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (documentId) REFERENCES documents(id),
+    FOREIGN KEY (sharedWithUserId) REFERENCES users(id)
+);
+
+getShareById:
+SELECT * FROM shares WHERE id = ?;
+
+getSharesByDocumentId:
+SELECT * FROM shares WHERE documentId = ? ORDER BY createdAt DESC;
+
+getSharesByUserId:
+SELECT * FROM shares WHERE sharedWithUserId = ? ORDER BY createdAt DESC;
+
+insertShare:
+INSERT INTO shares (id, documentId, sharedWithUserId, permission, createdAt) VALUES (?, ?, ?, ?, ?);
+
+updateShare:
+UPDATE shares SET permission = ? WHERE id = ?;
+
+deleteShareById:
+DELETE FROM shares WHERE id = ?;
+
+deleteSharesByDocumentId:
+DELETE FROM shares WHERE documentId = ?;

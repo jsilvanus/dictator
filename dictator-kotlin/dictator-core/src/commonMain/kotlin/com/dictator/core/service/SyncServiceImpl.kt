@@ -217,8 +217,9 @@ class SyncServiceImpl(
                 documentRepository.updateDocument(updated)
             }
             
-            // Update conflict as resolved
-            conflictRepository.resolveConflict(conflictId)
+            // Update conflict as resolved. The repository stamps status and resolvedAt
+            // itself; it takes the conflict to read the chosen version off it.
+            conflictRepository.resolveConflict(conflictId, conflict.copy(resolvedVersion = resolution))
             
             // Update sync metadata
             val syncMetadata = syncMetadataRepository.getSyncMetadata(conflict.documentId)

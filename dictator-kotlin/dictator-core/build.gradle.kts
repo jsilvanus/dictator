@@ -1,18 +1,14 @@
 plugins {
-    id("org.jetbrains.kotlin.multiplatform") version "1.9.25"
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.25"
-    id("app.cash.sqldelight") version "2.0.1"
+    // Versions come from settings.gradle.kts pluginManagement (D0).
+    id("org.jetbrains.kotlin.multiplatform")
+    id("org.jetbrains.kotlin.plugin.serialization")
+    id("app.cash.sqldelight")
 }
 
 kotlin {
     // Multiplatform configuration
-    jvm {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "11"
-            }
-        }
-    }
+    jvmToolchain(21)
+    jvm()
 
     sourceSets {
         val commonMain by getting {
@@ -34,11 +30,17 @@ kotlin {
 
                 // SQLDelight
                 implementation("app.cash.sqldelight:runtime:2.0.1")
+                // Query.asFlow(), used by the repositories' observe* methods.
+                implementation("app.cash.sqldelight:coroutines-extensions:2.0.1")
 
                 // Ktor Client (multiplatform)
                 implementation("io.ktor:ktor-client-core:2.3.4")
                 implementation("io.ktor:ktor-client-serialization:2.3.4")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.4")
+                // ContentNegotiation and Logging are separate artifacts; HttpClientConfig
+                // installs both.
+                implementation("io.ktor:ktor-client-content-negotiation:2.3.4")
+                implementation("io.ktor:ktor-client-logging:2.3.4")
 
                 // Koin DI
                 implementation("io.insert-koin:koin-core:3.4.0")

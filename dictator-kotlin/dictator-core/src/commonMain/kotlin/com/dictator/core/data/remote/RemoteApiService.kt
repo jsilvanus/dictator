@@ -521,7 +521,7 @@ class RemoteApiService(
     }
     
     suspend fun pushDocumentChanges(documentId: String, changes: Map<String, String>, deviceId: String) {
-        return try {
+        try {
             val response = httpClient.post("$baseUrl/api/documents/$documentId/sync") {
                 contentType(ContentType.Application.Json)
                 authToken?.let { header("Authorization", it) }

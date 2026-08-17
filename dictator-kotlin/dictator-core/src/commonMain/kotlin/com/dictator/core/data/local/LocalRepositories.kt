@@ -1,5 +1,6 @@
 package com.dictator.core.data.local
 
+import app.cash.sqldelight.coroutines.asFlow
 import com.dictator.core.data.converter.*
 import com.dictator.core.domain.entity.*
 import com.dictator.core.domain.repository.*
@@ -7,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
+import kotlinx.serialization.encodeToString
 
 /**
  * Local repository implementations using SQLDelight for database access.

@@ -1,0 +1,33 @@
+-- Folders table
+CREATE TABLE folders (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    userId TEXT NOT NULL,
+    parentId TEXT,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+getFolderById:
+SELECT * FROM folders WHERE id = ?;
+
+getFoldersByUserId:
+SELECT * FROM folders WHERE userId = ? ORDER BY createdAt DESC;
+
+getRootFolders:
+SELECT * FROM folders WHERE parentId IS NULL ORDER BY createdAt DESC;
+
+getFoldersByParentId:
+SELECT * FROM folders WHERE parentId = ? ORDER BY createdAt DESC;
+
+insertFolder:
+INSERT INTO folders (id, name, userId, parentId, createdAt) VALUES (?, ?, ?, ?, ?);
+
+updateFolder:
+UPDATE folders SET name = ?, parentId = ? WHERE id = ?;
+
+deleteFolderById:
+DELETE FROM folders WHERE id = ?;
+
+deleteFoldersByUserId:
+DELETE FROM folders WHERE userId = ?;

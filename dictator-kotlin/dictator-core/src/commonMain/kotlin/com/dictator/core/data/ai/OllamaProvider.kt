@@ -8,6 +8,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import io.ktor.util.InternalAPI
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

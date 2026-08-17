@@ -20,10 +20,10 @@ class JvmDatabaseDriverProvider(
         
         val driver = JdbcSqliteDriver(
             url = "jdbc:sqlite:$dbPath",
-            properties = mapOf(
-                "journal_mode" to "WAL",  // Write-Ahead Logging for better concurrency
-                "foreign_keys" to "ON"    // Enable foreign key constraints
-            )
+            properties = java.util.Properties().apply {
+                setProperty("journal_mode", "WAL")  // Write-Ahead Logging for better concurrency
+                setProperty("foreign_keys", "ON")   // Enable foreign key constraints
+            }
         )
         
         // Run migrations on first creation

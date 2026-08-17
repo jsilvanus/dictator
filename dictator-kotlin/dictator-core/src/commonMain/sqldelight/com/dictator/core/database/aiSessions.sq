@@ -1,0 +1,28 @@
+-- AI Sessions table
+CREATE TABLE aiSessions (
+    id TEXT PRIMARY KEY,
+    userId TEXT,
+    mode TEXT NOT NULL,
+    turnsJson TEXT NOT NULL,
+    metadata TEXT,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+getSessionById:
+SELECT * FROM aiSessions WHERE id = ?;
+
+getSessionsByUserId:
+SELECT * FROM aiSessions WHERE userId = ? ORDER BY createdAt DESC;
+
+insertSession:
+INSERT INTO aiSessions (id, userId, mode, turnsJson, metadata, createdAt) VALUES (?, ?, ?, ?, ?, ?);
+
+updateSession:
+UPDATE aiSessions SET mode = ?, turnsJson = ?, metadata = ? WHERE id = ?;
+
+deleteSessionById:
+DELETE FROM aiSessions WHERE id = ?;
+
+deleteSessionsByUserId:
+DELETE FROM aiSessions WHERE userId = ?;

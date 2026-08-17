@@ -7,31 +7,6 @@ package com.dictator.core.service
 import com.dictator.core.data.tools.*
 
 /**
- * Tool service interface
- */
-interface ToolService {
-    suspend fun registerTool(tool: RegisteredTool): Result<Unit>
-    suspend fun getTool(name: String): RegisteredTool?
-    suspend fun getAllTools(): List<RegisteredTool>
-    suspend fun searchTools(query: String): List<RegisteredTool>
-    
-    suspend fun executeTool(toolName: String, arguments: Map<String, Any?>, context: ToolExecutionContext): Result<ToolResult>
-    
-    suspend fun hasPermission(userId: String, target: String, toolType: String, documentId: String? = null): Boolean
-    suspend fun grantPermission(permission: ToolPermission): Result<ToolPermission>
-    suspend fun revokePermission(permissionId: String): Result<Unit>
-    suspend fun getPermissionsForUser(userId: String): List<ToolPermission>
-    
-    suspend fun requestPermission(request: PermissionRequest): Result<PermissionRequest>
-    suspend fun approvePermissionRequest(requestId: String, mode: ToolPermissionMode): Result<ToolPermission>
-    suspend fun rejectPermissionRequest(requestId: String): Result<Unit>
-    suspend fun getPendingRequests(userId: String): List<PermissionRequest>
-    
-    suspend fun getToolLogs(toolName: String): List<ToolExecutionLog>
-    suspend fun getUserLogs(userId: String): List<ToolExecutionLog>
-}
-
-/**
  * Tool Service Implementation
  */
 class ToolServiceImpl(

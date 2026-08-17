@@ -3,11 +3,13 @@ package com.dictator.core.data.ai
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import io.ktor.util.InternalAPI
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

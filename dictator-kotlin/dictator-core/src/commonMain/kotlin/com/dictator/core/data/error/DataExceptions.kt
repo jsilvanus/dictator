@@ -5,15 +5,15 @@ package com.dictator.core.data.error
  */
 
 sealed class DataException(message: String, cause: Throwable? = null) : Exception(message, cause) {
-    data class NotFound(val message: String) : DataException(message)
-    data class ValidationError(val message: String) : DataException(message)
-    data class NetworkError(val message: String, val cause: Throwable? = null) : DataException(message, cause)
-    data class ServerError(val message: String, val code: Int? = null) : DataException(message)
-    data class SyncError(val message: String) : DataException(message)
-    data class ConflictError(val message: String) : DataException(message)
-    data class DatabaseError(val message: String, val cause: Throwable? = null) : DataException(message, cause)
-    data class AuthenticationError(val message: String) : DataException(message)
-    data class AuthorizationError(val message: String) : DataException(message)
+    data class NotFound(override val message: String) : DataException(message)
+    data class ValidationError(override val message: String) : DataException(message)
+    data class NetworkError(override val message: String, override val cause: Throwable? = null) : DataException(message, cause)
+    data class ServerError(override val message: String, val code: Int? = null) : DataException(message)
+    data class SyncError(override val message: String) : DataException(message)
+    data class ConflictError(override val message: String) : DataException(message)
+    data class DatabaseError(override val message: String, override val cause: Throwable? = null) : DataException(message, cause)
+    data class AuthenticationError(override val message: String) : DataException(message)
+    data class AuthorizationError(override val message: String) : DataException(message)
 }
 
 sealed class Result<T> {

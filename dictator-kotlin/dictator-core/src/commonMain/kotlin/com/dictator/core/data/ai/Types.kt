@@ -59,6 +59,7 @@ data class AiResponse(
 /**
  * AI Token Usage
  */
+@Serializable
 data class AiUsage(
     val inputTokens: Int = 0,
     val outputTokens: Int = 0

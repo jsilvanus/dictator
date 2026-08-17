@@ -7,34 +7,6 @@ package com.dictator.core.service
 import com.dictator.core.data.privacy.*
 
 /**
- * Privacy service interface
- */
-interface PrivacyService {
-    // Sensitive Data Detection
-    suspend fun detectSensitiveData(text: String): List<DetectedSensitiveData>
-    suspend fun containsSensitiveData(text: String): Boolean
-    suspend fun calculatePrivacyRisk(text: String): Float
-    suspend fun isSafeForAiProcessing(text: String): Boolean
-
-    // Telemetry
-    suspend fun recordEvent(userId: String, eventType: String, metadata: Map<String, String> = emptyMap())
-    suspend fun recordAiQueryEvent(userId: String, provider: String, model: String, hasSensitiveData: Boolean)
-
-    // Provider Policies
-    suspend fun getProviderPolicy(provider: String): AiProviderPolicy?
-    suspend fun getAllProviderPolicies(): List<AiProviderPolicy>
-    suspend fun getPrivacyScore(provider: String): Float
-    suspend fun isGdprCompliant(provider: String): Boolean
-
-    // Privacy Settings
-    suspend fun getUserPrivacySettings(userId: String): UserPrivacySettings
-    suspend fun updatePrivacySettings(userId: String, settings: UserPrivacySettings)
-
-    // Audit Logging
-    suspend fun logPrivacyEvent(userId: String, eventType: String, details: String)
-}
-
-/**
  * Privacy Service Implementation
  */
 class PrivacyServiceImpl(

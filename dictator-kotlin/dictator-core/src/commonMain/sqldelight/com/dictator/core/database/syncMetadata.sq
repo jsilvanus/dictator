@@ -1,0 +1,26 @@
+-- Sync metadata table
+CREATE TABLE syncMetadata (
+    documentId TEXT PRIMARY KEY,
+    lastSyncedAt INTEGER,
+    localVersion INTEGER NOT NULL DEFAULT 1,
+    remoteVersion INTEGER NOT NULL DEFAULT 1,
+    pendingChanges INTEGER DEFAULT 0,
+    conflictStatus TEXT DEFAULT 'none',
+    updatedAt INTEGER NOT NULL,
+    FOREIGN KEY (documentId) REFERENCES documents(id)
+);
+
+getSyncMetadata:
+SELECT * FROM syncMetadata WHERE documentId = ?;
+
+getAllSyncMetadata:
+SELECT sm.* FROM syncMetadata sm
+JOIN documents d ON sm.documentId = d.id
+WHERE d.userId = ?;
+
+upsertSyncMetadata:
+INSERT OR REPLACE INTO syncMetadata (documentId, lastSyncedAt, localVersion, remoteVersion, pendingChanges, conflictStatus, updatedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+deleteSyncMetadata:
+DELETE FROM syncMetadata WHERE documentId = ?;

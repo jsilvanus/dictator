@@ -67,7 +67,9 @@ object PunctuationNormalizer {
         
         // Clean up spacing around punctuation
         result = result.replace(Regex("\\s+([.,!?;:])"), "$1")
-        result = result.replace(Regex("([([{])\\s+"), "$1")
+        // '[' must be escaped inside a character class: Java reads a bare '[' as opening
+        // a nested class, leaving the outer one unclosed.
+        result = result.replace(Regex("([(\\[{])\\s+"), "$1")
         result = result.replace(Regex("\\s+([\\])}])"), "$1")
         
         return result.trim()
@@ -79,8 +81,10 @@ object PunctuationNormalizer {
      */
     fun normalizeLineBreaks(text: String): String {
         var result = text
-        result = result.replace(Regex("\\bnew line\\b", RegexOption.IGNORE_CASE), "\n")
-        result = result.replace(Regex("\\bnew paragraph\\b", RegexOption.IGNORE_CASE), "\n\n")
+        // The spoken phrase stands in for the break itself, so the whitespace that
+        // surrounded it goes with it: "line one new line line two" -> "line one\nline two".
+        result = result.replace(Regex("\\s*\\bnew line\\b\\s*", RegexOption.IGNORE_CASE), "\n")
+        result = result.replace(Regex("\\s*\\bnew paragraph\\b\\s*", RegexOption.IGNORE_CASE), "\n\n")
         return result
     }
     
