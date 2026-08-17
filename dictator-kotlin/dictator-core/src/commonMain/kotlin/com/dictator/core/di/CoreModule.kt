@@ -5,12 +5,15 @@ import com.dictator.core.data.local.*
 import com.dictator.core.data.remote.HttpClientFactory
 import com.dictator.core.data.remote.RemoteApiService
 import com.dictator.core.domain.repository.*
-import com.dictator.core.service.McpService
-import com.dictator.core.service.McpServiceImpl
-import com.dictator.core.service.PrivacyService
-import com.dictator.core.service.PrivacyServiceImpl
-import com.dictator.core.service.ToolService
-import com.dictator.core.service.ToolServiceImpl
+import com.dictator.core.service.*
+import com.dictator.core.data.privacy.ProviderPolicyManager
+import com.dictator.core.data.privacy.SensitiveDataDetector
+import com.dictator.core.data.tools.ToolExecutor
+import com.dictator.core.data.tools.ToolPermissionsManager
+import com.dictator.core.data.tools.ToolRegistry
+import com.dictator.core.util.validation.Validators
+import com.dictator.core.util.voice.PunctuationNormalizer
+import com.dictator.core.util.voice.VoiceCommandParser
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 import io.ktor.client.*
@@ -86,15 +89,15 @@ val coreModule = module {
     }
     
     // Utilities (singletons)
-    singleOf(::com.dictator.core.util.voice.VoiceCommandParser)
-    singleOf(::com.dictator.core.util.voice.PunctuationNormalizer)
-    singleOf(::com.dictator.core.util.validation.Validators)
-    singleOf(::com.dictator.core.data.privacy.SensitiveDataDetector)
-    singleOf(::com.dictator.core.data.privacy.ProviderPolicyManager)
-    singleOf(::com.dictator.core.data.tools.ToolRegistry)
-    singleOf(::com.dictator.core.data.tools.ToolPermissionsManager)
+    singleOf(::VoiceCommandParser)
+    singleOf(::PunctuationNormalizer)
+    singleOf(::Validators)
+    singleOf(::SensitiveDataDetector)
+    singleOf(::ProviderPolicyManager)
+    singleOf(::ToolRegistry)
+    singleOf(::ToolPermissionsManager)
     single {
-        com.dictator.core.data.tools.ToolExecutor(
+        ToolExecutor(
             registry = get(),
             permissionsManager = get()
         )

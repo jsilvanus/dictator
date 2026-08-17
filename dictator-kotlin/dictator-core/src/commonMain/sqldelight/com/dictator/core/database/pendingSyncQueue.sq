@@ -1,0 +1,39 @@
+-- Pending sync queue table
+CREATE TABLE pendingSyncQueue (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    userId TEXT,
+    deviceId TEXT NOT NULL DEFAULT 'kotlin',
+    changeDataJson TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    retryCount INTEGER DEFAULT 0,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    FOREIGN KEY (documentId) REFERENCES documents(id),
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+getPendingItemById:
+SELECT * FROM pendingSyncQueue WHERE id = ?;
+
+getPendingItemsByDocumentId:
+SELECT * FROM pendingSyncQueue WHERE documentId = ? ORDER BY createdAt ASC;
+
+getPendingItemsByUserId:
+SELECT * FROM pendingSyncQueue WHERE userId = ? ORDER BY createdAt ASC;
+
+getPendingItems:
+SELECT * FROM pendingSyncQueue WHERE status = ? ORDER BY createdAt ASC;
+
+insertPendingItem:
+INSERT INTO pendingSyncQueue (id, documentId, userId, deviceId, changeDataJson, status, retryCount, createdAt, updatedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updatePendingItem:
+UPDATE pendingSyncQueue SET status = ?, retryCount = ?, updatedAt = ? WHERE id = ?;
+
+deletePendingItem:
+DELETE FROM pendingSyncQueue WHERE id = ?;
+
+deletePendingItemsByDocumentId:
+DELETE FROM pendingSyncQueue WHERE documentId = ?;

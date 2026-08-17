@@ -1,0 +1,37 @@
+-- Documents table
+CREATE TABLE documents (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    folderId TEXT NOT NULL,
+    userId TEXT,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    lastModifiedDevice TEXT DEFAULT 'kotlin',
+    deviceVersion INTEGER DEFAULT 1,
+    FOREIGN KEY (folderId) REFERENCES folders(id),
+    FOREIGN KEY (userId) REFERENCES users(id)
+);
+
+getDocumentById:
+SELECT * FROM documents WHERE id = ?;
+
+getDocumentsByUserId:
+SELECT * FROM documents WHERE userId = ? ORDER BY updatedAt DESC;
+
+getDocumentsByFolderId:
+SELECT * FROM documents WHERE folderId = ? ORDER BY updatedAt DESC;
+
+insertDocument:
+INSERT INTO documents (id, title, folderId, userId, createdAt, updatedAt, lastModifiedDevice, deviceVersion)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+updateDocument:
+UPDATE documents 
+SET title = ?, folderId = ?, userId = ?, updatedAt = ?, lastModifiedDevice = ?, deviceVersion = ? 
+WHERE id = ?;
+
+deleteDocumentById:
+DELETE FROM documents WHERE id = ?;
+
+deleteDocumentsByUserId:
+DELETE FROM documents WHERE userId = ?;

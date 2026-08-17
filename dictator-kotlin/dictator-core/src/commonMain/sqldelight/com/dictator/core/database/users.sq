@@ -1,0 +1,22 @@
+-- Users table
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    name TEXT,
+    createdAt INTEGER NOT NULL
+);
+
+getUserById:
+SELECT * FROM users WHERE id = ?;
+
+getUserByEmail:
+SELECT * FROM users WHERE email = ?;
+
+insertUser:
+INSERT INTO users (id, email, name, createdAt) VALUES (?, ?, ?, ?);
+
+updateUser:
+UPDATE users SET email = ?, name = ? WHERE id = ?;
+
+deleteUserById:
+DELETE FROM users WHERE id = ?;

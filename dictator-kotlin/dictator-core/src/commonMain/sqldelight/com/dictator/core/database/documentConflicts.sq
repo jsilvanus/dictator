@@ -1,0 +1,38 @@
+-- Document conflicts table
+CREATE TABLE documentConflicts (
+    id TEXT PRIMARY KEY,
+    documentId TEXT NOT NULL,
+    baseVersionJson TEXT NOT NULL,
+    androidVersionJson TEXT NOT NULL,
+    webVersionJson TEXT NOT NULL,
+    resolvedVersionJson TEXT,
+    status TEXT DEFAULT 'unresolved',
+    createdAt INTEGER NOT NULL,
+    resolvedAt INTEGER,
+    FOREIGN KEY (documentId) REFERENCES documents(id)
+);
+
+getConflictById:
+SELECT * FROM documentConflicts WHERE id = ?;
+
+getConflictsByDocumentId:
+SELECT * FROM documentConflicts WHERE documentId = ? ORDER BY createdAt DESC;
+
+getUnresolvedConflicts:
+SELECT * FROM documentConflicts WHERE documentId = ? AND status = 'unresolved' ORDER BY createdAt DESC;
+
+insertConflict:
+INSERT INTO documentConflicts (id, documentId, baseVersionJson, androidVersionJson, webVersionJson, resolvedVersionJson, status, createdAt, resolvedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateConflict:
+UPDATE documentConflicts SET status = ?, resolvedVersionJson = ?, resolvedAt = ? WHERE id = ?;
+
+resolveConflict:
+UPDATE documentConflicts SET status = ?, resolvedVersionJson = ?, resolvedAt = ? WHERE id = ?;
+
+deleteConflict:
+DELETE FROM documentConflicts WHERE id = ?;
+
+deleteConflictsByDocumentId:
+DELETE FROM documentConflicts WHERE documentId = ?;
