@@ -64,13 +64,39 @@ this integration that avoids the upgrade.
 This touches every Kotlin module in the Android port, so it should land on its own, first, before
 any Aidos-specific code.
 
-**Status:** the toolchain half is done and Gradle now evaluates, which it did not before — a
-`kotlin-parcelize` plugin id with no marker artifact was failing *every* invocation, including
-`:dictator-core`. With that cleared, `:dictator-core` compiled for the first time and reports **402
-source errors** (unresolved Ktor imports, serialization inference, and more). The module had never
-been built, so none of it was ever verified. That, plus the CI job, is the remainder of D0.
+**Status:** the toolchain is done, and `:dictator-core` now compiles and its 52 tests pass — the
+first time the module has ever built. Gradle previously failed *every* invocation on a
+`kotlin-parcelize` plugin id with no marker artifact; clearing that exposed **402 source errors**,
+since nothing in the module had ever been verified.
 
-**Done when:** `cd dictator-kotlin && ./gradlew build` passes on Kotlin 2.4.10 / JVM 21, in CI.
+Those 402 were not 402 problems. Four whole-file defects accounted for more than two thirds:
+
+- `tables.sq` held every table and query in one file, so SQLDelight generated a single
+  `TablesQueries` while all nine call sites expected `database.usersQueries` and friends. Split
+  per table.
+- `McpIndex.kt` was a TypeScript barrel file (`export class McpClient`) written in Kotlin. Every
+  line was both a syntax error and a phantom redeclaration shadowing the real types in its own
+  package. Deleted.
+- `EntityConverters.kt` declared its own `Db*` placeholder data classes, so the `toDomainEntity()`
+  extensions were attached to types the repositories never produce. Now typealiases to the
+  generated rows.
+- Two Ktor artifacts (`content-negotiation`, `logging`) and SQLDelight's `coroutines-extensions`
+  were used but never declared; the unresolved `asFlow()` alone made 47 downstream calls
+  untypeable.
+
+The residue was ordinary: missing imports, three service interfaces declared twice, nullability at
+the generated/domain boundary. Running the tests then surfaced two genuine defects — `escapeRegex`
+and `PunctuationNormalizer` both built character classes with an unescaped `[`, which Java reads as
+opening a nested class, and `normalizeLineBreaks` left the whitespace around the spoken phrase in
+place.
+
+**`:dictator-android` has not been compiled.** It is in the same never-built state `:dictator-core`
+was, and it needs an Android SDK, which this environment does not have. That is the remainder of
+D0.
+
+**Done when:** `cd dictator-kotlin && gradle build` passes on Kotlin 2.4.10 / JVM 21, in CI. There
+is no Gradle wrapper in `dictator-kotlin/`. CI currently runs `:dictator-core:build` only, for the
+reason above.
 
 ## D1 · LLM chat through Engine
 
