@@ -48,7 +48,7 @@ object CursorCommandParser {
      * Used to safely embed literal strings in regex patterns.
      */
     private fun escapeRegex(value: String): String {
-        return value.replace(Regex("""[.*+?^${'$'}{}()|[\]\\]"""), "\\$0")
+        return value.replace(Regex("""[.*+?^${'$'}(){}|\[\]\\]"""), "\\$0")
     }
     
     /**

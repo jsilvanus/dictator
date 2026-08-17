@@ -30,6 +30,8 @@ kotlin {
 
                 // SQLDelight
                 implementation("app.cash.sqldelight:runtime:2.0.1")
+                // Query.asFlow(), used by the repositories' observe* methods.
+                implementation("app.cash.sqldelight:coroutines-extensions:2.0.1")
 
                 // Ktor Client (multiplatform)
                 implementation("io.ktor:ktor-client-core:2.3.4")

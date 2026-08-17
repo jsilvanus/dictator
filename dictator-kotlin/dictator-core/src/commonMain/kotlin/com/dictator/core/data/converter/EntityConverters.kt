@@ -56,8 +56,8 @@ fun DbDocument.toDomainEntity(): Document = Document(
     userId = userId,
     createdAt = createdAt,
     updatedAt = updatedAt,
-    lastModifiedDevice = lastModifiedDevice,
-    deviceVersion = deviceVersion
+    lastModifiedDevice = lastModifiedDevice ?: "kotlin",
+    deviceVersion = deviceVersion ?: 1
 )
 
 // ============= DocumentVersion Converters =============
@@ -66,11 +66,11 @@ fun DbDocumentVersion.toDomainEntity(): DocumentVersion = DocumentVersion(
     id = id,
     documentId = documentId,
     content = content,
-    version = version,
+    version = version.toInt(),
     createdBy = createdBy,
     createdAt = createdAt,
-    deviceSource = deviceSource,
-    deviceVersion = deviceVersion
+    deviceSource = deviceSource ?: "kotlin",
+    deviceVersion = deviceVersion ?: 1
 )
 
 // ============= Share Converters =============
@@ -119,8 +119,8 @@ fun DbSyncMetadata.toDomainEntity(): SyncMetadata = SyncMetadata(
     lastSyncedAt = lastSyncedAt,
     localVersion = localVersion,
     remoteVersion = remoteVersion,
-    pendingChanges = pendingChanges,
-    conflictStatus = conflictStatus,
+    pendingChanges = pendingChanges?.toInt() ?: 0,
+    conflictStatus = conflictStatus ?: "none",
     updatedAt = updatedAt
 )
 
@@ -140,8 +140,8 @@ fun DbPendingSyncItem.toDomainEntity(): PendingSyncItem {
         userId = userId,
         deviceId = deviceId,
         changeData = changeData,
-        status = status,
-        retryCount = retryCount,
+        status = status ?: "pending",
+        retryCount = retryCount?.toInt() ?: 0,
         createdAt = createdAt,
         updatedAt = updatedAt
     )
@@ -157,7 +157,7 @@ fun DbDocumentConflict.toDomainEntity(): DocumentConflict {
         androidVersion = parseVersionJson(androidVersionJson),
         webVersion = parseVersionJson(webVersionJson),
         resolvedVersion = resolvedVersionJson?.let { parseVersionJson(it) },
-        status = status,
+        status = status ?: "unresolved",
         createdAt = createdAt,
         resolvedAt = resolvedAt
     )
