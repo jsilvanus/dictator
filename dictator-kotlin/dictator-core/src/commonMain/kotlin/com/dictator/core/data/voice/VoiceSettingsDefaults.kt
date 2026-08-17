@@ -75,7 +75,7 @@ fun getDefaultActivationCommandsForLanguage(language: String): List<ActivationCo
     return when (language) {
         "fi-FI" -> DEFAULT_FINNISH_ACTIVATION_COMMANDS
         "sv-SE" -> DEFAULT_SWEDISH_ACTIVATION_COMMANDS
-        "en-US", else -> DEFAULT_ENGLISH_ACTIVATION_COMMANDS
+        else -> DEFAULT_ENGLISH_ACTIVATION_COMMANDS
     }
 }
 

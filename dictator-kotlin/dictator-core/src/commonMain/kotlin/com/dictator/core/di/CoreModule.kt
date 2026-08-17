@@ -89,9 +89,9 @@ val coreModule = module {
     }
     
     // Utilities (singletons)
-    singleOf(::VoiceCommandParser)
-    singleOf(::PunctuationNormalizer)
-    singleOf(::Validators)
+    single { VoiceCommandParser }
+    single { PunctuationNormalizer }
+    single { Validators }
     singleOf(::SensitiveDataDetector)
     singleOf(::ProviderPolicyManager)
     singleOf(::ToolRegistry)

@@ -8,22 +8,6 @@ import com.dictator.core.data.mcp.*
 import io.ktor.client.HttpClient
 
 /**
- * MCP service interface for managing MCP servers and tools
- */
-interface McpService {
-    suspend fun registerServer(config: McpServerConfig): Result<Unit>
-    suspend fun unregisterServer(serverId: String): Result<Unit>
-    suspend fun getServer(serverId: String): McpServerState?
-    suspend fun getAllServers(): List<McpServerState>
-    suspend fun getTool(serverId: String, toolName: String): McpToolDefinition?
-    suspend fun getAllTools(): Map<String, Pair<String, McpToolDefinition>>
-    suspend fun callTool(serverId: String, toolName: String, arguments: Map<String, Any?>): Result<McpToolResult>
-    suspend fun reconnectServer(serverId: String): Result<Unit>
-    suspend fun getConnectedServersCount(): Int
-    suspend fun getServerTools(serverId: String): Map<String, McpToolDefinition>
-}
-
-/**
  * MCP Service Implementation
  */
 class McpServiceImpl(

@@ -35,6 +35,10 @@ kotlin {
                 implementation("io.ktor:ktor-client-core:2.3.4")
                 implementation("io.ktor:ktor-client-serialization:2.3.4")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.4")
+                // ContentNegotiation and Logging are separate artifacts; HttpClientConfig
+                // installs both.
+                implementation("io.ktor:ktor-client-content-negotiation:2.3.4")
+                implementation("io.ktor:ktor-client-logging:2.3.4")
 
                 // Koin DI
                 implementation("io.insert-koin:koin-core:3.4.0")
