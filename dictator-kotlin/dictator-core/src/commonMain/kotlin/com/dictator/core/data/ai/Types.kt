@@ -4,20 +4,15 @@ import com.dictator.core.data.privacy.AiContentSource
 import com.dictator.core.data.privacy.AiRequestScope
 import kotlinx.serialization.Serializable
 
-/**
- * AI Model Provider Types
- */
 enum class ModelProvider {
     CLAUDE,
     OPENAI,
     OLLAMA,
     OPENAI_COMPATIBLE,
-    DICTATOR
+    DICTATOR,
+    AIDOS
 }
 
-/**
- * AI Inline Request
- */
 data class AiInlineRequest(
     val prompt: String,
     val context: String? = null,
@@ -26,17 +21,8 @@ data class AiInlineRequest(
     val thinkingBudgetTokens: Int? = null
 )
 
-/**
- * AI Chat Message
- */
-data class AiChatMessage(
-    val role: String,
-    val content: String
-)
+data class AiChatMessage(val role: String, val content: String)
 
-/**
- * AI Chat Request
- */
 data class AiChatRequest(
     val messages: List<AiChatMessage>,
     val systemPrompt: String? = null,
@@ -46,9 +32,6 @@ data class AiChatRequest(
     val thinkingBudgetTokens: Int? = null
 )
 
-/**
- * AI Response
- */
 data class AiResponse(
     val content: String,
     val stopReason: String? = null,
@@ -56,18 +39,9 @@ data class AiResponse(
     val thinking: String? = null
 )
 
-/**
- * AI Token Usage
- */
 @Serializable
-data class AiUsage(
-    val inputTokens: Int = 0,
-    val outputTokens: Int = 0
-)
+data class AiUsage(val inputTokens: Int = 0, val outputTokens: Int = 0)
 
-/**
- * AI Stream Chunk
- */
 sealed class AiStreamChunk {
     data class Delta(val content: String) : AiStreamChunk()
     data class ThinkingDelta(val content: String) : AiStreamChunk()
@@ -76,9 +50,6 @@ sealed class AiStreamChunk {
     data class Error(val error: String) : AiStreamChunk()
 }
 
-/**
- * User AI Preferences
- */
 data class UserAiPreferences(
     val userId: String,
     val preferredProvider: ModelProvider,
@@ -91,9 +62,6 @@ data class UserAiPreferences(
     val updatedAt: Long = System.currentTimeMillis()
 )
 
-/**
- * Provider Configuration
- */
 data class ProviderConfig(
     val type: ModelProvider,
     val apiKey: String? = null,
@@ -103,17 +71,13 @@ data class ProviderConfig(
     val maxTokens: Int? = null
 )
 
-/**
- * AI Turn Provenance - tracks metadata about an AI interaction
- * Includes source, confidence, scope, device, and thinking content
- */
 @Serializable
 data class AiTurnProvenance(
     val id: String,
     val aiSessionId: String,
     val turnId: String,
     val source: AiContentSource,
-    val confidence: Double? = null, // 0-1 for AI content
+    val confidence: Double? = null,
     val contentScope: AiRequestScope? = null,
     val policyId: String? = null,
     val reviewedAt: Long? = null,
@@ -124,10 +88,6 @@ data class AiTurnProvenance(
     val createdAt: Long = System.currentTimeMillis()
 )
 
-/**
- * AI Turn with provenance metadata
- * Represents a single turn in an AI conversation with full tracking data
- */
 @Serializable
 data class AiTurnWithProvenance(
     val turnId: String,
