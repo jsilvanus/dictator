@@ -37,6 +37,7 @@ class AndroidVoiceServiceImpl @Inject constructor(
     interface VoiceListener {
         fun onResults(text: String, confidence: Float)
         fun onPartialResults(text: String)
+        fun onRmsChanged(rmsdB: Float)
         fun onError(errorCode: String, message: String)
     }
 
@@ -51,23 +52,17 @@ class AndroidVoiceServiceImpl @Inject constructor(
 
     fun getLanguage(): String = currentLanguage
 
-    /** Whether the Android runtime currently has microphone permission. */
     fun hasRecordAudioPermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
 
-    /** Whether any Android speech recognizer is available. */
     fun isRecognitionAvailable(): Boolean = SpeechRecognizer.isRecognitionAvailable(context)
 
-    /** Whether an on-device recognizer is available on this device. */
     fun isOnDeviceRecognitionAvailable(): Boolean =
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
             SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
 
-    /**
-     * Select the Android provider mode. Aidos remains a separate provider and is not
-     * affected by this setting.
-     */
+    /** Select the Android provider mode; Aidos remains a separate provider. */
     fun setUseOnDeviceRecognizer(enabled: Boolean) {
         useOnDeviceRecognizer = enabled
     }
@@ -152,11 +147,11 @@ class AndroidVoiceServiceImpl @Inject constructor(
             Napier.d("Ready for speech ($currentLanguage)")
         }
 
-        override fun onBeginningOfSpeech() {
-            Napier.d("Beginning of speech")
-        }
+        override fun onBeginningOfSpeech() = Unit
 
-        override fun onRmsChanged(rmsdB: Float) = Unit
+        override fun onRmsChanged(rmsdB: Float) {
+            voiceListener?.onRmsChanged(rmsdB)
+        }
 
         override fun onBufferReceived(buffer: ByteArray?) = Unit
 
