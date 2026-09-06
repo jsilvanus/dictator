@@ -12,10 +12,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 data class AIMessage(
@@ -79,12 +79,11 @@ class AIViewModel @Inject constructor(
             canRetry = false
         )
         lastFailedPrompt = trimmedPrompt
-        startStreaming(trimmedPrompt)
+        startStreaming()
     }
 
     fun retryLastPrompt() {
-        val prompt = lastFailedPrompt ?: return
-        if (_state.value.isStreaming) return
+        if (lastFailedPrompt == null || _state.value.isStreaming) return
 
         val nextRetry = _state.value.retryCount + 1
         if (nextRetry > maxRetries) {
@@ -102,7 +101,7 @@ class AIViewModel @Inject constructor(
             retryCount = nextRetry,
             canRetry = false
         )
-        startStreaming(prompt)
+        startStreaming()
     }
 
     fun clearConversation() {
@@ -126,7 +125,6 @@ class AIViewModel @Inject constructor(
     fun insertIntoDocument(text: String): String = text
 
     fun loadSessions() {
-        // Conversation persistence is handled separately from the provider transport.
         _state.value = _state.value.copy(sessions = listOf("default"))
     }
 
@@ -153,13 +151,12 @@ class AIViewModel @Inject constructor(
             }
             .onFailure { error ->
                 _state.value = _state.value.copy(
-                    errorMessage = error.message ?: "Unable to configure AI provider",
-                    canRetry = false
+                    errorMessage = error.message ?: "Unable to configure AI provider"
                 )
             }
     }
 
-    private fun startStreaming(prompt: String) {
+    private fun startStreaming() {
         streamJob?.cancel()
         streamJob = viewModelScope.launch {
             val provider = try {
@@ -182,16 +179,14 @@ class AIViewModel @Inject constructor(
             val messages = _state.value.messages.map {
                 AiChatMessage(role = it.role, content = it.content)
             }
-
             val request = AiChatRequest(
                 messages = messages,
                 systemPrompt = "You are Dictator, a helpful writing assistant. Answer clearly and concisely.",
-                temperature = null,
-                maxTokens = null,
                 stream = true
             )
 
             var response = ""
+            var finalized = false
             try {
                 provider.chat(request).collect { chunk ->
                     when (chunk) {
@@ -202,30 +197,47 @@ class AIViewModel @Inject constructor(
                         is AiStreamChunk.ThinkingDelta -> Unit
                         AiStreamChunk.ThinkingComplete -> Unit
                         AiStreamChunk.Complete -> {
-                            if (response.isNotEmpty()) {
-                                _state.value = _state.value.copy(
-                                    messages = _state.value.messages + AIMessage(
-                                        id = System.currentTimeMillis().toString(),
-                                        role = "assistant",
-                                        content = response
-                                    ),
-                                    currentStreamingResponse = "",
-                                    isStreaming = false,
-                                    errorMessage = null,
-                                    canRetry = false
-                                )
-                                lastFailedPrompt = null
-                            } else if (_state.value.isStreaming) {
-                                handleFailure("AI provider returned an empty response")
+                            if (!finalized) {
+                                finalized = true
+                                if (response.isNotEmpty()) {
+                                    completeResponse(response)
+                                } else if (_state.value.isStreaming) {
+                                    handleFailure("AI provider returned an empty response")
+                                }
                             }
                         }
-                        is AiStreamChunk.Error -> handleFailure(chunk.error)
+                        is AiStreamChunk.Error -> {
+                            if (!finalized) {
+                                finalized = true
+                                handleFailure(chunk.error)
+                            }
+                        }
                     }
                 }
+
+                if (!finalized && _state.value.isStreaming) {
+                    if (response.isNotEmpty()) completeResponse(response)
+                    else handleFailure("AI provider ended without a response")
+                }
             } catch (error: Exception) {
-                handleFailure(error.message ?: "AI request failed")
+                if (!finalized) handleFailure(error.message ?: "AI request failed")
             }
         }
+    }
+
+    private fun completeResponse(response: String) {
+        _state.value = _state.value.copy(
+            messages = _state.value.messages + AIMessage(
+                id = System.currentTimeMillis().toString(),
+                role = "assistant",
+                content = response
+            ),
+            currentStreamingResponse = "",
+            isStreaming = false,
+            errorMessage = null,
+            canRetry = false
+        )
+        lastFailedPrompt = null
     }
 
     private fun handleFailure(message: String) {
