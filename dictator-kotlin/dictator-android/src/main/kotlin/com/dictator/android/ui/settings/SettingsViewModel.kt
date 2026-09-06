@@ -1,5 +1,6 @@
 package com.dictator.android.ui.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dictator.android.ui.ai.AidosAiProvider
@@ -8,11 +9,10 @@ import com.dictator.core.data.ai.AiInlineRequest
 import com.dictator.core.data.ai.AiProviderFactory
 import com.dictator.core.data.ai.ModelProvider
 import com.dictator.core.data.ai.ProviderConfig
-import com.dictator.core.data.local.VoiceSettingsRepository
-import com.dictator.core.data.voice.ActivationCommand
 import com.dictator.core.data.voice.VoiceSettings
 import com.dictator.core.service.SharedPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.HttpClient
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +43,8 @@ data class SettingsState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val sharedPreferences: SharedPreferences,
-    private val httpClient: HttpClient
+    private val httpClient: HttpClient,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state
@@ -133,7 +134,7 @@ class SettingsViewModel @Inject constructor(
                     )
                     SettingsMode.DirectProvider -> if (currentState.selectedProvider == ModelProvider.AIDOS) {
                         AidosAiProvider(
-                            context = getApplicationContext(),
+                            context = context,
                             model = currentState.model.trim(),
                             temperature = currentState.temperature.toFloat(),
                             maxTokens = currentState.maxTokens
@@ -200,7 +201,4 @@ class SettingsViewModel @Inject constructor(
         ModelProvider.DICTATOR -> "dictator-ai-default"
         ModelProvider.AIDOS -> AidosAiProvider.DEFAULT_MODEL
     }
-
-    private fun getApplicationContext(): android.content.Context =
-        androidx.test.core.app.ApplicationProvider.getApplicationContext()
 }
