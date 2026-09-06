@@ -9,6 +9,10 @@ import io.ktor.client.HttpClient
 import javax.inject.Inject
 import javax.inject.Singleton
 
+interface AiProviderResolver {
+    fun resolve(): AiProvider
+}
+
 /**
  * Resolves the Android AI configuration into a real core AiProvider.
  * The same provider implementations are used by Android and the other Kotlin targets.
@@ -17,8 +21,8 @@ import javax.inject.Singleton
 class AndroidAiProviderResolver @Inject constructor(
     private val httpClient: HttpClient,
     private val sharedPreferences: SharedPreferences
-) {
-    fun resolve(): AiProvider {
+) : AiProviderResolver {
+    override fun resolve(): AiProvider {
         val mode = sharedPreferences.getString("settings_mode", "dictator_service")
 
         if (mode != "direct_provider") {
