@@ -41,7 +41,7 @@ data class AIPanelUiState(
 
 @HiltViewModel
 class AIViewModel @Inject constructor(
-    private val providerResolver: AndroidAiProviderResolver,
+    private val providerResolver: AiProviderResolver,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _state = MutableStateFlow(AIPanelUiState())
@@ -199,11 +199,8 @@ class AIViewModel @Inject constructor(
                         AiStreamChunk.Complete -> {
                             if (!finalized) {
                                 finalized = true
-                                if (response.isNotEmpty()) {
-                                    completeResponse(response)
-                                } else if (_state.value.isStreaming) {
-                                    handleFailure("AI provider returned an empty response")
-                                }
+                                if (response.isNotEmpty()) completeResponse(response)
+                                else if (_state.value.isStreaming) handleFailure("AI provider returned an empty response")
                             }
                         }
                         is AiStreamChunk.Error -> {
