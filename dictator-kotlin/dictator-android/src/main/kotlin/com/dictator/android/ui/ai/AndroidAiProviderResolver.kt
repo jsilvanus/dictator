@@ -1,5 +1,6 @@
 package com.dictator.android.ui.ai
 
+import android.content.Context
 import com.dictator.core.data.ai.AiProvider
 import com.dictator.core.data.ai.AiProviderFactory
 import com.dictator.core.data.ai.ModelProvider
@@ -13,12 +14,9 @@ interface AiProviderResolver {
     fun resolve(): AiProvider
 }
 
-/**
- * Resolves the Android AI configuration into a real core AiProvider.
- * The same provider implementations are used by Android and the other Kotlin targets.
- */
 @Singleton
 class AndroidAiProviderResolver @Inject constructor(
+    private val context: Context,
     private val httpClient: HttpClient,
     private val sharedPreferences: SharedPreferences
 ) : AiProviderResolver {
@@ -41,6 +39,21 @@ class AndroidAiProviderResolver @Inject constructor(
         val type = sharedPreferences.getString("provider_type", ModelProvider.CLAUDE.name)
             ?.let { runCatching { ModelProvider.valueOf(it) }.getOrNull() }
             ?: ModelProvider.CLAUDE
+
+        if (type == ModelProvider.AIDOS) {
+            return AidosAiProvider(
+                context = context,
+                model = sharedPreferences.getString("provider_model", null)
+                    ?.trim()
+                    ?.ifEmpty { AidosAiProvider.DEFAULT_MODEL }
+                    ?: AidosAiProvider.DEFAULT_MODEL,
+                temperature = sharedPreferences.getString("provider_temperature", null)
+                    ?.toFloatOrNull()
+                    ?: 0.7f,
+                maxTokens = sharedPreferences.getString("provider_max_tokens", null)
+                    ?.toIntOrNull()
+            )
+        }
 
         return AiProviderFactory.createProvider(
             httpClient,
