@@ -83,6 +83,11 @@ class AndroidVoiceServiceImpl @Inject constructor(
                 return@post
             }
 
+            if (useOnDeviceRecognizer && !isOnDeviceRecognitionAvailable()) {
+                voiceListener?.onError("ON_DEVICE_NOT_AVAILABLE", "On-device speech recognition is not available on this device")
+                return@post
+            }
+
             try {
                 destroyRecognizer()
                 speechRecognizer = createRecognizer()
@@ -135,7 +140,7 @@ class AndroidVoiceServiceImpl @Inject constructor(
     }
 
     private fun createRecognizer(): SpeechRecognizer {
-        if (useOnDeviceRecognizer && isOnDeviceRecognitionAvailable()) {
+        if (useOnDeviceRecognizer) {
             return SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
         }
         return SpeechRecognizer.createSpeechRecognizer(context)
