@@ -1,5 +1,9 @@
 package com.dictator.android.ui.voice
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -15,31 +19,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicNone
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import com.dictator.android.R
 
 @Composable
@@ -49,11 +52,25 @@ fun VoicePanel(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        viewModel.setPermissionGranted(granted)
+        if (granted) viewModel.startListening()
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.setPermissionGranted(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
 
     val indicatorState = when (state.state) {
         VoiceState.IDLE -> VoiceIndicatorState.IDLE
         VoiceState.LISTENING -> VoiceIndicatorState.LISTENING
-        VoiceState.PROCESSING -> VoiceIndicatorState.COMMAND_RECOGNIZED // Processing a command
+        VoiceState.PROCESSING -> VoiceIndicatorState.COMMAND_RECOGNIZED
         VoiceState.ERROR -> VoiceIndicatorState.ERROR
         VoiceState.SUCCESS -> VoiceIndicatorState.IDLE
     }
@@ -88,7 +105,12 @@ fun VoicePanel(
             }
 
             when (state.state) {
-                VoiceState.IDLE -> IdleState(viewModel)
+                VoiceState.IDLE -> IdleState(
+                    viewModel = viewModel,
+                    onRequestPermission = {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                )
                 VoiceState.LISTENING -> ListeningState(viewModel, state)
                 VoiceState.PROCESSING -> ProcessingState()
                 VoiceState.ERROR -> ErrorState(state, viewModel)
@@ -99,7 +121,10 @@ fun VoicePanel(
 }
 
 @Composable
-private fun IdleState(viewModel: VoiceViewModel) {
+private fun IdleState(
+    viewModel: VoiceViewModel,
+    onRequestPermission: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -111,7 +136,13 @@ private fun IdleState(viewModel: VoiceViewModel) {
             modifier = Modifier
                 .size(72.dp)
                 .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                .clickable { viewModel.startListening() },
+                .clickable {
+                    if (viewModel.state.value.isPermissionGranted) {
+                        viewModel.startListening()
+                    } else {
+                        onRequestPermission()
+                    }
+                },
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -122,7 +153,11 @@ private fun IdleState(viewModel: VoiceViewModel) {
             )
         }
         Text(
-            text = stringResource(R.string.start_listening),
+            text = if (viewModel.state.value.isPermissionGranted) {
+                stringResource(R.string.start_listening)
+            } else {
+                "Allow microphone access"
+            },
             style = MaterialTheme.typography.labelMedium
         )
     }
@@ -150,10 +185,7 @@ private fun ListeningState(viewModel: VoiceViewModel, state: VoiceUiState) {
         Box(
             modifier = Modifier
                 .size(72.dp)
-                .background(
-                    MaterialTheme.colorScheme.errorContainer,
-                    CircleShape
-                )
+                .background(MaterialTheme.colorScheme.errorContainer, CircleShape)
                 .clickable { viewModel.stopListening() },
             contentAlignment = Alignment.Center
         ) {
@@ -170,15 +202,12 @@ private fun ListeningState(viewModel: VoiceViewModel, state: VoiceUiState) {
             color = MaterialTheme.colorScheme.error
         )
 
-        // IMPROVEMENT: Recording duration feedback
-        val durationSeconds = (state.recordingDuration / 1000).toInt()
-        val maxSeconds = 30
         Text(
-            text = "$durationSeconds / $maxSeconds seconds",
+            text = "${(state.recordingDuration / 1000).toInt()} / 30 seconds",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        
+
         LinearProgressIndicator(
             progress = (state.recordingDuration / 30000f).coerceIn(0f, 1f),
             modifier = Modifier
@@ -186,16 +215,6 @@ private fun ListeningState(viewModel: VoiceViewModel, state: VoiceUiState) {
                 .height(4.dp)
         )
 
-        // IMPROVEMENT: Silence detection feedback
-        if (state.silenceDuration > 0L) {
-            Text(
-                text = "Silence detected (${(state.silenceDuration / 1000)}s)",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.warning
-            )
-        }
-
-        // Waveform animation
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -203,15 +222,25 @@ private fun ListeningState(viewModel: VoiceViewModel, state: VoiceUiState) {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            repeat(5) {
+            val samples = state.waveformAmplitudes.takeLast(5)
+            repeat(5) { index ->
+                val amplitude = samples.getOrNull(index) ?: 0.15f
                 Box(
                     modifier = Modifier
-                        .width(4.dp)
-                        .height((8 + it * 4 * pulse).dp)
-                        .background(MaterialTheme.colorScheme.primary)
                         .padding(horizontal = 2.dp)
+                        .width(4.dp)
+                        .height((8 + amplitude * 24 * pulse).dp)
+                        .background(MaterialTheme.colorScheme.primary)
                 )
             }
+        }
+
+        if (state.transcribedText.isNotBlank()) {
+            Text(
+                text = state.transcribedText,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -226,10 +255,7 @@ private fun ProcessingState() {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         CircularProgressIndicator(modifier = Modifier.size(48.dp))
-        Text(
-            text = "Processing...",
-            style = MaterialTheme.typography.labelMedium
-        )
+        Text("Processing...", style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -275,22 +301,24 @@ private fun SuccessState(
                 .padding(12.dp)
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.voice_confidence, (state.confidence * 100).toInt()),
-                style = MaterialTheme.typography.labelSmall
-            )
-            LinearProgressIndicator(
-                progress = state.confidence,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp)
-                    .height(4.dp)
-            )
+        if (state.confidence > 0f) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.voice_confidence, (state.confidence * 100).toInt()),
+                    style = MaterialTheme.typography.labelSmall
+                )
+                LinearProgressIndicator(
+                    progress = state.confidence,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp)
+                        .height(4.dp)
+                )
+            }
         }
 
         Row(
@@ -314,4 +342,3 @@ private fun SuccessState(
         }
     }
 }
-// Helper for width composable - removed due to Compose import conflict
