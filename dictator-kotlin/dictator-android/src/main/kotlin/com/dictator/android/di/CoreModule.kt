@@ -28,7 +28,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 @Module
 @InstallIn(SingletonComponent::class)
 object CoreModule {
-    
+
     @Provides
     @Singleton
     fun provideContext(@ApplicationContext context: Context): Context = context
@@ -45,6 +45,11 @@ object CoreModule {
 
     @Provides
     @Singleton
+    fun provideVoiceSettingsRepository(sharedPreferences: SharedPreferences): VoiceSettingsRepository =
+        VoiceSettingsRepository(sharedPreferences)
+
+    @Provides
+    @Singleton
     fun provideHttpClient(): HttpClient = HttpClientFactory.createHttpClient()
 
     @Provides
@@ -55,7 +60,6 @@ object CoreModule {
             baseUrl = BuildConfig.API_BASE_URL
         )
 
-    // Repository bindings
     @Provides
     @Singleton
     fun provideUserRepository(
