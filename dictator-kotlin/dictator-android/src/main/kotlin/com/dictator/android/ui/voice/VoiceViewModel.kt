@@ -1,6 +1,7 @@
 package com.dictator.android.ui.voice
 
-import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.dictator.android.data.AndroidVoiceServiceImpl
 import com.dictator.core.data.local.VoiceSettingsRepository
 import com.dictator.core.data.voice.ActivationCommand
@@ -10,7 +11,6 @@ import com.dictator.core.domain.entity.CursorState
 import com.dictator.core.util.cursor.CursorCommandExecutor
 import com.dictator.core.util.cursor.CursorCommandParser
 import com.dictator.core.util.privacy.SensitiveDataDetector
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.Job
@@ -19,8 +19,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import javax.inject.Inject
 
 enum class VoiceState {
@@ -47,10 +45,9 @@ data class VoiceUiState(
 
 @HiltViewModel
 class VoiceViewModel @Inject constructor(
-    @ApplicationContext context: Context,
-    private val voiceSettingsRepository: VoiceSettingsRepository? = null
+    private val voiceService: AndroidVoiceServiceImpl,
+    private val voiceSettingsRepository: VoiceSettingsRepository
 ) : ViewModel() {
-    private val voiceService = AndroidVoiceServiceImpl(context)
     private val _state = MutableStateFlow(
         VoiceUiState(isPermissionGranted = voiceService.hasRecordAudioPermission())
     )
@@ -102,17 +99,14 @@ class VoiceViewModel @Inject constructor(
     private fun loadVoiceSettings() {
         viewModelScope.launch {
             try {
-                val settings = voiceSettingsRepository?.loadVoiceSettings()
-                if (settings != null) {
-                    voiceService.setLanguage(settings.language)
-                    _state.value = _state.value.copy(
-                        currentLanguage = settings.language,
-                        activationCommands = settings.activationCommands[settings.language].orEmpty()
-                    )
-                } else {
-                    voiceService.setLanguage(DEFAULT_LANGUAGE)
-                }
+                val settings = voiceSettingsRepository.loadVoiceSettings()
+                voiceService.setLanguage(settings.language)
+                _state.value = _state.value.copy(
+                    currentLanguage = settings.language,
+                    activationCommands = settings.activationCommands[settings.language].orEmpty()
+                )
             } catch (e: Exception) {
+                voiceService.setLanguage(DEFAULT_LANGUAGE)
                 Napier.e("Error loading voice settings", e)
             }
         }
@@ -121,12 +115,12 @@ class VoiceViewModel @Inject constructor(
     fun setLanguage(language: String) {
         viewModelScope.launch {
             try {
-                voiceSettingsRepository?.setLanguage(language)
+                voiceSettingsRepository.setLanguage(language)
                 voiceService.setLanguage(language)
-                val settings = voiceSettingsRepository?.loadVoiceSettings()
+                val settings = voiceSettingsRepository.loadVoiceSettings()
                 _state.value = _state.value.copy(
                     currentLanguage = language,
-                    activationCommands = settings?.activationCommands?.get(language).orEmpty()
+                    activationCommands = settings.activationCommands[language].orEmpty()
                 )
             } catch (e: Exception) {
                 Napier.e("Error setting language", e)
