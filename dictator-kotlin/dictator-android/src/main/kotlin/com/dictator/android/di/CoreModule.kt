@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.dictator.android.BuildConfig
 import com.dictator.android.data.AndroidSharedPreferences
+import com.dictator.android.ui.ai.AiProviderResolver
+import com.dictator.android.ui.ai.AndroidAiProviderResolver
 import com.dictator.core.data.local.*
 import com.dictator.core.data.remote.HttpClientFactory
 import com.dictator.core.data.remote.RemoteApiService
@@ -21,14 +23,9 @@ import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "dictator_prefs")
 
-/**
- * Hilt module for core Android dependencies.
- * Provides Dictator Core services to Android app.
- */
 @Module
 @InstallIn(SingletonComponent::class)
 object CoreModule {
-    
     @Provides
     @Singleton
     fun provideContext(@ApplicationContext context: Context): Context = context
@@ -49,82 +46,58 @@ object CoreModule {
 
     @Provides
     @Singleton
+    fun provideAiProviderResolver(resolver: AndroidAiProviderResolver): AiProviderResolver = resolver
+
+    @Provides
+    @Singleton
     fun provideRemoteApiService(httpClient: HttpClient): RemoteApiService =
         RemoteApiService(
             httpClient = httpClient,
             baseUrl = BuildConfig.API_BASE_URL
         )
 
-    // Repository bindings
     @Provides
     @Singleton
-    fun provideUserRepository(
-        @ApplicationContext context: Context
-    ): UserRepository = LocalUserRepository(
-        com.dictator.core.data.database.DatabaseManager.getInstance()
-    )
+    fun provideUserRepository(@ApplicationContext context: Context): UserRepository =
+        LocalUserRepository(com.dictator.core.data.database.DatabaseManager.getInstance())
 
     @Provides
     @Singleton
-    fun provideFolderRepository(
-        @ApplicationContext context: Context
-    ): FolderRepository = LocalFolderRepository(
-        com.dictator.core.data.database.DatabaseManager.getInstance()
-    )
+    fun provideFolderRepository(@ApplicationContext context: Context): FolderRepository =
+        LocalFolderRepository(com.dictator.core.data.database.DatabaseManager.getInstance())
 
     @Provides
     @Singleton
-    fun provideDocumentRepository(
-        @ApplicationContext context: Context
-    ): DocumentRepository = LocalDocumentRepository(
-        com.dictator.core.data.database.DatabaseManager.getInstance()
-    )
+    fun provideDocumentRepository(@ApplicationContext context: Context): DocumentRepository =
+        LocalDocumentRepository(com.dictator.core.data.database.DatabaseManager.getInstance())
 
     @Provides
     @Singleton
-    fun provideDocumentVersionRepository(
-        @ApplicationContext context: Context
-    ): DocumentVersionRepository = LocalDocumentVersionRepository(
-        com.dictator.core.data.database.DatabaseManager.getInstance()
-    )
+    fun provideDocumentVersionRepository(@ApplicationContext context: Context): DocumentVersionRepository =
+        LocalDocumentVersionRepository(com.dictator.core.data.database.DatabaseManager.getInstance())
 
     @Provides
     @Singleton
-    fun provideShareRepository(
-        @ApplicationContext context: Context
-    ): ShareRepository = LocalShareRepository(
-        com.dictator.core.data.database.DatabaseManager.getInstance()
-    )
+    fun provideShareRepository(@ApplicationContext context: Context): ShareRepository =
+        LocalShareRepository(com.dictator.core.data.database.DatabaseManager.getInstance())
 
     @Provides
     @Singleton
-    fun provideAiSessionRepository(
-        @ApplicationContext context: Context
-    ): AiSessionRepository = LocalAiSessionRepository(
-        com.dictator.core.data.database.DatabaseManager.getInstance()
-    )
+    fun provideAiSessionRepository(@ApplicationContext context: Context): AiSessionRepository =
+        LocalAiSessionRepository(com.dictator.core.data.database.DatabaseManager.getInstance())
 
     @Provides
     @Singleton
-    fun provideSyncMetadataRepository(
-        @ApplicationContext context: Context
-    ): SyncMetadataRepository = LocalSyncMetadataRepository(
-        com.dictator.core.data.database.DatabaseManager.getInstance()
-    )
+    fun provideSyncMetadataRepository(@ApplicationContext context: Context): SyncMetadataRepository =
+        LocalSyncMetadataRepository(com.dictator.core.data.database.DatabaseManager.getInstance())
 
     @Provides
     @Singleton
-    fun providePendingSyncRepository(
-        @ApplicationContext context: Context
-    ): PendingSyncRepository = LocalPendingSyncRepository(
-        com.dictator.core.data.database.DatabaseManager.getInstance()
-    )
+    fun providePendingSyncRepository(@ApplicationContext context: Context): PendingSyncRepository =
+        LocalPendingSyncRepository(com.dictator.core.data.database.DatabaseManager.getInstance())
 
     @Provides
     @Singleton
-    fun provideConflictRepository(
-        @ApplicationContext context: Context
-    ): ConflictRepository = LocalConflictRepository(
-        com.dictator.core.data.database.DatabaseManager.getInstance()
-    )
+    fun provideConflictRepository(@ApplicationContext context: Context): ConflictRepository =
+        LocalConflictRepository(com.dictator.core.data.database.DatabaseManager.getInstance())
 }
