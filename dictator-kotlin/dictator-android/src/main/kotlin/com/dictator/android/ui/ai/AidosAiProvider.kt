@@ -1,20 +1,20 @@
 package com.dictator.android.ui.ai
 
+import android.content.Context
+import com.dictator.core.data.ai.AiChatRequest
+import com.dictator.core.data.ai.AiInlineRequest
+import com.dictator.core.data.ai.AiProvider
+import com.dictator.core.data.ai.AiResponse
+import com.dictator.core.data.ai.AiStreamChunk
+import com.dictator.core.data.ai.ModelProvider
 import fi.italeino.aidos.sdk.client.AidosEngineClient
 import fi.italeino.aidos.sdk.client.AndroidAidosEngineClientFactory
 import fi.italeino.aidos.sdk.client.ChatCompletionRequest
 import fi.italeino.aidos.sdk.client.ChatMessage
 import fi.italeino.aidos.sdk.client.EngineAvailability
-import android.content.Context
-import com.dictator.core.data.ai.AiChatRequest
-import com.dictator.core.data.ai.AiProvider
-import com.dictator.core.data.ai.AiResponse
-import com.dictator.core.data.ai.AiStreamChunk
-import com.dictator.core.data.ai.AiInlineRequest
-import com.dictator.core.data.ai.ModelProvider
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flow
 
 /**
  * Dictator's native Aidos provider. The Aidos SDK owns Binder, approval, authentication,
@@ -39,14 +39,18 @@ class AidosAiProvider(
                 model = model,
                 messages = messages,
                 temperature = request.temperature?.toFloat() ?: temperature,
-                max_tokens = request.maxTokens ?: maxTokens,
-                stream = false
+                max_tokens = request.maxTokens ?: maxTokens
             )
         ) ?: throw IllegalStateException(availabilityMessage())
 
+        val choice = response.choices.firstOrNull()
+            ?: throw IllegalStateException("Aidos Engine returned no choices")
+        val content = choice.message.content.orEmpty()
+        if (content.isBlank()) throw IllegalStateException("Aidos Engine returned an empty response")
+
         return AiResponse(
-            content = response.choices.firstOrNull()?.message?.content.orEmpty(),
-            stopReason = response.choices.firstOrNull()?.finish_reason,
+            content = content,
+            stopReason = choice.finish_reason,
             usage = response.usage.let {
                 com.dictator.core.data.ai.AiUsage(it.prompt_tokens, it.completion_tokens)
             }
@@ -82,9 +86,8 @@ class AidosAiProvider(
 
     override fun getModelName(): String = model
 
-    override fun getProviderType(): ModelProvider = ModelProvider.DICTATOR
+    override fun getProviderType(): ModelProvider = ModelProvider.AIDOS
 
-    /** Current Engine availability, useful to Android UI beyond the generic AiProvider contract. */
     fun availability(): EngineAvailability = client.availability()
 
     fun close() = client.close()
