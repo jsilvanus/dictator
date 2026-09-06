@@ -7,7 +7,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 
 class AndroidVoiceServiceImplTest {
     private val context: Context = mock {
@@ -45,6 +44,9 @@ class AndroidVoiceServiceImplTest {
 
         assertEquals("Network error", service.errorMessage(SpeechRecognizer.ERROR_NETWORK))
         assertEquals("Language unavailable", service.errorMessage(SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE))
-        assertEquals("Speech recognition service disconnected", service.errorMessage(SpeechRecognizer.ERROR_SERVER_DISCONNECTED))
+        assertEquals(
+            "Speech recognition service disconnected",
+            service.errorMessage(SpeechRecognizer.ERROR_SERVER_DISCONNECTED)
+        )
     }
 }
