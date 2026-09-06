@@ -12,8 +12,6 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import androidx.core.content.ContextCompat
-import com.dictator.core.data.local.VoiceSettingsRepository
-import com.dictator.core.data.voice.ActivationCommand
 import io.github.aakira.napier.Napier
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,15 +25,13 @@ import javax.inject.Singleton
  */
 @Singleton
 class AndroidVoiceServiceImpl @Inject constructor(
-    private val context: Context,
-    private val voiceSettingsRepository: VoiceSettingsRepository? = null
+    private val context: Context
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var speechRecognizer: SpeechRecognizer? = null
     private var voiceListener: VoiceListener? = null
     private var isListening = false
     private var currentLanguage: String = "en-US"
-    private var activationCommands: List<ActivationCommand> = emptyList()
     private var useOnDeviceRecognizer = false
 
     interface VoiceListener {
@@ -49,13 +45,11 @@ class AndroidVoiceServiceImpl @Inject constructor(
     }
 
     fun setLanguage(language: String) {
+        require(language.isNotBlank()) { "language must not be blank" }
         currentLanguage = language
-        activationCommands = voiceSettingsRepository?.getActivationCommandsForLanguage(language).orEmpty()
     }
 
     fun getLanguage(): String = currentLanguage
-
-    fun getActivationCommands(): List<ActivationCommand> = activationCommands
 
     /** Whether the Android runtime currently has microphone permission. */
     fun hasRecordAudioPermission(): Boolean =
@@ -200,7 +194,7 @@ class AndroidVoiceServiceImpl @Inject constructor(
         override fun onEvent(eventType: Int, params: Bundle?) = Unit
     }
 
-    private fun errorMessage(error: Int): String = when (error) {
+    internal fun errorMessage(error: Int): String = when (error) {
         SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
         SpeechRecognizer.ERROR_CLIENT -> "Client side error"
         SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Insufficient permissions"
