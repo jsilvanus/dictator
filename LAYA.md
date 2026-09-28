@@ -1,14 +1,14 @@
-# Laya and Intent Classification
+# Laya and Intent Decisions
 
 ## Purpose
 
-This document records the architectural considerations for adding Laya and/or classification-based intent routing to Dictator.
+This document records the architectural considerations for adding Laya and/or typed-decision-based intent routing to Dictator.
 
 This is a design note, not an implementation commitment.
 
 ## Problem
 
-Dictator currently has two conceptually different kinds of user input:
+Dictator has two conceptually different kinds of user input:
 
 1. commands that should be handled by Dictator's deterministic command machinery;
 2. natural-language requests that should be sent to an LLM.
@@ -30,6 +30,24 @@ Examples:
         -> LLM request
 
 The goal is to improve routing without giving a model authority to execute commands.
+
+## Laya is more than ordinary classification
+
+Laya should not be reduced to a simple `classify(text, labels)` API.
+
+Its useful decision primitives are:
+
+- `choice` — choose among alternatives and expose the probability distribution;
+- `noul` — answer a boolean question with a probability;
+- `score` — make a graded/ordinal decision.
+
+For Dictator, ordinary intent classification is most naturally represented by `choice`, for example:
+
+    COMMAND       0.96
+    LLM_REQUEST   0.03
+    AMBIGUOUS     0.01
+
+Additional `noul` and `score` decisions can provide independent signals when useful.
 
 ## Proposed architecture
 
@@ -54,12 +72,12 @@ The goal is to improve routing without giving a model authority to execute comma
        v
     execution
 
-Laya would sit inside the IntentRouter as a classifier:
+Laya would sit inside the IntentRouter as a typed-decision model:
 
     IntentRouter
         |
         v
-    IntentClassifier
+    IntentClassifier / Decision API
         |
         v
     Aidos Engine
@@ -69,25 +87,48 @@ Laya would sit inside the IntentRouter as a classifier:
 
 Dictator should not depend directly on ONNX Runtime or Laya internals.
 
-## Why Laya?
+## Multiple decisions in one inference
 
-Laya can provide a fast semantic decision before invoking a generative model.
-
-A suitable initial classification could be:
-
-    COMMAND
-    LLM_REQUEST
-    AMBIGUOUS
-
-The classifier can also provide probabilities.
+One of the reasons to consider Laya is that several questions can be evaluated against the same transcript/state.
 
 For example:
 
-    COMMAND       0.96
-    LLM_REQUEST   0.03
-    AMBIGUOUS     0.01
+    intent: choice
+        COMMAND
+        LLM_REQUEST
+        AMBIGUOUS
 
-This can be used for routing, but the probability must not itself authorize a command.
+    explicit_action: noul
+        "Is the user explicitly asking for an action?"
+
+    destructive: noul
+        "Would the requested action modify or delete content?"
+
+    command_strength: score
+        0..4
+
+This can provide richer routing information without invoking a separate model for every question.
+
+The exact set of decisions should be established experimentally; do not add complexity merely because the model supports it.
+
+## Why Laya through Aidos?
+
+Dictator should ask Aidos for a typed-decision capability rather than know that the model happens to be Laya.
+
+Conceptually:
+
+    Dictator
+        |
+        v
+    IntentClassifier / Decision API
+        |
+        v
+    Aidos decision API
+        |
+        v
+    Laya (initial implementation)
+
+This leaves room for a different decision model later without redesigning Dictator.
 
 ## Keep VoiceCommandParser
 
@@ -109,30 +150,13 @@ If Laya says "command" but the deterministic parser cannot identify a valid comm
 
 Possible fallback behaviour is to treat the input as an LLM request or ask for clarification.
 
-## Why generic classification in Aidos?
-
-Dictator should ask Aidos for a classification capability rather than know that the model happens to be Laya.
-
-Conceptually:
-
-    Dictator
-        |
-        v
-    IntentClassifier
-        |
-        v
-    Aidos classification API
-        |
-        v
-    Laya (initial implementation)
-
-This leaves room for a different model later without redesigning Dictator.
+The classifier's probability must never itself authorize a command.
 
 ## Context
 
-The first implementation should classify the transcript itself.
+The first implementation should make decisions from the transcript itself.
 
-Later, the classifier may benefit from context such as:
+Later, the decision model may benefit from context such as:
 
 - current editor/application;
 - whether a document is open;
@@ -144,7 +168,7 @@ Later, the classifier may benefit from context such as:
 
 Do not add all of this to the first version unless evaluation shows that it is necessary.
 
-## Confidence policy
+## Routing policy
 
 Routing thresholds should be configurable rather than embedded in command logic.
 
@@ -163,7 +187,7 @@ The exact thresholds must be established empirically.
 
 In particular, optimize evaluation for false command routing because an incorrectly recognized command can modify user content.
 
-## Three-way classification
+## Three-way intent
 
 A binary COMMAND/LLM split is probably insufficient.
 
@@ -183,13 +207,13 @@ Ambiguity should never silently become an irreversible command.
 
 The first integration should not change live behaviour.
 
-Run the classifier alongside the existing pipeline:
+Run the decision model alongside the existing pipeline:
 
     STT
       |
       +--> existing routing/execution
       |
-      +--> Laya classification
+      +--> Laya typed decisions
               |
               v
             logging
@@ -197,8 +221,8 @@ Run the classifier alongside the existing pipeline:
 Collect:
 
 - transcript;
-- predicted intent;
-- probabilities;
+- predicted decisions;
+- probabilities/distributions;
 - actual existing behaviour;
 - latency;
 - model loading time;
@@ -208,7 +232,7 @@ Then compare predictions against human labels.
 
 ## Finnish evaluation set
 
-Dictator should have a small explicit evaluation corpus containing natural Finnish command and LLM phrasing.
+Dictator should have an explicit evaluation corpus containing natural Finnish command and LLM phrasing.
 
 Examples:
 
@@ -228,13 +252,15 @@ The actual dataset should be substantially larger and should include natural spo
 
 Do not assume that a general multilingual model is automatically reliable for Dictator's Finnish command vocabulary.
 
+Also do not assume that the general-purpose Laya checkpoint is already suitable for this task. Evaluate it first; only then consider domain-specific training or another model.
+
 ## Safety boundary
 
 Laya must never directly execute a Dictator command.
 
 The chain should be:
 
-    semantic classification
+    semantic decision
         ->
     deterministic command recognition
         ->
@@ -246,7 +272,7 @@ This makes Laya a routing aid rather than an authority.
 
 ## Performance considerations
 
-The classifier is useful only if it is sufficiently cheaper/faster than sending every utterance to an LLM.
+The decision model is useful only if it is sufficiently cheaper/faster than sending every utterance to an LLM.
 
 Important measurements:
 
@@ -255,31 +281,34 @@ Important measurements:
 - memory use;
 - battery impact on Android;
 - model load/unload time;
-- accuracy;
+- intent accuracy;
 - false command rate;
 - false LLM-request rate;
-- ambiguous rate.
+- ambiguous rate;
+- usefulness of additional `noul`/`score` decisions.
 
 The model should preferably be managed by Aidos so Dictator does not own a second model runtime.
 
 ## Possible future uses
 
-If the generic classification path proves useful, the same mechanism could support:
+If the generic decision path proves useful, the same mechanism could support:
 
 - command routing;
-- editor intent classification;
+- editor intent decisions;
 - voice interaction state;
 - clarification detection;
 - model selection;
-- lightweight semantic routing.
+- lightweight semantic routing;
+- graded decisions where ordinary classification is insufficient.
 
-These should remain separate classifier tasks rather than turning Laya into a general-purpose command executor.
+These should remain separate decision tasks rather than turning Laya into a general-purpose command executor.
 
 ## Open questions
 
-- What generic classification API should Aidos expose?
-- Does Dictator need only COMMAND/LLM/AMBIGUOUS, or more command categories?
-- How much editor context improves classification?
+- What generic typed-decision API should Aidos expose?
+- Does Dictator need only COMMAND/LLM/AMBIGUOUS, or more intent categories?
+- Which decisions should use `choice`, `noul`, or `score`?
+- How much editor context improves routing?
 - What confidence calibration is adequate?
 - Should ambiguous input go to the LLM or trigger clarification?
 - What latency/memory budget is acceptable on Android?
@@ -291,8 +320,8 @@ These should remain separate classifier tasks rather than turning Laya into a ge
 
 Do not immediately replace Dictator's current routing.
 
-First run Laya in shadow mode through Aidos. Establish whether multilingual Laya can reliably distinguish commands from LLM requests in Finnish and measure its resource cost.
+First run Laya in shadow mode through Aidos. Establish whether the multilingual model can reliably distinguish commands from LLM requests in Finnish, and whether additional typed decisions provide useful information at acceptable resource cost.
 
-If the results are good, add a small IntentClassifier abstraction to Dictator and use Aidos classification as the implementation.
+If the results are good, add a small IntentClassifier/Decision abstraction to Dictator and use Aidos as the implementation.
 
 The deterministic VoiceCommandParser remains the final command recognizer and execution boundary.
