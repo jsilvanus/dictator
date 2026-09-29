@@ -46,6 +46,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
+    testOptions {
+        // android.jar is a stub in unit tests; return defaults instead of throwing on Android calls.
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildFeatures {
         compose = true
         // AGP 8.x no longer enables this implicitly, and defaultConfig sets
@@ -59,6 +64,9 @@ android {
         }
     }
 }
+
+// The root build applies useJUnitPlatform() to every Test task; these are JUnit 4 tests.
+tasks.withType<Test>().configureEach { useJUnit() }
 
 kotlin {
     jvmToolchain(21)

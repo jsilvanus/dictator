@@ -35,6 +35,10 @@ class DictatorApplication : Application() {
             additionalModules = listOf(androidKoinModule(this, aidosEngine))
         )
 
+        // Instantiating the resolver registers the AIDOS provider with AiProviderFactory, so it is
+        // available before any screen asks whether it is.
+        org.koin.core.context.GlobalContext.get().get<com.dictator.android.data.ai.AiProviderResolver>()
+
         // Announce ourselves to Aidos Engine at launch. On a device where Engine is installed and
         // Dictator is not yet approved, this is what makes Dictator's first permission request
         // appear in Engine (notification + Connected Apps); it is harmless when Engine is absent.

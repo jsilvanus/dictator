@@ -1,104 +1,76 @@
 package com.dictator.android.ui.document
 
+import com.dictator.android.testutil.inMemoryStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.*
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DocumentViewModelTest {
-    private lateinit var viewModel: DocumentViewModel
+    private val store = inMemoryStore()
 
     @Before
-    fun setup() {
-        viewModel = DocumentViewModel()
+    fun setup() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
+
+    @After
+    fun tearDown() { Dispatchers.resetMain() }
+
+    @Test
+    fun `starts empty on a fresh install`() {
+        val vm = DocumentViewModel(store)
+        assertTrue(vm.state.value.documents.isEmpty())
+        assertFalse(vm.state.value.isLoading)
     }
 
     @Test
-    fun testInitialState() {
-        val state = viewModel.state.value
-        assertTrue(state.documents.isNotEmpty())
-        assertEquals("", state.searchQuery)
-        assertFalse(state.isLoading)
+    fun `created documents are persisted and listed newest first`() = runTest {
+        val vm = DocumentViewModel(store)
+        var firstId = ""
+        var secondId = ""
+        vm.createNewDocument("First") { firstId = it }
+        vm.createNewDocument("Second") { secondId = it }
+        assertEquals(listOf(secondId, firstId), vm.state.value.documents.map { it.id })
+        // A new view model (app restart) sees them too.
+        assertEquals(2, DocumentViewModel(store).state.value.documents.size)
     }
 
     @Test
-    fun testLoadDocuments() {
-        val state = viewModel.state.value
-        assertTrue(state.documents.isNotEmpty())
-        assertTrue(state.documents.any { it.title.contains("Welcome") })
+    fun `delete removes from the store`() = runTest {
+        val vm = DocumentViewModel(store)
+        var id = ""
+        vm.createNewDocument("Gone") { id = it }
+        vm.deleteDocument(id)
+        assertTrue(vm.state.value.documents.isEmpty())
+        assertNull(store.load(id))
     }
 
     @Test
-    fun testSearchDocuments() {
-        viewModel.onSearchQueryChanged("Writing")
-        val filtered = viewModel.getFilteredDocuments()
-        assertTrue(filtered.any { it.title.contains("Writing") })
+    fun `search filters by title ignoring case`() = runTest {
+        val vm = DocumentViewModel(store)
+        vm.createNewDocument("Sunday sermon") {}
+        vm.createNewDocument("Shopping list") {}
+        vm.onSearchQueryChanged("SERMON")
+        assertEquals(listOf("Sunday sermon"), vm.getFilteredDocuments().map { it.title })
+        vm.onSearchQueryChanged("nothing")
+        assertTrue(vm.getFilteredDocuments().isEmpty())
     }
 
     @Test
-    fun testSearchEmpty() {
-        viewModel.onSearchQueryChanged("NonExistent")
-        val filtered = viewModel.getFilteredDocuments()
-        assertTrue(filtered.isEmpty())
-    }
-
-    @Test
-    fun testCreateNewDocument() {
-        val initialCount = viewModel.state.value.documents.size
-        val newId = viewModel.createNewDocument("New Doc")
-        val updatedCount = viewModel.state.value.documents.size
-        assertEquals(initialCount + 1, updatedCount)
-    }
-
-    @Test
-    fun testSelectDocument() {
-        val doc = viewModel.state.value.documents.first()
-        viewModel.selectDocument(doc)
-        val state = viewModel.state.value
-        assertEquals(doc.id, state.selectedDocument?.id)
-        assertTrue(state.showDetailDialog)
-    }
-
-    @Test
-    fun testDismissDetailDialog() {
-        val doc = viewModel.state.value.documents.first()
-        viewModel.selectDocument(doc)
-        assertTrue(viewModel.state.value.showDetailDialog)
-        viewModel.dismissDetailDialog()
-        assertFalse(viewModel.state.value.showDetailDialog)
-    }
-
-    @Test
-    fun testDeleteDocument() {
-        val doc = viewModel.state.value.documents.first()
-        val initialCount = viewModel.state.value.documents.size
-        viewModel.deleteDocument(doc.id)
-        val updatedCount = viewModel.state.value.documents.size
-        assertEquals(initialCount - 1, updatedCount)
-    }
-
-    @Test
-    fun testGetFilteredDocuments() {
-        val allDocs = viewModel.getFilteredDocuments()
-        assertTrue(allDocs.isNotEmpty())
-        
-        viewModel.onSearchQueryChanged("Writing")
-        val filtered = viewModel.getFilteredDocuments()
-        assertTrue(filtered.all { it.title.contains("Writing") || it.folder.contains("Writing") })
-    }
-
-    @Test
-    fun testCaseSensitiveSearch() {
-        viewModel.onSearchQueryChanged("WELCOME")
-        val filtered = viewModel.getFilteredDocuments()
-        assertTrue(filtered.any { it.title.contains("Welcome") })
-    }
-
-    @Test
-    fun testRefresh() {
-        val initialDocs = viewModel.state.value.documents
-        viewModel.onRefresh()
-        val refreshedDocs = viewModel.state.value.documents
-        assertEquals(initialDocs.size, refreshedDocs.size)
+    fun `select and dismiss the detail dialog`() = runTest {
+        val vm = DocumentViewModel(store)
+        vm.createNewDocument("Doc") {}
+        val doc = vm.state.value.documents.first()
+        vm.selectDocument(doc)
+        assertEquals(doc.id, vm.state.value.selectedDocument?.id)
+        assertTrue(vm.state.value.showDetailDialog)
+        vm.dismissDetailDialog()
+        assertFalse(vm.state.value.showDetailDialog)
     }
 }

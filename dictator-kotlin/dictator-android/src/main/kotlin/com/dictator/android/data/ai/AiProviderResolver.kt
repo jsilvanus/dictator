@@ -25,6 +25,11 @@ object AiSettingsKeys {
     const val DICTATION_ENGINE = "dictation_engine"   // "system" | "aidos"
 }
 
+/** What the UI needs to know about the chosen provider without building it. */
+interface AiProviderSelection {
+    fun selectedType(): ModelProvider
+}
+
 /**
  * Builds the [AiProvider] the user selected in settings. Also registers the Aidos provider with
  * [AiProviderFactory], the seam dictator-core provides because it cannot link the Android-only SDK.
@@ -33,7 +38,7 @@ class AiProviderResolver(
     private val prefs: SharedPreferences,
     private val httpClient: HttpClient,
     private val engine: AidosEngineConnection
-) {
+) : AiProviderSelection {
     init {
         AiProviderFactory.register(ModelProvider.AIDOS) { _, config ->
             AidosProvider(
@@ -46,7 +51,7 @@ class AiProviderResolver(
     }
 
     /** The selected provider type, without building it (used for privacy decisions). */
-    fun selectedType(): ModelProvider {
+    override fun selectedType(): ModelProvider {
         if (prefs.getString(AiSettingsKeys.MODE, AiSettingsKeys.MODE_DIRECT) == AiSettingsKeys.MODE_SERVICE) {
             return ModelProvider.DICTATOR
         }

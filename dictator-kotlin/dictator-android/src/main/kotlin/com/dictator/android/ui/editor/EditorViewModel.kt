@@ -2,9 +2,9 @@ package com.dictator.android.ui.editor
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dictator.android.data.ai.AiProviderResolver
+import com.dictator.android.data.ai.AiProviderSelection
 import com.dictator.android.data.dictation.DictationEngine
-import com.dictator.android.data.dictation.DictationEngineFactory
+import com.dictator.android.data.dictation.DictationEngines
 import com.dictator.android.data.dictation.DictationEngineKind
 import com.dictator.android.data.dictation.DictationListener
 import com.dictator.core.data.local.VoiceSettingsRepository
@@ -17,6 +17,7 @@ import com.dictator.core.util.voice.CommandType
 import com.dictator.core.util.voice.DictationAction
 import com.dictator.core.util.voice.DictationInterpreter
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -75,12 +76,14 @@ data class EditorUiState(
 class EditorViewModel constructor(
     private val store: LocalDocumentStore,
     private val aiService: AiService,
-    private val aiResolver: AiProviderResolver,
+    private val aiResolver: AiProviderSelection,
     private val policies: ProviderPolicyManager,
     private val privacy: PrivacyService,
     private val voiceSettings: VoiceSettingsRepository,
     private val prefs: SharedPreferences,
-    private val engines: DictationEngineFactory
+    private val engines: DictationEngines,
+    /** Where saves run; a test passes its own dispatcher. */
+    saveDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
     private val _state = MutableStateFlow(EditorUiState())
     val state: StateFlow<EditorUiState> = _state.asStateFlow()
@@ -92,7 +95,7 @@ class EditorViewModel constructor(
     private var engine: DictationEngine? = null
 
     // A final save must outlive the ViewModel's own scope, which is cancelled in onCleared().
-    private val saveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val saveScope = CoroutineScope(SupervisorJob() + saveDispatcher)
 
     // ---- loading & saving -------------------------------------------------------------------
 
@@ -219,9 +222,12 @@ class EditorViewModel constructor(
         val start = minOf(s.selStart, s.selEnd)
         val end = maxOf(s.selStart, s.selEnd)
         val before = s.content.substring(0, start)
-        val piece = if (spaced) DictationInterpreter.joinWithSpace(before, text) else text
+        val after = s.content.substring(end)
+        var piece = if (spaced) DictationInterpreter.joinWithSpace(before, text) else text
+        // Dictating into the middle of a line: keep the following word from gluing onto the insertion.
+        if (spaced && after.isNotEmpty() && !after.first().isWhitespace() && after.first() !in ".,!?;:)" && !piece.last().isWhitespace()) piece += " "
         pushUndo(s.content, force = true)
-        val newContent = before + piece + s.content.substring(end)
+        val newContent = before + piece + after
         val cursor = before.length + piece.length
         applyContent(newContent, cursor, cursor)
     }

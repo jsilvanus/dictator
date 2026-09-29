@@ -64,8 +64,8 @@ fun androidKoinModule(context: Context, engine: AidosEngineConnection) = module 
     viewModel { McpViewModel(mcpService = get()) }
     viewModel {
         EditorViewModel(
-            store = get(), aiService = get(), aiResolver = get(), policies = get(), privacy = get(),
-            voiceSettings = get(), prefs = get(), engines = get()
+            store = get(), aiService = get(), aiResolver = get<AiProviderResolver>(), policies = get(), privacy = get(),
+            voiceSettings = get(), prefs = get(), engines = get<DictationEngineFactory>()
         )
     }
 }
