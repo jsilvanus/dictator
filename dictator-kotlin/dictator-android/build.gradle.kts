@@ -66,6 +66,9 @@ android {
 
 kotlin {
     jvmToolchain(21)
+    compilerOptions {
+        freeCompilerArgs.add("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")
+    }
 }
 
 dependencies {
@@ -111,8 +114,6 @@ dependencies {
     // Security & Crypto
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // Speech Recognition
-    implementation("androidx.speech:speech-recognition:1.0.0-alpha03")
 
     // SQLDelight Android driver
     implementation("app.cash.sqldelight:android-driver:2.0.1")

@@ -9,11 +9,26 @@ import io.ktor.client.HttpClient
  */
 object AiProviderFactory {
 
+    // Platform modules contribute providers dictator-core cannot build itself: the Aidos SDK is
+    // Android-only and this module targets the JVM (docs/AIDOS_SDK_INTEGRATION_PLAN.md, D1).
+    private val registered = mutableMapOf<ModelProvider, (HttpClient, ProviderConfig) -> AiProvider>()
+
+    /** Register (or replace) the builder for [type]. Called once at platform startup. */
+    fun register(type: ModelProvider, builder: (HttpClient, ProviderConfig) -> AiProvider) {
+        registered[type] = builder
+    }
+
+    fun isRegistered(type: ModelProvider): Boolean = type in registered
+
     /**
      * Create a provider instance based on configuration
      */
     fun createProvider(httpClient: HttpClient, config: ProviderConfig): AiProvider {
+        registered[config.type]?.let { return it(httpClient, config) }
         return when (config.type) {
+            ModelProvider.AIDOS ->
+                throw IllegalStateException("Aidos provider is not available on this platform")
+
             ModelProvider.CLAUDE -> {
                 val apiKey = config.apiKey ?: throw IllegalArgumentException("Claude provider requires apiKey")
                 ClaudeProvider(httpClient, apiKey, config.model ?: "claude-sonnet-4-6")
@@ -106,6 +121,8 @@ object AiProviderFactory {
             !System.getenv("OPENAI_COMPATIBLE_API_KEY").isNullOrEmpty()
         providers.add(AvailableProvider(ModelProvider.OPENAI_COMPATIBLE, "OpenAI-Compatible", isCompatibleConfigured))
 
+        providers.add(AvailableProvider(ModelProvider.AIDOS, "Aidos Engine (on-device)", isRegistered(ModelProvider.AIDOS)))
+
         // Dictator service is always available as it's a public service
         providers.add(AvailableProvider(ModelProvider.DICTATOR, "Dictator Service", true))
 
@@ -146,6 +163,13 @@ object AiProviderFactory {
 
             ModelProvider.DICTATOR -> {
                 // Dictator service is always valid, no configuration needed
+            }
+
+            ModelProvider.AIDOS -> {
+                // No key or URL: trust comes from the Engine's per-app approval, not configuration.
+                if (!isRegistered(ModelProvider.AIDOS)) {
+                    errors.add("Aidos Engine is not available on this platform")
+                }
             }
         }
 

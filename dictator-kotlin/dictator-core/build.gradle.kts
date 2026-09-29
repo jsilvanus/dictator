@@ -34,7 +34,8 @@ kotlin {
                 implementation("app.cash.sqldelight:coroutines-extensions:2.0.1")
 
                 // Ktor Client (multiplatform)
-                implementation("io.ktor:ktor-client-core:2.3.4")
+                // api: the Android module builds HttpClient / Koin values from these types.
+                api("io.ktor:ktor-client-core:2.3.4")
                 implementation("io.ktor:ktor-client-serialization:2.3.4")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.4")
                 // ContentNegotiation and Logging are separate artifacts; HttpClientConfig
@@ -43,7 +44,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-logging:2.3.4")
 
                 // Koin DI
-                implementation("io.insert-koin:koin-core:3.4.0")
+                api("io.insert-koin:koin-core:3.4.0")
 
                 // Logging
                 implementation("io.github.aakira:napier:2.6.1")
@@ -85,8 +86,10 @@ sqldelight {
     databases {
         create("DictatorDatabase") {
             packageName.set("com.dictator.core.database")
+            // Schema comes from the CREATE TABLE statements in the .sq files. It used to say
+            // deriveSchemaFromMigrations, but there are no .sqm files, so the generated schema was
+            // empty and every query failed with "no such table".
             schemaOutputDirectory.set(file("src/commonMain/sqldelight"))
-            deriveSchemaFromMigrations.set(true)
         }
     }
 }

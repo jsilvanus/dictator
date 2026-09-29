@@ -382,3 +382,4 @@ class VoiceViewModel @Inject constructor(
         recordingJob?.cancel()
         silenceDetectionJob?.cancel()
     }
+}

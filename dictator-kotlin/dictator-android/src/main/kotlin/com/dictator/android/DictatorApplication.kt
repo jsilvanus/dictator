@@ -1,12 +1,13 @@
 package com.dictator.android
 
 import android.app.Application
+import com.dictator.android.BuildConfig
 import com.dictator.android.data.AidosEngineConnection
 import com.dictator.android.data.AndroidDatabaseDriverProvider
 import com.dictator.core.DictatorCore
 import dagger.hilt.android.HiltAndroidApp
 import io.github.aakira.napier.Napier
-import io.github.aakira.napier.log
+import io.github.aakira.napier.DebugAntilog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,6 +27,9 @@ class DictatorApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // Without an Antilog Napier drops every message, including the Aidos handshake result.
+        if (BuildConfig.DEBUG) Napier.base(DebugAntilog())
+
         // Initialize Dictator Core with the Android SQLDelight driver.
         DictatorCore.initialize(AndroidDatabaseDriverProvider(this))
 
@@ -37,6 +41,6 @@ class DictatorApplication : Application() {
             Napier.i("Aidos Engine: $availability")
         }
 
-        Napier.log { "DictatorApplication initialized" }
+        Napier.i("DictatorApplication initialized")
     }
 }

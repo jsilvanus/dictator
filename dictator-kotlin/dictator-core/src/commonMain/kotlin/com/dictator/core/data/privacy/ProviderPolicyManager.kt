@@ -80,6 +80,23 @@ class ProviderPolicyManager {
             notes = "100% local processing. No data transmission or retention. Highest privacy."
         )
 
+        // Aidos Engine: on-device models served over loopback by a separate app. Same shape as the
+        // Ollama entry so `isLocalProvider` treats it as never leaving the device, but distinguished
+        // by where the models run.
+        policies["aidos"] = AiProviderPolicy(
+            id = "policy-aidos-v1",
+            provider = "aidos",
+            displayName = "Aidos Engine (On-device)",
+            dataRetentionDays = 0,
+            processingPurposes = emptyList(),
+            processingLocations = listOf("local"),
+            usesDataForTraining = false,
+            trainingOptOutAvailable = false,
+            privacyPolicyUrl = "",
+            gdprCompliant = true,
+            notes = "Runs on this device via Aidos Engine. Requests go to 127.0.0.1 only; nothing is sent to a third party or retained."
+        )
+
         // Dictator's Policy (own backend)
         policies["dictator"] = AiProviderPolicy(
             id = "policy-dictator-v1",

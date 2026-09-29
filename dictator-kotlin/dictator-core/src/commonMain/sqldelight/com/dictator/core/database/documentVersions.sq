@@ -26,3 +26,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 deleteVersionsByDocumentId:
 DELETE FROM documentVersions WHERE documentId = ?;
+
+deleteVersionById:
+DELETE FROM documentVersions WHERE id = ?;

@@ -291,6 +291,7 @@ private fun getSyncIcon(state: SyncState): ImageVector {
     }
 }
 
+@Composable
 private fun getSyncColor(state: SyncState) = when (state) {
     SyncState.SYNCED -> MaterialTheme.colorScheme.primary
     SyncState.SYNCING -> MaterialTheme.colorScheme.secondary

@@ -14,8 +14,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronDown
-import androidx.compose.material.icons.filled.ChevronUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -226,7 +226,7 @@ fun AIHistoryTurnCard(
                         Box(modifier = Modifier.height(4.dp))
                         Text(
                             text = formatTimestamp(Date(prov.createdAt)) +
-                                    if (prov.confidence != null) " • ${(prov.confidence * 100).toInt()}% confidence"
+                                    if (prov.confidence != null) " • ${(prov.confidence!! * 100).toInt()}% confidence"
                                     else "",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -236,7 +236,7 @@ fun AIHistoryTurnCard(
 
                 // Expand/Collapse Icon
                 Icon(
-                    imageVector = if (isExpanded) Icons.Filled.ChevronUp else Icons.Filled.ChevronDown,
+                    imageVector = if (isExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -267,7 +267,7 @@ fun AIHistoryTurnCard(
                             MetadataRow("Thinking:", "${prov.thinkingBudgetTokens} tokens")
                         }
                         if (prov.reviewedAt != null) {
-                            MetadataRow("Reviewed:", formatTimestamp(Date(prov.reviewedAt)))
+                            MetadataRow("Reviewed:", formatTimestamp(Date(prov.reviewedAt!!)))
                         }
 
                         Box(modifier = Modifier.height(12.dp))

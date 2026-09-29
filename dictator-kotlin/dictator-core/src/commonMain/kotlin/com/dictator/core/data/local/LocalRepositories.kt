@@ -211,6 +211,11 @@ class LocalDocumentVersionRepository(
         queries.deleteVersionsByDocumentId(documentId)
         return true
     }
+
+    override suspend fun deleteVersion(id: String): Boolean {
+        queries.deleteVersionById(id)
+        return true
+    }
     
     override fun observeVersions(documentId: String): Flow<List<DocumentVersion>> {
         return queries.getVersionsByDocumentId(documentId).asFlow().map { result ->
