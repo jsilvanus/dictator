@@ -30,6 +30,28 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        // Aidos SDK (docs/AIDOS_SDK_INTEGRATION_PLAN.md, D-4). Scoped by group so no other
+        // dependency ever asks these repositories, and a missing GitHub token can only affect
+        // the SDK itself.
+        //
+        // Local development: `cd <aidos>/sdk && gradle :client:publishToMavenLocal`, which
+        // publishes version 0.1.0 to ~/.m2 — no token needed.
+        // CI / releases: GitHub Packages, authenticated with `gpr.user`/`gpr.key` Gradle
+        // properties or GITHUB_ACTOR/GITHUB_TOKEN (read:packages), with -PaidosSdkVersion=<version>.
+        mavenLocal {
+            content { includeGroup("fi.italeino.aidos.sdk") }
+        }
+        maven {
+            name = "AidosGitHubPackages"
+            url = uri("https://maven.pkg.github.com/jsilvanus/aidos")
+            credentials {
+                username = providers.gradleProperty("gpr.user")
+                    .orElse(providers.environmentVariable("GITHUB_ACTOR")).orNull ?: "token"
+                password = providers.gradleProperty("gpr.key")
+                    .orElse(providers.environmentVariable("GITHUB_TOKEN")).orNull ?: ""
+            }
+            content { includeGroup("fi.italeino.aidos.sdk") }
+        }
         google()
         mavenCentral()
         gradlePluginPortal()

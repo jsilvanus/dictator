@@ -29,15 +29,15 @@ on the same Android device; a server cannot do that. Nothing in `lib/ai/provider
 ## What Dictator depends on from the Aidos side
 
 None of the Dictator phases below can start against a working Engine until these land. They are
-tracked in the canonical plan as S0–S4. **S0 and S1 are done and on Aidos's `main`.**
+tracked in the canonical plan as S0–S4. **S0–S4 are done on Aidos's `main`**; the SDK's Engine API v1 contract is frozen (`sdk/CONTRACT.md` in `jsilvanus/aidos`).
 
 | Phase | Status | What | Why Dictator needs it |
 |---|---|---|---|
 | S0 | **done** (aidos#37) | The SDK compiles at all | It had never compiled: a missing brace, `private val modelId` conflicting with its own `override val`, `Turn.System.text` where kernel declares `content`, undeclared `kernel` and serialization dependencies, and Kotlin 2.1.0 against the repo's 2.4.10 |
 | S1 | **done** (aidos#39) | Handshake permission `signature` → `normal` | Dictator is signed with a different certificate. Under `signature` it took a `SecurityException` at `bindService` and never reached the approval screen built for exactly this case. Trust now comes from the Binder-verified caller identity plus the user's persisted approval |
-| S2 | pending | A real SDK client: Binder handshake, three-state approval result, OkHttp transport, **SSE streaming**, typed capability negotiation | `EngineClientImpl.initialize()` still contains no Binder code and returns `false` unconditionally |
-| S3 | pending | Published artifacts on GitHub Packages | How Dictator consumes it |
-| S4 | pending | Real token streaming in Engine | Engine's SSE chunks an already-complete response, so first-token latency equals full generation time |
+| S2 | **done** | A real SDK client: Binder handshake, three-state approval result, OkHttp transport, **SSE streaming**, typed capability negotiation | `EngineClientImpl.initialize()` still contains no Binder code and returns `false` unconditionally |
+| S3 | **done** | Published artifacts on GitHub Packages | How Dictator consumes it |
+| S4 | **done** | Real token streaming in Engine | Engine's SSE chunks an already-complete response, so first-token latency equals full generation time |
 
 Dictator depends on `aidos-sdk-client` only — the artifact with **no** dependency on Aidos's
 `kernel` contract types. The `ModelAdapter` bindings ship separately as `aidos-sdk-adapters` for
@@ -124,6 +124,20 @@ target, and the SDK is Android-only.** `AidosProvider` cannot live in `dictator-
 
 **Done when:** a user selects Aidos as their provider, dictation-mode AI and the chat panel both
 work against a real Engine, and uninstalling Engine falls back cleanly instead of erroring.
+
+**Status: started — first handshake only.** `dictator-android` depends on `aidos-sdk-client`
+(resolution: `settings.gradle.kts`) and `DictatorApplication` calls `AidosEngineConnection.connect()`
+at launch, so Dictator's first permission request reaches Engine (notification + Connected Apps).
+Not yet built: the provider, the privacy policy entry and the availability UI above. Try it:
+
+1. `cd <aidos>/sdk && gradle :client:publishToMavenLocal` (publishes `0.1.0` to `~/.m2`).
+2. Build and install `aidos/engine/androidapp` and `dictator-kotlin/dictator-android` on one device.
+3. Open Aidos Engine first (its service must be running — see aidos `sdk/CONTRACT.md`, known issues).
+4. Open Dictator: Engine posts "Dictator wants access"; approve on Connected Apps; relaunch Dictator
+   and the log line `Aidos Engine: Available` appears.
+
+**Unverified:** `:dictator-android` still has never been compiled (no Android SDK in CI or the cloud
+environment), so this change is checked by reading only.
 
 ## D2 · Offline dictation
 
