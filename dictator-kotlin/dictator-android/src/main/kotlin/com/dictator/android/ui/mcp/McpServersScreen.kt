@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.androidx.compose.koinViewModel
 import com.dictator.android.R
 import com.dictator.core.data.mcp.McpServerConfig
 
@@ -29,7 +29,7 @@ import com.dictator.core.data.mcp.McpServerConfig
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun McpServersScreen(
-    viewModel: McpViewModel = hiltViewModel(),
+    viewModel: McpViewModel = koinViewModel(),
     onBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()

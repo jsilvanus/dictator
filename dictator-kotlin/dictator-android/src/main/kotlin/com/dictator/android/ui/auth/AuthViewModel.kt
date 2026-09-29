@@ -5,19 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.dictator.core.data.error.DataException
 import com.dictator.core.service.AuthService
 import com.dictator.core.util.validation.Validators
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * ViewModel for authentication screens.
  * Manages login/signup form state with validation and password strength checking.
  */
-@HiltViewModel
-class AuthViewModel @Inject constructor(
+class AuthViewModel constructor(
     private val authService: AuthService
 ) : ViewModel() {
     private val _state = MutableStateFlow(AuthUiState())

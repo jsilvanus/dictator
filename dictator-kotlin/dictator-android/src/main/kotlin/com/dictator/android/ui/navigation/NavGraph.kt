@@ -22,7 +22,8 @@ sealed class Screen(val route: String) {
 @Composable
 fun DictatorNavHost(
     navController: NavHostController = rememberNavController(),
-    startDestination: String = Screen.Auth.route
+    // Dictator works without an account: documents are local, AI is the provider chosen in Settings.
+    startDestination: String = Screen.DocumentList.route
 ) {
     NavHost(
         navController = navController,
@@ -43,11 +44,6 @@ fun DictatorNavHost(
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
-                },
-                onLogout = {
-                    navController.navigate(Screen.Auth.route) {
-                        popUpTo(Screen.DocumentList.route) { inclusive = true }
-                    }
                 }
             )
         }

@@ -1,5 +1,6 @@
 package com.dictator.android.ui.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -16,13 +17,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.androidx.compose.koinViewModel
+import android.app.PendingIntent
+import com.dictator.android.data.AidosEngineConnection
+import com.dictator.android.data.dictation.DictationEngineKind
 import com.dictator.core.data.ai.ModelProvider
+import fi.italeino.aidos.sdk.client.EngineAvailability
 
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -119,6 +124,33 @@ fun SettingsScreen(
                         onTemperatureChange = { viewModel.setTemperature(it) },
                         maxTokens = state.maxTokens,
                         onMaxTokensChange = { viewModel.setMaxTokens(it) }
+                    )
+                }
+            }
+
+            item {
+                DictationConfig(
+                    engine = state.dictationEngine,
+                    onEngineChange = { viewModel.setDictationEngine(it) },
+                    language = state.language,
+                    onLanguageChange = { viewModel.setLanguage(it) }
+                )
+            }
+
+            if (state.selectedProvider == ModelProvider.AIDOS || state.dictationEngine == DictationEngineKind.AIDOS) {
+                item {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    AidosEngineCard(
+                        availability = state.engineAvailability,
+                        checking = state.engineChecking,
+                        llmModels = state.engineLlmModels,
+                        sttModels = state.engineSttModels,
+                        aidosModel = state.aidosModel,
+                        sttModel = state.sttModel,
+                        onAidosModelChange = { viewModel.setAidosModel(it) },
+                        onSttModelChange = { viewModel.setSttModel(it) },
+                        onRefresh = { viewModel.refreshEngine() },
+                        onOpenApproval = viewModel.approvalIntent()?.let { intent -> { sendIntent(intent) } }
                     )
                 }
             }
@@ -422,6 +454,13 @@ private fun DirectProviderConfig(
                 }
                 ModelProvider.DICTATOR -> {
                     DictatorProviderConfig()
+                }
+                ModelProvider.AIDOS -> {
+                    Text(
+                        "AI runs on this device through Aidos Engine. No key, no account and no network needed.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -765,5 +804,109 @@ private fun DictatorProviderConfig() {
                 )
             }
         }
+    }
+}
+
+
+private fun sendIntent(intent: PendingIntent) {
+    try {
+        intent.send()
+    } catch (e: PendingIntent.CanceledException) {
+        // Engine's deep link expired; "Check again" fetches a fresh one.
+    }
+}
+
+private val LANGUAGES = listOf("fi-FI" to "Suomi", "en-US" to "English (US)", "sv-SE" to "Svenska")
+
+@Composable
+private fun DictationConfig(
+    engine: DictationEngineKind,
+    onEngineChange: (DictationEngineKind) -> Unit,
+    language: String,
+    onLanguageChange: (String) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Dictation", style = MaterialTheme.typography.titleMedium)
+            Text("Language", style = MaterialTheme.typography.labelMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LANGUAGES.forEach { (code, label) ->
+                    FilterChip(selected = language == code, onClick = { onLanguageChange(code) }, label = { Text(label) })
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            Text("Speech recognition", style = MaterialTheme.typography.labelMedium)
+            EngineOption(
+                selected = engine == DictationEngineKind.SYSTEM,
+                onClick = { onEngineChange(DictationEngineKind.SYSTEM) },
+                title = "Android speech service",
+                description = "Words appear as you speak. On most phones the audio is sent to Google's servers."
+            )
+            EngineOption(
+                selected = engine == DictationEngineKind.AIDOS,
+                onClick = { onEngineChange(DictationEngineKind.AIDOS) },
+                title = "Offline (Aidos Engine)",
+                description = "Audio never leaves the phone. No live words: each phrase appears after a short pause. Needs Aidos Engine with a speech model."
+            )
+        }
+    }
+}
+
+@Composable
+private fun EngineOption(selected: Boolean, onClick: () -> Unit, title: String, description: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        RadioButton(selected = selected, onClick = onClick)
+        Column(Modifier.padding(top = 12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun AidosEngineCard(
+    availability: EngineAvailability?,
+    checking: Boolean,
+    llmModels: List<String>,
+    sttModels: List<String>,
+    aidosModel: String,
+    sttModel: String,
+    onAidosModelChange: (String) -> Unit,
+    onSttModelChange: (String) -> Unit,
+    onRefresh: () -> Unit,
+    onOpenApproval: (() -> Unit)?
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Aidos Engine", style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (checking) "Checking…" else AidosEngineConnection.explain(availability),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (availability == EngineAvailability.Available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onRefresh, enabled = !checking) { Text("Check again") }
+                if (availability == EngineAvailability.PendingApproval && onOpenApproval != null) {
+                    Button(onClick = onOpenApproval) { Text("Open approval") }
+                }
+            }
+            if (availability == EngineAvailability.Available) {
+                ModelPicker("Language model", llmModels, aidosModel, onAidosModelChange, emptyHint = "No language model installed in Engine.")
+                ModelPicker("Speech model", sttModels, sttModel, onSttModelChange, emptyHint = "No speech model installed in Engine.")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModelPicker(label: String, models: List<String>, selected: String, onSelect: (String) -> Unit, emptyHint: String) {
+    Text(label, style = MaterialTheme.typography.labelMedium)
+    if (models.isEmpty()) {
+        Text(emptyHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        return
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected = selected.isBlank(), onClick = { onSelect("") }, label = { Text("Automatic") })
+        models.forEach { id -> FilterChip(selected = selected == id, onClick = { onSelect(id) }, label = { Text(id) }) }
     }
 }

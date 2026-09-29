@@ -4,8 +4,8 @@ import android.app.Application
 import com.dictator.android.BuildConfig
 import com.dictator.android.data.AidosEngineConnection
 import com.dictator.android.data.AndroidDatabaseDriverProvider
+import com.dictator.android.di.androidKoinModule
 import com.dictator.core.DictatorCore
-import dagger.hilt.android.HiltAndroidApp
 import io.github.aakira.napier.Napier
 import io.github.aakira.napier.DebugAntilog
 import kotlinx.coroutines.CoroutineScope
@@ -15,9 +15,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Dictator Application entry point.
- * Initializes Hilt DI and Dictator Core services.
+ * Initializes Dictator Core (which starts Koin) and the Android additions.
  */
-@HiltAndroidApp
 class DictatorApplication : Application() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -31,7 +30,10 @@ class DictatorApplication : Application() {
         if (BuildConfig.DEBUG) Napier.base(DebugAntilog())
 
         // Initialize Dictator Core with the Android SQLDelight driver.
-        DictatorCore.initialize(AndroidDatabaseDriverProvider(this))
+        DictatorCore.initialize(
+            AndroidDatabaseDriverProvider(this),
+            additionalModules = listOf(androidKoinModule(this, aidosEngine))
+        )
 
         // Announce ourselves to Aidos Engine at launch. On a device where Engine is installed and
         // Dictator is not yet approved, this is what makes Dictator's first permission request

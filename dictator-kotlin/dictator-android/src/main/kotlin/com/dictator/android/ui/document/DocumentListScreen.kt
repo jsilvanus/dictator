@@ -40,16 +40,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.dictator.android.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DocumentListScreen(
-    viewModel: DocumentViewModel = viewModel(),
+    viewModel: DocumentViewModel = koinViewModel(),
     onDocumentSelect: (String) -> Unit = {},
     onSettingsClick: () -> Unit = {},
-    onLogout: () -> Unit = {}
+    onLogout: (() -> Unit)? = null
 ) {
     val state by viewModel.state.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -66,8 +66,10 @@ fun DocumentListScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.documents)) },
                 actions = {
-                    IconButton(onClick = onLogout) {
-                        Icon(Icons.Filled.Logout, contentDescription = stringResource(R.string.logout))
+                    if (onLogout != null) {
+                        IconButton(onClick = onLogout) {
+                            Icon(Icons.Filled.Logout, contentDescription = stringResource(R.string.logout))
+                        }
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
@@ -211,9 +213,8 @@ fun DocumentListScreen(
         NewDocumentDialog(
             onDismiss = { showNewDocumentDialog = false },
             onCreateDocument = { title ->
-                val docId = viewModel.createNewDocument(title)
                 showNewDocumentDialog = false
-                onDocumentSelect(docId)
+                viewModel.createNewDocument(title, onDocumentSelect)
             }
         )
     }
