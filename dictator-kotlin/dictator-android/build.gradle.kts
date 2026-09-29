@@ -75,6 +75,12 @@ dependencies {
     // Core library dependency (from dictator-core)
     implementation(project(":dictator-core"))
 
+    // Aidos SDK client (docs/AIDOS_SDK_INTEGRATION_PLAN.md, D-1): handshake + loopback transport to
+    // Aidos Engine. Deliberately the client artifact only — it has no dependency on Aidos's
+    // `kernel` contract types. Its manifest brings the Engine handshake permission and the
+    // package-visibility <queries> entry with it. See settings.gradle.kts for where this resolves.
+    implementation("fi.italeino.aidos.sdk:aidos-sdk-client:${providers.gradleProperty("aidosSdkVersion").getOrElse("0.1.0")}")
+
     // Jetpack Compose
     val composeBom = platform("androidx.compose:compose-bom:2024.02.00")
     implementation(composeBom)
