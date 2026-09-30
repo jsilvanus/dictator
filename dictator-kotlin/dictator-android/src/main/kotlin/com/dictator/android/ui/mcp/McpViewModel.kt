@@ -13,8 +13,6 @@ import kotlinx.coroutines.launch
 import com.dictator.core.data.mcp.McpServerConfig
 import com.dictator.core.data.mcp.McpServerState
 import com.dictator.core.service.McpService
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 
 data class McpUiState(
     val servers: List<McpServerState> = emptyList(),
@@ -26,8 +24,7 @@ data class McpUiState(
     val totalCount: Int = 0
 )
 
-@HiltViewModel
-class McpViewModel @Inject constructor(
+class McpViewModel constructor(
     private val mcpService: McpService
 ) : ViewModel() {
     

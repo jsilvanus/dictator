@@ -138,7 +138,7 @@ class SyncServiceEdgeCaseTest {
         val largeContent = "x".repeat(10 * 1024)  // 10KB for test (represents large content)
         
         // Sync should handle large documents with chunking/streaming
-        assertTrue(largeContent.length > 10 * 1024)
+        assertTrue(largeContent.length >= 10 * 1024)
     }
     
     @Test
@@ -335,7 +335,7 @@ class SyncServiceEdgeCaseTest {
         // Should have retries with increasing delays: 1s, 2s, 4s, 8s, 16s
         assertEquals(5, backoffDelays.size)
         assertEquals(1000L, backoffDelays[0])
-        assertEquals(32000L, backoffDelays[4])
+        assertEquals(16000L, backoffDelays[4])
     }
 
     @Test

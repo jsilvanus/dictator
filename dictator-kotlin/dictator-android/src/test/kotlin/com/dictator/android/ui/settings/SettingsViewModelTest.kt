@@ -1,6 +1,12 @@
 package com.dictator.android.ui.settings
 
+import com.dictator.android.data.AidosEngineConnection
+import com.dictator.android.data.ai.AiSettingsKeys
+import com.dictator.android.data.dictation.DictationEngineKind
+import com.dictator.android.testutil.FakeAidosClient
 import com.dictator.core.data.ai.ModelProvider
+import com.dictator.core.data.local.VoiceSettingsRepository
+import fi.italeino.aidos.sdk.client.EngineAvailability
 import com.dictator.core.service.SharedPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,21 +27,25 @@ class SettingsViewModelTest {
 
     private lateinit var viewModel: SettingsViewModel
     private lateinit var mockSharedPreferences: MockSharedPreferences
+    private lateinit var aidos: FakeAidosClient
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         mockSharedPreferences = MockSharedPreferences()
-        viewModel = SettingsViewModel(mockSharedPreferences)
+        aidos = FakeAidosClient()
+        viewModel = SettingsViewModel(mockSharedPreferences, AidosEngineConnection(aidos), VoiceSettingsRepository(mockSharedPreferences))
     }
 
     @Test
     fun `initial state should use default values`() = runTest {
         val state = viewModel.state.first()
-        assertEquals(SettingsMode.DictatorService, state.mode)
+        // Local-first defaults: on-device AI, system dictation.
+        assertEquals(SettingsMode.DirectProvider, state.mode)
         assertEquals("", state.dictatorServiceUrl)
-        assertEquals(ModelProvider.CLAUDE, state.selectedProvider)
+        assertEquals(ModelProvider.AIDOS, state.selectedProvider)
+        assertEquals(DictationEngineKind.SYSTEM, state.dictationEngine)
         assertEquals(0.7, state.temperature)
         assertEquals(2048, state.maxTokens)
     }
@@ -240,7 +250,7 @@ class SettingsViewModelTest {
         viewModel.testConnection()
         
         val state = viewModel.state.first()
-        assertTrue(state.testConnectionStatus?.contains("successful") == true)
+        assertTrue(state.testConnectionStatus?.contains("complete") == true)
     }
 
     @Test
@@ -250,7 +260,7 @@ class SettingsViewModelTest {
         viewModel.testConnection()
         
         val state = viewModel.state.first()
-        assertTrue(state.testConnectionStatus?.contains("Invalid") == true)
+        assertTrue(state.testConnectionStatus?.contains("Missing") == true)
     }
 
     @Test
@@ -261,7 +271,7 @@ class SettingsViewModelTest {
         viewModel.testConnection()
         
         val state = viewModel.state.first()
-        assertTrue(state.testConnectionStatus?.contains("valid") == true)
+        assertTrue(state.testConnectionStatus?.contains("complete") == true)
     }
 
     @Test
@@ -273,6 +283,22 @@ class SettingsViewModelTest {
         
         val state = viewModel.state.first()
         assertTrue(state.testConnectionStatus?.contains("Missing") == true)
+    }
+
+    @Test
+    fun `saving persists the dictation engine choice`() = runTest {
+        viewModel.setDictationEngine(DictationEngineKind.AIDOS)
+        viewModel.validateAndSaveSettings()
+        assertEquals("aidos", mockSharedPreferences.getString(AiSettingsKeys.DICTATION_ENGINE))
+    }
+
+    @Test
+    fun `aidos provider needs no api key to save`() = runTest {
+        viewModel.setSelectedProvider(ModelProvider.AIDOS)
+        viewModel.validateAndSaveSettings()
+        val state = viewModel.state.first()
+        assertEquals(null, state.errorMessage)
+        assertEquals("AIDOS", mockSharedPreferences.getString(AiSettingsKeys.PROVIDER))
     }
 
     /**
@@ -298,3 +324,4 @@ class SettingsViewModelTest {
         }
     }
 }
+

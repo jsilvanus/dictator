@@ -1,12 +1,13 @@
 package com.dictator.android
 
 import android.app.Application
+import com.dictator.android.BuildConfig
 import com.dictator.android.data.AidosEngineConnection
 import com.dictator.android.data.AndroidDatabaseDriverProvider
+import com.dictator.android.di.androidKoinModule
 import com.dictator.core.DictatorCore
-import dagger.hilt.android.HiltAndroidApp
 import io.github.aakira.napier.Napier
-import io.github.aakira.napier.log
+import io.github.aakira.napier.DebugAntilog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,9 +15,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Dictator Application entry point.
- * Initializes Hilt DI and Dictator Core services.
+ * Initializes Dictator Core (which starts Koin) and the Android additions.
  */
-@HiltAndroidApp
 class DictatorApplication : Application() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -26,8 +26,18 @@ class DictatorApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // Without an Antilog Napier drops every message, including the Aidos handshake result.
+        if (BuildConfig.DEBUG) Napier.base(DebugAntilog())
+
         // Initialize Dictator Core with the Android SQLDelight driver.
-        DictatorCore.initialize(AndroidDatabaseDriverProvider(this))
+        DictatorCore.initialize(
+            AndroidDatabaseDriverProvider(this),
+            additionalModules = listOf(androidKoinModule(this, aidosEngine))
+        )
+
+        // Instantiating the resolver registers the AIDOS provider with AiProviderFactory, so it is
+        // available before any screen asks whether it is.
+        org.koin.core.context.GlobalContext.get().get<com.dictator.android.data.ai.AiProviderResolver>()
 
         // Announce ourselves to Aidos Engine at launch. On a device where Engine is installed and
         // Dictator is not yet approved, this is what makes Dictator's first permission request
@@ -37,6 +47,6 @@ class DictatorApplication : Application() {
             Napier.i("Aidos Engine: $availability")
         }
 
-        Napier.log { "DictatorApplication initialized" }
+        Napier.i("DictatorApplication initialized")
     }
 }

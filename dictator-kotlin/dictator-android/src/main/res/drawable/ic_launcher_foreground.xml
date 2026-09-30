@@ -1,0 +1,6 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Microphone glyph, centered inside the 66dp adaptive-icon safe zone. -->
+    <path android:fillColor="#FFFFFF" android:pathData="M54,30a8,8 0 0 1 8,8v14a8,8 0 0 1 -16,0V38a8,8 0 0 1 8,-8z"/>
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="3" android:strokeLineCap="round" android:pathData="M44,52a10,10 0 0 0 20,0M54,62v10M47,72h14"/>
+</vector>

@@ -54,6 +54,7 @@ interface DocumentVersionRepository {
     suspend fun getVersionsSince(documentId: String, timestamp: Long): List<DocumentVersion>
     suspend fun createVersion(version: DocumentVersion): DocumentVersion
     suspend fun deleteByDocumentId(documentId: String): Boolean
+    suspend fun deleteVersion(id: String): Boolean
     
     fun observeVersions(documentId: String): Flow<List<DocumentVersion>>
 }

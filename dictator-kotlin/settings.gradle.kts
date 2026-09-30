@@ -18,11 +18,6 @@ pluginManagement {
         // resolve — that alone made every Gradle invocation fail, core module
         // included. The resolvable id is the fully qualified one.
         id("org.jetbrains.kotlin.plugin.parcelize") version "2.4.10"
-        // KSP has no release for Kotlin 2.4.10 (newest is 2.3.9), so Hilt stays on
-        // kapt for now. The kapt plugin was never declared at all, which is why
-        // `kapt(...)` was an unresolved reference.
-        id("org.jetbrains.kotlin.kapt") version "2.4.10"
-        id("com.google.dagger.hilt.android") version "2.52"
         id("app.cash.sqldelight") version "2.0.2"
     }
 }

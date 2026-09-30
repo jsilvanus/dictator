@@ -32,6 +32,10 @@ class AidosEngineConnection(
         return client.availability().also { _availability.value = it }
     }
 
+    /** Connect only if the last known state is not already [EngineAvailability.Available]. */
+    suspend fun ensureAvailable(): EngineAvailability =
+        if (_availability.value == EngineAvailability.Available && client.isAvailable()) EngineAvailability.Available else connect()
+
     /** Deep link into Engine's Connected Apps screen while [availability] is PendingApproval. */
     fun pendingApprovalIntent(): PendingIntent? = approvalIntent()
 
@@ -39,6 +43,22 @@ class AidosEngineConnection(
         fun create(context: Context): AidosEngineConnection {
             val android = AndroidAidosEngineClientFactory.createClient(context)
             return AidosEngineConnection(android) { android.pendingApprovalIntent() }
+        }
+
+        /** One line a user can act on, for every state except Available. */
+        fun explain(availability: EngineAvailability?): String = when (availability) {
+            null -> "Checking for Aidos Engine…"
+            EngineAvailability.Available -> "Aidos Engine is ready."
+            EngineAvailability.NotInstalled ->
+                "Aidos Engine is not installed, or not running. Open Aidos Engine once, then try again."
+            EngineAvailability.PendingApproval ->
+                "Approve Dictator in Aidos Engine (Connected Apps), then try again."
+            EngineAvailability.Denied ->
+                "Dictator was denied in Aidos Engine. Allow it under Connected Apps in Aidos Engine."
+            EngineAvailability.IncompatibleVersion ->
+                "This Aidos Engine speaks a different API version. Update Aidos Engine or Dictator."
+            EngineAvailability.HandshakeFailed ->
+                "Could not reach Aidos Engine. Make sure it is running."
         }
     }
 }

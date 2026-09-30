@@ -12,7 +12,9 @@ enum class ModelProvider {
     OPENAI,
     OLLAMA,
     OPENAI_COMPATIBLE,
-    DICTATOR
+    DICTATOR,
+    /** On-device models served by Aidos Engine. Implemented by the platform module (dictator-android) via [AiProviderFactory.register]. */
+    AIDOS
 }
 
 /**

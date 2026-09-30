@@ -11,8 +11,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.dictator.core.data.privacy.UserPrivacySettings
 import com.dictator.core.service.PrivacyService
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 
 data class PrivacyUiState(
     val settings: UserPrivacySettings? = null,
@@ -24,8 +22,7 @@ data class PrivacyUiState(
     val shareAnalytics: Boolean = false
 )
 
-@HiltViewModel
-class PrivacyViewModel @Inject constructor(
+class PrivacyViewModel constructor(
     private val privacyService: PrivacyService
 ) : ViewModel() {
     

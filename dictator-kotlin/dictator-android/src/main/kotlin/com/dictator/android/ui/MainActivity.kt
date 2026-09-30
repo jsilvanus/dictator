@@ -10,14 +10,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.dictator.android.ui.navigation.DictatorNavHost
 import com.dictator.android.ui.theme.DictatorTheme
-import dagger.hilt.android.AndroidEntryPoint
 import io.github.aakira.napier.Napier
 
 /**
  * Main Activity for Dictator Android app.
  * Entry point for all Compose UI.
  */
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

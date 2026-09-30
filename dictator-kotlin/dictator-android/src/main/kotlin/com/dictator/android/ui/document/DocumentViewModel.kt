@@ -2,16 +2,12 @@ package com.dictator.android.ui.document
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dictator.core.domain.entity.Document as DomainDocument
-import com.dictator.core.domain.repository.DocumentRepository
-import com.dictator.core.data.error.DataException
-import dagger.hilt.android.lifecycle.HiltViewModel
+import com.dictator.core.service.LocalDocumentStore
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class Document(
     val id: String,
@@ -32,9 +28,8 @@ data class DocumentListUiState(
     val showDetailDialog: Boolean = false
 )
 
-@HiltViewModel
-class DocumentViewModel @Inject constructor(
-    private val documentRepository: DocumentRepository
+class DocumentViewModel constructor(
+    private val store: LocalDocumentStore
 ) : ViewModel() {
     private val _state = MutableStateFlow(DocumentListUiState())
     val state: StateFlow<DocumentListUiState> = _state.asStateFlow()
@@ -47,34 +42,20 @@ class DocumentViewModel @Inject constructor(
         _state.value = _state.value.copy(isLoading = true, errorMessage = null)
         viewModelScope.launch {
             try {
-                // Load documents from the actual DocumentService
-                val domainDocuments = documentRepository.getAllDocuments()
-                val uiDocuments = domainDocuments.map { doc ->
+                val uiDocuments = store.list().map { doc ->
                     Document(
                         id = doc.id,
                         title = doc.title,
-                        folder = "Documents",  // TODO: Get folder info from repository
+                        folder = "Documents",
                         lastModified = doc.updatedAt,
-                        isSynced = true
+                        // Nothing syncs yet: documents live on this device only.
+                        isSynced = false
                     )
                 }
-                _state.value = _state.value.copy(
-                    documents = uiDocuments,
-                    isLoading = false,
-                    errorMessage = null
-                )
-            } catch (e: DataException) {
-                Napier.e("Error loading documents", e)
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    errorMessage = e.message ?: "Failed to load documents"
-                )
+                _state.value = _state.value.copy(documents = uiDocuments, isLoading = false, errorMessage = null)
             } catch (e: Exception) {
-                Napier.e("Unexpected error loading documents", e)
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    errorMessage = e.message ?: "An unexpected error occurred"
-                )
+                Napier.e("Error loading documents", e)
+                _state.value = _state.value.copy(isLoading = false, errorMessage = e.message ?: "Failed to load documents")
             }
         }
     }
@@ -96,10 +77,7 @@ class DocumentViewModel @Inject constructor(
     }
 
     fun selectDocument(document: Document) {
-        _state.value = _state.value.copy(
-            selectedDocument = document,
-            showDetailDialog = true
-        )
+        _state.value = _state.value.copy(selectedDocument = document, showDetailDialog = true)
     }
 
     fun dismissDetailDialog() {
@@ -107,28 +85,40 @@ class DocumentViewModel @Inject constructor(
     }
 
     fun deleteDocument(documentId: String) {
-        val updated = _state.value.documents.filter { it.id != documentId }
-        _state.value = _state.value.copy(documents = updated, showDetailDialog = false)
+        _state.value = _state.value.copy(
+            documents = _state.value.documents.filter { it.id != documentId },
+            showDetailDialog = false
+        )
+        viewModelScope.launch {
+            try {
+                store.delete(documentId)
+            } catch (e: Exception) {
+                Napier.e("Error deleting document", e)
+                _state.value = _state.value.copy(errorMessage = e.message ?: "Failed to delete document")
+                loadDocuments()
+            }
+        }
     }
 
     fun archiveDocument(documentId: String) {
-        val current = _state.value.selectedDocument
-        if (current?.id == documentId) {
+        // Archiving is not implemented; the dialog action just closes it.
+        if (_state.value.selectedDocument?.id == documentId) {
             _state.value = _state.value.copy(showDetailDialog = false)
         }
     }
 
-    fun createNewDocument(title: String): String {
-        val newId = System.currentTimeMillis().toString()
-        val newDocument = Document(
-            id = newId,
-            title = title,
-            folder = "Documents"
-        )
-        _state.value = _state.value.copy(
-            documents = _state.value.documents + newDocument
-        )
-        return newId
+    /** Creates the document, then reports its id so the caller can open it. */
+    fun createNewDocument(title: String, onCreated: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val doc = store.create(title)
+                loadDocuments()
+                onCreated(doc.id)
+            } catch (e: Exception) {
+                Napier.e("Error creating document", e)
+                _state.value = _state.value.copy(errorMessage = e.message ?: "Failed to create document")
+            }
+        }
     }
 
     fun onRefresh() {

@@ -3,10 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
     // Kotlin 2.x moves Compose off android.composeOptions onto its own plugin.
     id("org.jetbrains.kotlin.plugin.compose")
-    // Hilt's annotation processing. KSP has no Kotlin 2.4.10 build yet, so this
-    // stays on kapt; it was previously used without the plugin being applied.
-    id("org.jetbrains.kotlin.kapt")
-    id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("org.jetbrains.kotlin.plugin.parcelize")
 }
@@ -50,6 +46,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
+    testOptions {
+        // android.jar is a stub in unit tests; return defaults instead of throwing on Android calls.
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildFeatures {
         compose = true
         // AGP 8.x no longer enables this implicitly, and defaultConfig sets
@@ -64,13 +65,17 @@ android {
     }
 }
 
+// The root build applies useJUnitPlatform() to every Test task; these are JUnit 4 tests.
+tasks.withType<Test>().configureEach { useJUnit() }
+
 kotlin {
     jvmToolchain(21)
+    compilerOptions {
+        freeCompilerArgs.add("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")
+    }
 }
 
 dependencies {
-    // Kotlin standard library
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.25")
 
     // Core library dependency (from dictator-core)
     implementation(project(":dictator-core"))
@@ -98,10 +103,12 @@ dependencies {
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.6")
 
-    // Hilt for dependency injection
-    implementation("com.google.dagger:hilt-android:2.52")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    kapt("com.google.dagger:hilt-compiler:2.52")
+    // Koin: dictator-core already wires everything with it. Hilt was removed because no Hilt
+    // release reads Kotlin 2.4 metadata and also supports AGP 8 (2.52 fails with "Provided
+    // Metadata instance has version 2.4.0, while maximum supported version is 2.1.0"; 2.60
+    // needs AGP 9), and it needed kapt, which is the fragile part of this toolchain.
+    implementation("io.insert-koin:koin-android:3.4.3")
+    implementation("io.insert-koin:koin-androidx-compose:3.4.6")
 
     // AndroidX
     implementation("androidx.appcompat:appcompat:1.6.1")
@@ -111,8 +118,6 @@ dependencies {
     // Security & Crypto
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // Speech Recognition
-    implementation("androidx.speech:speech-recognition:1.0.0-alpha03")
 
     // SQLDelight Android driver
     implementation("app.cash.sqldelight:android-driver:2.0.1")
@@ -135,7 +140,7 @@ dependencies {
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
     testImplementation("org.mockito:mockito-core:5.5.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.25")
+    testImplementation("org.jetbrains.kotlin:kotlin-test:2.4.10")
 
     androidTestImplementation(composeBom)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

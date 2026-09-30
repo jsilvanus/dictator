@@ -132,8 +132,9 @@ fun CursorIndicator(
                     color = MaterialTheme.colorScheme.primary
                 )
                 
-                val startPos = cursorState.selection.startPos.startChar
-                val endPos = cursorState.selection.endPos.endChar
+                val selection = cursorState.selection!!
+                val startPos = selection.startPos.startChar
+                val endPos = selection.endPos.endChar
                 val length = maxOf(0, endPos - startPos)
                 
                 Text(

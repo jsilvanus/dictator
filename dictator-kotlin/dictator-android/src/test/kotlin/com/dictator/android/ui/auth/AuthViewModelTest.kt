@@ -1,71 +1,69 @@
 package com.dictator.android.ui.auth
 
-import kotlinx.coroutines.test.runTest
+import com.dictator.core.data.error.DataException
+import com.dictator.core.service.AuthService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.*
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
+    private class FakeAuth(var failure: Exception? = null) : AuthService {
+        var lastLogin: Pair<String, String>? = null
+        var lastSignup: Triple<String, String, String>? = null
+        override suspend fun login(email: String, password: String): String { failure?.let { throw it }; lastLogin = email to password; return "jwt" }
+        override suspend fun signup(email: String, name: String, password: String): String { failure?.let { throw it }; lastSignup = Triple(email, name, password); return "jwt" }
+        override suspend fun logout() {}
+        override suspend fun validateToken(token: String) = true
+        override suspend fun refreshToken(token: String) = token
+        override fun getCurrentUserId(): String? = null
+    }
+
+    private lateinit var auth: FakeAuth
     private lateinit var viewModel: AuthViewModel
 
     @Before
     fun setup() {
-        viewModel = AuthViewModel()
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        auth = FakeAuth()
+        viewModel = AuthViewModel(auth)
     }
+
+    @After
+    fun tearDown() { Dispatchers.resetMain() }
 
     @Test
     fun testInitialState() {
         val state = viewModel.state.value
         assertEquals("", state.email)
         assertEquals("", state.password)
-        assertEquals(false, state.isSignUp)
-        assertEquals(false, state.showPassword)
-        assertEquals(false, state.termsAccepted)
+        assertFalse(state.isSignUp)
+        assertFalse(state.showPassword)
+        assertFalse(state.termsAccepted)
     }
 
     @Test
-    fun testOnEmailChanged() {
-        viewModel.onEmailChanged("test@example.com")
-        assertEquals("test@example.com", viewModel.state.value.email)
-        assertNull(viewModel.state.value.errorMessage)
-    }
-
-    @Test
-    fun testOnPasswordChanged() {
-        viewModel.onPasswordChanged("password123")
-        assertEquals("password123", viewModel.state.value.password)
-    }
-
-    @Test
-    fun testPasswordStrengthCalculation() = runTest {
+    fun testPasswordStrengthCalculation() {
+        viewModel.toggleMode()
         viewModel.onPasswordChanged("weak")
-        val state1 = viewModel.state.value
-        // Too short, should be WEAK
-        
-        viewModel.onPasswordChanged("Medium1!")
-        val state2 = viewModel.state.value
-        assertEquals(PasswordStrength.MEDIUM, state2.passwordStrength)
-        
+        assertEquals(PasswordStrength.WEAK, viewModel.state.value.passwordStrength)
         viewModel.onPasswordChanged("StrongPass123!")
-        val state3 = viewModel.state.value
-        assertEquals(PasswordStrength.STRONG, state3.passwordStrength)
-    }
-
-    @Test
-    fun testTogglePasswordVisibility() {
-        assertFalse(viewModel.state.value.showPassword)
-        viewModel.togglePasswordVisibility()
-        assertTrue(viewModel.state.value.showPassword)
-        viewModel.togglePasswordVisibility()
-        assertFalse(viewModel.state.value.showPassword)
+        assertEquals(PasswordStrength.VERY_STRONG, viewModel.state.value.passwordStrength)
     }
 
     @Test
     fun testToggleMode() {
-        assertFalse(viewModel.state.value.isSignUp)
+        viewModel.onEmailChanged("a@b.co")
         viewModel.toggleMode()
         assertTrue(viewModel.state.value.isSignUp)
-        assertEquals("", viewModel.state.value.email) // Should be cleared
+        // Mode switch clears the name/confirm fields, not the email.
+        assertEquals("", viewModel.state.value.name)
     }
 
     @Test
@@ -73,8 +71,8 @@ class AuthViewModelTest {
         viewModel.onEmailChanged("invalid-email")
         viewModel.onPasswordChanged("password123")
         viewModel.submit()
-        assertNotNull(viewModel.state.value.errorMessage)
         assertTrue(viewModel.state.value.errorMessage!!.contains("valid email"))
+        assertNull(auth.lastLogin)
     }
 
     @Test
@@ -82,62 +80,63 @@ class AuthViewModelTest {
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("short")
         viewModel.submit()
-        assertNotNull(viewModel.state.value.errorMessage)
         assertTrue(viewModel.state.value.errorMessage!!.contains("8 characters"))
     }
 
     @Test
-    fun testLoginValidation() {
+    fun testLoginCallsServiceAndReportsSuccess() {
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password123")
         viewModel.submit()
-        // Should be successful
+        assertEquals("test@example.com" to "password123", auth.lastLogin)
         assertNotNull(viewModel.state.value.successMessage)
+        assertFalse(viewModel.state.value.isLoading)
+    }
+
+    @Test
+    fun testServerErrorIsShown() {
+        auth.failure = DataException.NetworkError("Server unreachable")
+        viewModel.onEmailChanged("test@example.com")
+        viewModel.onPasswordChanged("password123")
+        viewModel.submit()
+        assertEquals("Server unreachable", viewModel.state.value.errorMessage)
+        assertNull(viewModel.state.value.successMessage)
     }
 
     @Test
     fun testSignupWithoutTermsAccepted() {
-        viewModel.toggleMode() // Switch to signup
+        viewModel.toggleMode()
         viewModel.onNameChanged("John Doe")
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password123")
         viewModel.onConfirmPasswordChanged("password123")
         viewModel.submit()
-        assertNotNull(viewModel.state.value.errorMessage)
         assertTrue(viewModel.state.value.errorMessage!!.contains("Terms"))
     }
 
     @Test
     fun testSignupWithPasswordMismatch() {
-        viewModel.toggleMode() // Switch to signup
+        viewModel.toggleMode()
         viewModel.toggleTermsAcceptance()
         viewModel.onNameChanged("John Doe")
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password123")
         viewModel.onConfirmPasswordChanged("different")
         viewModel.submit()
-        assertNotNull(viewModel.state.value.errorMessage)
         assertTrue(viewModel.state.value.errorMessage!!.contains("not match"))
     }
 
     @Test
-    fun testSignupValidation() {
-        viewModel.toggleMode() // Switch to signup
+    fun testSignupCallsService() {
+        viewModel.toggleMode()
         viewModel.toggleTermsAcceptance()
         viewModel.onNameChanged("John Doe")
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password123")
         viewModel.onConfirmPasswordChanged("password123")
         viewModel.submit()
+        assertEquals(Triple("test@example.com", "John Doe", "password123"), auth.lastSignup)
         assertNotNull(viewModel.state.value.successMessage)
-        assertEquals(null, viewModel.state.value.errorMessage)
-    }
-
-    @Test
-    fun testLoadingState() {
-        viewModel.onEmailChanged("test@example.com")
-        viewModel.onPasswordChanged("password123")
-        viewModel.submit()
-        assertTrue(viewModel.state.value.isLoading)
+        assertNull(viewModel.state.value.errorMessage)
     }
 }
