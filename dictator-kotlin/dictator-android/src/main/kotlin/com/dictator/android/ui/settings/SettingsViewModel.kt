@@ -10,6 +10,7 @@ import com.dictator.android.data.ai.AiSettingsKeys
 import com.dictator.android.data.dictation.DictationEngineKind
 import com.dictator.core.data.ai.ModelProvider
 import fi.italeino.aidos.sdk.client.EngineAvailability
+import com.dictator.android.data.shadow.ShadowSettings
 import com.dictator.core.service.SharedPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +46,10 @@ data class SettingsState(
     val engineLlmModels: List<String> = emptyList(),
     val engineSttModels: List<String> = emptyList(),
     val aidosModel: String = "",
-    val sttModel: String = ""
+    val sttModel: String = "",
+    // Shadow-mode intent logging (both off by default)
+    val shadowIntent: Boolean = false,
+    val shadowStoreText: Boolean = false
 )
 
 class SettingsViewModel constructor(
@@ -96,7 +100,9 @@ class SettingsViewModel constructor(
                     dictationEngine = DictationEngineKind.fromPref(sharedPreferences.getString(AiSettingsKeys.DICTATION_ENGINE, null)),
                     language = voiceSettingsRepository.loadVoiceSettings().language,
                     aidosModel = sharedPreferences.getString(AiSettingsKeys.AIDOS_MODEL, "") ?: "",
-                    sttModel = sharedPreferences.getString(AiSettingsKeys.STT_MODEL, "") ?: ""
+                    sttModel = sharedPreferences.getString(AiSettingsKeys.STT_MODEL, "") ?: "",
+                    shadowIntent = ShadowSettings.isEnabled(sharedPreferences),
+                    shadowStoreText = ShadowSettings.storesText(sharedPreferences)
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
@@ -315,6 +321,17 @@ class SettingsViewModel constructor(
 
     fun setSttModel(model: String) {
         _state.value = _state.value.copy(sttModel = model)
+    }
+
+    /** Takes effect immediately (not on Save): a logging switch should not wait for unrelated edits. */
+    fun setShadowIntent(on: Boolean) {
+        sharedPreferences.setString(ShadowSettings.ENABLED, if (on) "yes" else "no")
+        _state.value = _state.value.copy(shadowIntent = on)
+    }
+
+    fun setShadowStoreText(on: Boolean) {
+        sharedPreferences.setString(ShadowSettings.STORE_TEXT, if (on) "yes" else "no")
+        _state.value = _state.value.copy(shadowStoreText = on)
     }
 
     fun clearError() {

@@ -16,6 +16,7 @@ import com.dictator.core.service.SharedPreferences
 import com.dictator.core.util.voice.CommandType
 import com.dictator.core.util.voice.DictationAction
 import com.dictator.core.util.voice.DictationInterpreter
+import com.dictator.core.util.voice.shadow.ShadowIntentRecorder
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -83,7 +84,9 @@ class EditorViewModel constructor(
     private val prefs: SharedPreferences,
     private val engines: DictationEngines,
     /** Where saves run; a test passes its own dispatcher. */
-    saveDispatcher: CoroutineDispatcher = Dispatchers.IO
+    saveDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    /** Shadow-mode intent logging; null (the default) disables it. Never affects what an utterance does. */
+    private val shadow: ShadowIntentRecorder? = null
 ) : ViewModel() {
     private val _state = MutableStateFlow(EditorUiState())
     val state: StateFlow<EditorUiState> = _state.asStateFlow()
@@ -340,7 +343,11 @@ class EditorViewModel constructor(
         val s = _state.value
         val commands = voiceSettings.getActivationCommandsForLanguage(language)
         val before = s.content.substring(0, minOf(s.selStart, s.selEnd))
-        when (val action = DictationInterpreter.interpret(text, language, commands, before)) {
+        val action = DictationInterpreter.interpret(text, language, commands, before)
+        // Shadow mode: ask the decision model in the background and log it beside the parser's choice.
+        // Fire-and-forget; the action below is decided by the parser alone.
+        shadow?.let { recorder -> viewModelScope.launch { recorder.record(text, language, action) } }
+        when (action) {
             is DictationAction.Insert -> if (action.text.isNotEmpty()) insertAtCursor(action.text, spaced = true)
             is DictationAction.AskAi -> openAi(action.prompt, run = true)
             is DictationAction.UnknownCommand -> notice("Did not understand the command: \"${action.spoken}\"")
