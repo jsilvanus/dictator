@@ -13,6 +13,11 @@ import com.dictator.core.service.LocalDocumentStore
 import com.dictator.core.service.ProviderAiService
 import com.dictator.core.service.SharedPreferences
 import com.dictator.android.data.dictation.DictationEngineFactory
+import com.dictator.android.data.shadow.EngineIntentProbe
+import com.dictator.android.data.shadow.ShadowFileSink
+import com.dictator.android.data.shadow.ShadowSettings
+import com.dictator.core.util.voice.shadow.ShadowIntentRecorder
+import java.io.File
 import com.dictator.android.ui.auth.AuthViewModel
 import com.dictator.android.ui.document.DocumentViewModel
 import com.dictator.android.ui.editor.EditorViewModel
@@ -57,6 +62,20 @@ fun androidKoinModule(context: Context, engine: AidosEngineConnection) = module 
 
     single { DictationEngineFactory(context = context, connection = get(), prefs = get()) }
 
+    // Shadow-mode intent logging (LAYA.md): records what Aidos Engine's decision model would say beside what
+    // the parser did. Both switches default to off and nothing here changes dictation behaviour.
+    single { ShadowFileSink(File(context.filesDir, "shadow-intent.jsonl")) }
+    single {
+        val prefs: SharedPreferences = get()
+        ShadowIntentRecorder(
+            probe = EngineIntentProbe(get<AidosEngineConnection>()),
+            sink = get<ShadowFileSink>(),
+            enabled = { ShadowSettings.isEnabled(prefs) },
+            storeText = { ShadowSettings.storesText(prefs) },
+            nowMillis = { System.currentTimeMillis() }
+        )
+    }
+
     viewModel { AuthViewModel(authService = get()) }
     viewModel { DocumentViewModel(store = get()) }
     viewModel { SettingsViewModel(sharedPreferences = get(), engine = get(), voiceSettingsRepository = get()) }
@@ -65,7 +84,8 @@ fun androidKoinModule(context: Context, engine: AidosEngineConnection) = module 
     viewModel {
         EditorViewModel(
             store = get(), aiService = get(), aiResolver = get<AiProviderResolver>(), policies = get(), privacy = get(),
-            voiceSettings = get(), prefs = get(), engines = get<DictationEngineFactory>()
+            voiceSettings = get(), prefs = get(), engines = get<DictationEngineFactory>(),
+            shadow = get<ShadowIntentRecorder>()
         )
     }
 }

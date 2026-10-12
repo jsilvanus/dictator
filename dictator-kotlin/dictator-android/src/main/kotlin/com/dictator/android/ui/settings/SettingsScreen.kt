@@ -156,6 +156,15 @@ fun SettingsScreen(
             }
 
             item {
+                ShadowIntentCard(
+                    enabled = state.shadowIntent,
+                    storeText = state.shadowStoreText,
+                    onEnabledChange = { viewModel.setShadowIntent(it) },
+                    onStoreTextChange = { viewModel.setShadowStoreText(it) }
+                )
+            }
+
+            item {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
@@ -908,5 +917,55 @@ private fun ModelPicker(label: String, models: List<String>, selected: String, o
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilterChip(selected = selected.isBlank(), onClick = { onSelect("") }, label = { Text("Automatic") })
         models.forEach { id -> FilterChip(selected = selected == id, onClick = { onSelect(id) }, label = { Text(id) }) }
+    }
+}
+
+
+/**
+ * Shadow mode for command/dictation detection: Aidos Engine's decision model runs beside the parser and
+ * its guess is logged on this phone. It never changes what dictation does.
+ */
+@Composable
+private fun ShadowIntentCard(
+    enabled: Boolean,
+    storeText: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    onStoreTextChange: (Boolean) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Intent logging (experimental)", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Compares what Dictator does with what Aidos Engine's decision model would guess. " +
+                    "Stays on this phone and changes nothing about dictation. Needs Aidos Engine with a decision model.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Log intent guesses", style = MaterialTheme.typography.bodyLarge)
+                Switch(checked = enabled, onCheckedChange = onEnabledChange)
+            }
+            if (enabled) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Also keep the spoken text", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Off: only lengths and probabilities are kept. On: what you said is stored locally so mistakes can be reviewed.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(checked = storeText, onCheckedChange = onStoreTextChange)
+                }
+            }
+        }
     }
 }
