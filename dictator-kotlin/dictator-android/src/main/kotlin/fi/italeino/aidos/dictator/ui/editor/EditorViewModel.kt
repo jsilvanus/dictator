@@ -1,4 +1,4 @@
-﻿package fi.italeino.aidos.dictator.ui.editor
+package fi.italeino.aidos.dictator.ui.editor
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -85,6 +85,7 @@ class EditorViewModel constructor(
     private val engines: DictationEngines,
     /** Where saves run; a test passes its own dispatcher. */
     saveDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val ioDispatcher: CoroutineDispatcher = saveDispatcher,
     /** Shadow-mode intent logging; null (the default) disables it. Never affects what an utterance does. */
     private val shadow: ShadowIntentRecorder? = null
 ) : ViewModel() {
@@ -443,7 +444,7 @@ class EditorViewModel constructor(
         _state.value = _state.value.copy(ai = _state.value.ai.copy(running = true, error = null, result = null))
         viewModelScope.launch {
             try {
-                val answer = withContext(Dispatchers.IO) {
+                val answer = withContext(ioDispatcher) {
                     aiService.askInline(
                     prompt = if (text.isBlank()) prompt else "$prompt\n\n---\n$text",
                     context = AI_SYSTEM_PROMPT

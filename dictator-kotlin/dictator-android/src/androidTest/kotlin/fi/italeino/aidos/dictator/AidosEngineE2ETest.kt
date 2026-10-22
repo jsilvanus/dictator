@@ -1,9 +1,9 @@
-package com.dictator.android
+﻿package fi.italeino.aidos.dictator
 
 import android.util.Base64
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.dictator.android.data.AidosEngineConnection
+import fi.italeino.aidos.dictator.data.AidosEngineConnection
 import fi.italeino.aidos.sdk.client.EngineAvailability
 import fi.italeino.aidos.sdk.client.TranscriptionRequest
 import kotlinx.coroutines.runBlocking
