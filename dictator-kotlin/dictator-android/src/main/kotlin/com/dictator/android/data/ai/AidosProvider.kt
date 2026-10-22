@@ -12,7 +12,10 @@ import fi.italeino.aidos.sdk.client.ChatCompletionRequest
 import fi.italeino.aidos.sdk.client.ChatMessage
 import fi.italeino.aidos.sdk.client.EngineAvailability
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 
 /**
  * On-device AI through Aidos Engine (docs/AIDOS_SDK_INTEGRATION_PLAN.md, D1). Implements
@@ -36,17 +39,17 @@ class AidosProvider(
 
     override fun getProviderType(): ModelProvider = ModelProvider.AIDOS
 
-    private suspend fun requireEngine(): String {
+    private suspend fun requireEngine(): String = withContext(Dispatchers.IO) {
         val availability = connection.ensureAvailable()
         if (availability != EngineAvailability.Available) {
             throw IllegalStateException(AidosEngineConnection.explain(availability))
         }
-        if (preferredModel.isNotBlank()) return preferredModel
-        return connection.client.capabilities().models.firstOrNull { it.kind == "llm" }?.id
+        if (preferredModel.isNotBlank()) return@withContext preferredModel
+        return@withContext connection.client.capabilities().models.firstOrNull { it.kind == "llm" }?.id
             ?: throw IllegalStateException("Aidos Engine has no language model installed. Add one in Aidos Engine.")
     }
 
-    override suspend fun askInline(request: AiInlineRequest): AiResponse {
+    override suspend fun askInline(request: AiInlineRequest): AiResponse = withContext(Dispatchers.IO) {
         val modelId = requireEngine()
         val (temp, tokens) = mergeRequestParams(request)
         val messages = buildList {
@@ -57,7 +60,7 @@ class AidosProvider(
             ChatCompletionRequest(model = modelId, messages = messages, temperature = temp.toFloat(), max_tokens = tokens)
         ) ?: throw IllegalStateException("Aidos Engine did not return a response.")
         val text = response.choices.firstOrNull()?.message?.content.orEmpty()
-        return AiResponse(
+        AiResponse(
             content = text,
             stopReason = response.choices.firstOrNull()?.finish_reason,
             usage = AiUsage(response.usage.prompt_tokens, response.usage.completion_tokens)

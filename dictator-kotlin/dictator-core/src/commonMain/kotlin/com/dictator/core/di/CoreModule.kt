@@ -41,6 +41,7 @@ val coreModule = module {
     single {
         DatabaseManager.getInstance()
     }
+    single { DatabaseManager }
     
     // Shared Preferences (platform-specific - override in platform modules)
     single<SharedPreferences> {

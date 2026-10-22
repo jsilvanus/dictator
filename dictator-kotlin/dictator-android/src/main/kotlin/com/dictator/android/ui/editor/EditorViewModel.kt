@@ -443,10 +443,12 @@ class EditorViewModel constructor(
         _state.value = _state.value.copy(ai = _state.value.ai.copy(running = true, error = null, result = null))
         viewModelScope.launch {
             try {
-                val answer = aiService.askInline(
+                val answer = withContext(Dispatchers.IO) {
+                    aiService.askInline(
                     prompt = if (text.isBlank()) prompt else "$prompt\n\n---\n$text",
                     context = AI_SYSTEM_PROMPT
                 )
+                }
                 _state.value = _state.value.copy(ai = _state.value.ai.copy(running = false, result = answer.trim()))
             } catch (e: Exception) {
                 Napier.e("AI request failed", e)

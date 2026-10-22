@@ -31,8 +31,9 @@ out/
 
 # Build artifacts
 gradle-app.setting
-gradlew.bat
 !gradlew
+!gradlew.bat
+!gradle/wrapper/gradle-wrapper.jar
 
 # Generated files
 buildNumber.properties
@@ -67,3 +68,4 @@ build/
 
 # Windows
 Thumbs.db
+

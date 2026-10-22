@@ -227,6 +227,7 @@ fun DocumentCard(
     onLongPress: () -> Unit = {}
 ) {
     Card(
+        onClick = onSelect,
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
