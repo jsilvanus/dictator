@@ -9,8 +9,19 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
  */
 
 // Mock API responses
+const mockPayload = Buffer.from(
+  JSON.stringify({
+    sub: 'user-123',
+    email: 'user@example.com',
+    name: 'John Doe',
+    role: 'editor',
+    iat: 1724000000,
+    exp: Math.floor(Date.now() / 1000) + 604800,
+  })
+).toString('base64');
+
 const mockLoginResponse = {
-  token: '******',
+  token: 'eyJhbGciOiJIUzI1NiJ9.' + mockPayload + '.mockSignature',
   userId: 'user-123',
   email: 'user@example.com',
   name: 'John Doe',
@@ -113,7 +124,8 @@ describe('Cross-Platform Authentication Interoperability', () => {
 
     it('should handle token refresh to extend session', () => {
       const oldPayload = JSON.parse(Buffer.from(mockLoginResponse.token.split('.')[1], 'base64').toString());
-      const refreshedToken = mockLoginResponse.token; // In real scenario, this would be a new token
+      const refreshedPayload = Buffer.from(JSON.stringify({ ...oldPayload, exp: oldPayload.exp + 3600 })).toString('base64');
+      const refreshedToken = 'header.' + refreshedPayload + '.refreshedSig';
       const newPayload = JSON.parse(Buffer.from(refreshedToken.split('.')[1], 'base64').toString());
 
       expect(newPayload.iat).toBeDefined();
@@ -205,7 +217,7 @@ describe('Cross-Platform Authentication Interoperability', () => {
 
     it('should reject tokens with tampered claims', () => {
       // JWT signature verification should catch tampered tokens
-      const tamperedToken = '******';
+      const tamperedToken = 'eyJhbGciOiJIUzI1NiJ9.' + mockPayload + '.tampered';
       expect(tamperedToken.split('.')[2]).not.toBe('signature');
     });
   });
