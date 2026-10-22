@@ -7,7 +7,7 @@ export default defineConfig({
     // Background agents run in git worktrees under .claude/worktrees/, which are
     // full checkouts of this repo. Without this, vitest globs their copies of the
     // suite too and reports every count multiplied by the number of worktrees.
-    exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/.claude/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/.claude/**', 'tests/e2e/**'],
   },
   resolve: {
     alias: {

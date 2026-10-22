@@ -1,3 +1,4 @@
+import { AidosProvider } from './aidos';
 import { ClaudeProvider } from './claude';
 import { DictatorProvider } from './dictator';
 import { GenericOpenAiProvider } from './generic-openai';
@@ -38,6 +39,9 @@ export class AiProviderFactory {
 
       case 'dictator':
         return new DictatorProvider(config.baseUrl, config.model);
+
+      case 'aidos':
+        return new AidosProvider(config.baseUrl, config.apiKey, config.model);
 
       default:
         throw new Error(`Unknown provider type: ${config.type}`);
@@ -80,6 +84,15 @@ export class AiProviderFactory {
         process.env.OPENAI_COMPATIBLE_BASE_URL,
         process.env.OPENAI_COMPATIBLE_API_KEY,
         process.env.OPENAI_COMPATIBLE_MODEL || 'gpt-3.5-turbo'
+      );
+    }
+
+    // Try Aidos (local Engine discovery or env)
+    if (process.env.AIDOS_BASE_URL || AidosProvider.isDiscovered()) {
+      return new AidosProvider(
+        process.env.AIDOS_BASE_URL,
+        process.env.AIDOS_API_KEY,
+        process.env.AIDOS_MODEL || 'aidos-default'
       );
     }
 

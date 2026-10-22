@@ -3,7 +3,7 @@
  * Define the contract that all AI providers must implement
  */
 
-export type ModelProvider = 'claude' | 'openai' | 'ollama' | 'openai-compatible' | 'dictator';
+export type ModelProvider = 'claude' | 'openai' | 'ollama' | 'openai-compatible' | 'dictator' | 'aidos';
 
 export type AiInlineRequest = {
   prompt: string;
