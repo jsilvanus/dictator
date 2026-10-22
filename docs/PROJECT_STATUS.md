@@ -446,7 +446,7 @@ dictator-kotlin/dictator-core/src/
 ### Android App
 ```
 dictator-kotlin/dictator-android/src/
-├── main/kotlin/com/dictator/android/
+├── main/kotlin/fi/italeino/aidos/dictator/
 │   ├── DictatorApplication.kt (20 LOC)
 │   ├── ui/
 │   │   ├── MainActivity.kt (50 LOC)

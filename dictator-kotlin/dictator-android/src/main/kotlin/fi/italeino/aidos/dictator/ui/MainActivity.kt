@@ -1,0 +1,44 @@
+﻿package fi.italeino.aidos.dictator.ui
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import fi.italeino.aidos.dictator.ui.navigation.DictatorNavHost
+import fi.italeino.aidos.dictator.ui.theme.DictatorTheme
+import io.github.aakira.napier.Napier
+
+/**
+ * Main Activity for Dictator Android app.
+ * Entry point for all Compose UI.
+ */
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        Napier.d("MainActivity created")
+
+        setContent {
+            DictatorTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    DictatorApp()
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Root composable for Dictator App.
+ */
+@Composable
+fun DictatorApp() {
+    DictatorNavHost()
+}

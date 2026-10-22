@@ -7,7 +7,7 @@ This directory contains the Android-specific UI layer for Dictator, built with J
 ```
 dictator-android/
 ├── src/main/
-│   ├── kotlin/com/dictator/android/
+│   ├── kotlin/fi/italeino/aidos/dictator/
 │   │   ├── DictatorApplication.kt       # Hilt entry point
 │   │   ├── ui/
 │   │   │   ├── MainActivity.kt          # Main Compose activity

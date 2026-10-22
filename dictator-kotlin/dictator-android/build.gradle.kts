@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.dictator.android"
+    namespace = "fi.italeino.aidos.dictator"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.dictator.android"
+        applicationId = "fi.italeino.aidos.dictator"
         minSdk = 28
         targetSdk = 34
         versionCode = 1
