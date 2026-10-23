@@ -22,14 +22,18 @@ For complete privacy documentation, see **[PRIVACY_ARCHITECTURE.md](./PRIVACY_AR
 
 ---
 
-## 🏛️ UI Component Ownership & Design Vocabulary (D46)
+## 🏛️ Trusted Component Registry (TCR) & Component Ownership (D46)
 
-In the cross-repository ecosystem, specific repositories maintain authoritative ownership over UI domains:
-- **Dictator (`dictator`)**: Authoritative owner of **Document Editing Interfaces**, **Continuous Document Flows**, the **Red Pill (Ember Caret Actor)** speech-to-text cursor, and **TCR Staging Overlays** (`PillConstellationOverlay`, `FloatingActorPill`, `DocumentInputSection`, `TranscriptSplitDrawer`). Text flows directly from the cursor and enters the document at the active caret.
-- **Agentic Messenger (`agentic-messenger`)**: Authoritative owner of **4-Party Conversation Mesh Protocols**, **Universal Envelopes (UAE)**, **Blinded Relay Networking**, and **Cryptographic Provenance Badges** (Human Direct vs Delegated Runner).
-- **Aidos (`aidos`)**: Authoritative owner of the **Core Agent Loop**, **Model Adapters**, **Tool Contracts**, and **Taint-Safe Execution**.
+TCR stands for **Trusted Component Registry**. These pre-vetted components are used when generating the end goal: the **Desktop Generative UI** (in Aidos Desktop). While other projects are not Generative UI hosts, they author, create, and own their domain-specific UI components. 
 
-Other repositories consume or replicate these components strictly adhering to the owning repository's vocabulary and theming conventions.
+It is likely that the TCR will at some point move into a specific separate repository, but for now, all UI components are owned by the apps that first came up with them:
+- **Dictator (`dictator`)**: Authoritative owner of **Text Editing & Document Editing Interfaces**, **Continuous Document Flows** (`DocumentInputSection`), the **Red Pill (Ember Caret Actor)** speech-to-text cursor (`PersistentRedPill`, `FloatingActorPill`), and **TCR Staging Overlays** (`PillConstellationOverlay`, `RadialCountdownRing`, `HappeningsHUD`, `TranscriptSplitDrawer`, `CadenceEngine`). Text flows directly from the cursor and enters the document at the active caret.
+- **Agentic Messenger (`agentic-messenger` / AMP)**: Authoritative owner of **4-Party Conversation Mesh Protocols**, **Message Timelines** (`MessageBubble`, `ContactRow`), **Universal Envelopes (UAE)**, **Blinded Relay Networking**, **Progressive Disclosure Approvals** (`ApprovalCard`), and **Cryptographic Provenance Badges** (Human Direct vs Delegated Runner vs Human-Only E2EE).
+- **Aidos (`aidos`)**: Authoritative owner of the **Desktop Generative UI Host Canvas**, **Core Agent Loop**, **Model Adapters**, **Tool Contracts**, and **Taint-Safe Execution**.
+
+When other applications (such as **Aidos Messenger / AMP** or **Aidos Desktop**) require document editing, continuous composition, or Red Pill tools, they fetch them directly from Dictator.
+
+See full canonical specification: [Aidos TCR Component Domain Owners (docs/TCR_COMPONENT_DOMAIN_OWNERS.md)](../aidos/docs/TCR_COMPONENT_DOMAIN_OWNERS.md).
 
 ---
 
