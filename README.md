@@ -22,6 +22,17 @@ For complete privacy documentation, see **[PRIVACY_ARCHITECTURE.md](./PRIVACY_AR
 
 ---
 
+## 🏛️ UI Component Ownership & Design Vocabulary (D46)
+
+In the cross-repository ecosystem, specific repositories maintain authoritative ownership over UI domains:
+- **Dictator (`dictator`)**: Authoritative owner of **Document Editing Interfaces**, **Continuous Document Flows**, the **Red Pill (Ember Caret Actor)** speech-to-text cursor, and **TCR Staging Overlays** (`PillConstellationOverlay`, `FloatingActorPill`, `DocumentInputSection`, `TranscriptSplitDrawer`). Text flows directly from the cursor and enters the document at the active caret.
+- **Agentic Messenger (`agentic-messenger`)**: Authoritative owner of **4-Party Conversation Mesh Protocols**, **Universal Envelopes (UAE)**, **Blinded Relay Networking**, and **Cryptographic Provenance Badges** (Human Direct vs Delegated Runner).
+- **Aidos (`aidos`)**: Authoritative owner of the **Core Agent Loop**, **Model Adapters**, **Tool Contracts**, and **Taint-Safe Execution**.
+
+Other repositories consume or replicate these components strictly adhering to the owning repository's vocabulary and theming conventions.
+
+---
+
 ## 1. Product overview
 
 Dictator is a self-hosted, voice-first document editor for institutional deployment. A user presses a
