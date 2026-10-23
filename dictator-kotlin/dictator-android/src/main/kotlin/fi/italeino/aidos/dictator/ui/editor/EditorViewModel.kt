@@ -7,6 +7,13 @@ import fi.italeino.aidos.dictator.data.dictation.DictationEngine
 import fi.italeino.aidos.dictator.data.dictation.DictationEngines
 import fi.italeino.aidos.dictator.data.dictation.DictationEngineKind
 import fi.italeino.aidos.dictator.data.dictation.DictationListener
+import com.dictator.core.actor.ActorPillStatus
+import com.dictator.core.actor.ActorRole
+import com.dictator.core.actor.GlyphType
+import com.dictator.core.actor.HappeningsEvent
+import com.dictator.core.actor.OperationSeverity
+import com.dictator.core.actor.PillConstellationManager
+import com.dictator.core.actor.TextRangeBounds
 import com.dictator.core.data.local.VoiceSettingsRepository
 import com.dictator.core.data.privacy.ProviderPolicyManager
 import com.dictator.core.service.AiService
@@ -91,6 +98,15 @@ class EditorViewModel constructor(
 ) : ViewModel() {
     private val _state = MutableStateFlow(EditorUiState())
     val state: StateFlow<EditorUiState> = _state.asStateFlow()
+
+    val pillManager = PillConstellationManager(viewModelScope)
+
+    fun moveCursorByDelta(deltaX: Float) {
+        val s = _state.value
+        val step = if (deltaX > 0) 1 else -1
+        val newPos = (s.selStart + step).coerceIn(0, s.content.length)
+        _state.value = s.copy(selStart = newPos, selEnd = newPos)
+    }
 
     private val undoStack = ArrayDeque<String>()
     private val redoStack = ArrayDeque<String>()
@@ -348,11 +364,61 @@ class EditorViewModel constructor(
         // Shadow mode: ask the decision model in the background and log it beside the parser's choice.
         // Fire-and-forget; the action below is decided by the parser alone.
         shadow?.let { recorder -> viewModelScope.launch { recorder.record(text, language, action) } }
+        pillManager.appendTranscript("User", text, 0.95f, true)
         when (action) {
-            is DictationAction.Insert -> if (action.text.isNotEmpty()) insertAtCursor(action.text, spaced = true)
-            is DictationAction.AskAi -> openAi(action.prompt, run = true)
+            is DictationAction.Insert -> {
+                if (action.text.isNotEmpty()) {
+                    pillManager.recordHappening(
+                        recognizedUtterance = action.text,
+                        actorRole = ActorRole.ORCHESTRATOR_DICTATION,
+                        actionName = "INSERT",
+                        details = "Inserted at cursor",
+                        status = HappeningsEvent.EventStatus.COMMITTED
+                    )
+                    insertAtCursor(action.text, spaced = true)
+                }
+            }
+            is DictationAction.AskAi -> {
+                pillManager.recordHappening(
+                    recognizedUtterance = action.prompt,
+                    actorRole = ActorRole.GENERATIVE_AI,
+                    actionName = "ASK_AI",
+                    details = action.prompt,
+                    status = HappeningsEvent.EventStatus.COMMITTED
+                )
+                openAi(action.prompt, run = true)
+            }
             is DictationAction.UnknownCommand -> notice("Did not understand the command: \"${action.spoken}\"")
-            is DictationAction.Command -> runCommand(action.type, action.spoken)
+            is DictationAction.Command -> {
+                if (action.type == CommandType.DELETE_LINE || action.type == CommandType.DELETE_WORD) {
+                    val targetRange = TextRangeBounds(s.selStart, s.selEnd)
+                    val desc = if (action.type == CommandType.DELETE_LINE) "Poista rivi" else "Poista sana"
+                    pillManager.cadenceEngine.stageAndExecute(
+                        targetRange = targetRange,
+                        severity = OperationSeverity.DESTRUCTIVE,
+                        description = desc,
+                        glyph = GlyphType.DELETE
+                    ) {
+                        runCommand(action.type, action.spoken)
+                        pillManager.recordHappening(
+                            recognizedUtterance = action.spoken,
+                            actorRole = ActorRole.DETERMINISTIC_EDITOR,
+                            actionName = action.type.name,
+                            details = desc,
+                            status = HappeningsEvent.EventStatus.COMMITTED
+                        )
+                    }
+                } else {
+                    pillManager.recordHappening(
+                        recognizedUtterance = action.spoken,
+                        actorRole = ActorRole.DETERMINISTIC_EDITOR,
+                        actionName = action.type.name,
+                        details = "Command executed",
+                        status = HappeningsEvent.EventStatus.COMMITTED
+                    )
+                    runCommand(action.type, action.spoken)
+                }
+            }
         }
     }
 
@@ -442,6 +508,7 @@ class EditorViewModel constructor(
     private fun sendAi(text: String) {
         val prompt = _state.value.ai.prompt
         _state.value = _state.value.copy(ai = _state.value.ai.copy(running = true, error = null, result = null))
+        pillManager.setAiStatus(ActorPillStatus.WorkingGeneric(null, "Generoidaan tekoälyvastausta..."))
         viewModelScope.launch {
             try {
                 val answer = withContext(ioDispatcher) {

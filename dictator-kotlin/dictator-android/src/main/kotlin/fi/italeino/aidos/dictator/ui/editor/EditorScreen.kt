@@ -1,5 +1,7 @@
 ﻿package fi.italeino.aidos.dictator.ui.editor
 
+import fi.italeino.aidos.dictator.ui.pill.PillConstellationOverlay
+
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -193,15 +195,27 @@ private fun EditorText(state: EditorUiState, viewModel: EditorViewModel, modifie
             value = TextFieldValue(state.content, TextRange(state.selStart, state.selEnd))
         }
     }
-    OutlinedTextField(
-        value = value,
-        onValueChange = {
-            value = it
-            viewModel.onTextChanged(it.text, it.selection.start, it.selection.end)
-        },
-        placeholder = { Text("Type, or tap the microphone and speak.") },
-        modifier = modifier.fillMaxWidth().padding(bottom = 72.dp)
-    )
+    Box(modifier = modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {
+                value = it
+                viewModel.onTextChanged(it.text, it.selection.start, it.selection.end)
+            },
+            placeholder = { Text("Type, or tap the microphone and speak.") },
+            modifier = Modifier.fillMaxSize().padding(bottom = 72.dp)
+        )
+
+        // TCR Actor Pill Constellation Overlay
+        PillConstellationOverlay(
+            manager = viewModel.pillManager,
+            cursorX = 48,
+            cursorY = 120,
+            onDragCursor = { dragDelta ->
+                viewModel.moveCursorByDelta(dragDelta.x)
+            }
+        )
+    }
 }
 
 @Composable
